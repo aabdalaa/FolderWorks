@@ -1,0 +1,26 @@
+{
+  "appId": "com.paralegal.suite.criadorpastas",
+  "productName": "ParalegalCriadorPastas",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      "dir"
+    ],
+    "icon": "src/assets/icon.ico",
+    "verifyUpdateCodeSignature": false,
+    "signtoolOptions": null
+  },
+  "extraResources": [
+    {
+      "from": "electron/core/ExecuteAsUser.exe",
+      "to": "core/ExecuteAsUser.exe"
+    }
+  ]
+}

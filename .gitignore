@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+package-lock.json
+
+# Builds e arquivos binários gerados
+dist/
+build/*.jsc
+src/*.jsc
+
+# Arquivo de ambiente privado com IPs reais
+.env
+
+# Logs do sistema
+*.log
+
+# Cache do SO e IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

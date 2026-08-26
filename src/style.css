@@ -1,0 +1,575 @@
+/* =========================================================
+   ENTROPY FOLDERWORKS - NUBANK PURPLE THEME (CSS)
+   Color Palette: Nubank Purple (#820AD1, #8A05BE, #9B14EE)
+   ========================================================= */
+
+:root {
+  --bg-dark: #0D0414;
+  --bg-card: rgba(24, 7, 38, 0.75);
+  --bg-card-hover: rgba(38, 12, 60, 0.85);
+  --border-card: rgba(130, 10, 209, 0.3);
+  
+  --nubank-purple: #820AD1;
+  --nubank-purple-light: #8A05BE;
+  --nubank-purple-bright: #9B14EE;
+  --nubank-purple-glow: rgba(130, 10, 209, 0.4);
+  
+  --text-main: #F5F3F7;
+  --text-muted: #B3A5C5;
+  --text-dim: #7A6990;
+
+  --accent-cyan: #00F2FE;
+  --accent-green: #00E676;
+  --accent-red: #FF3366;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  background: radial-gradient(circle at 50% 0%, #210738 0%, var(--bg-dark) 70%);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* =========================================================
+   CABEÇALHO COM BRANDING E NUBANK GLOW
+   ========================================================= */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: rgba(13, 4, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-card);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.header-branding {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.developer-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  box-shadow: 0 0 12px var(--nubank-purple-glow);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.branding-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.developer-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--nubank-purple-bright);
+}
+
+.app-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.version-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(130, 10, 209, 0.2);
+  border: 1px solid rgba(130, 10, 209, 0.4);
+  color: #E2B6FF;
+  border-radius: 20px;
+}
+
+/* BOTÃO SOBRE / DEV SUBTIL */
+.btn-about {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.btn-about:hover {
+  background: var(--nubank-purple);
+  color: #FFF;
+  border-color: var(--nubank-purple-bright);
+  box-shadow: 0 0 12px var(--nubank-purple-glow);
+}
+
+.btn-exit {
+  background: rgba(255, 51, 102, 0.1);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+  color: #FF6688;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+}
+
+.btn-exit:hover {
+  background: rgba(255, 51, 102, 0.25);
+  color: #FFF;
+  border-color: #FF3366;
+  box-shadow: 0 0 12px rgba(255, 51, 102, 0.4);
+}
+
+/* =========================================================
+   CONTEÚDO PRINCIPAL (MAIN FLUID LAYOUT)
+   ========================================================= */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px 32px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.card-step {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.step-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--nubank-purple), var(--nubank-purple-bright));
+  color: #FFF;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px var(--nubank-purple-glow);
+}
+
+.step-titles h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.step-titles p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* GRID DE CARDS DAS EMPRESAS */
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.company-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.company-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(130, 10, 209, 0.5);
+  transform: translateY(-2px);
+}
+
+.company-card.selected {
+  background: linear-gradient(135deg, rgba(130, 10, 209, 0.25), rgba(155, 20, 238, 0.15));
+  border-color: var(--nubank-purple-bright);
+  box-shadow: 0 0 20px var(--nubank-purple-glow);
+}
+
+.radio-icon {
+  font-size: 1.4rem;
+  color: var(--text-dim);
+}
+
+.company-card.selected .radio-icon {
+  color: var(--nubank-purple-bright);
+}
+
+.num-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+
+.company-card.selected .num-badge {
+  background: var(--nubank-purple);
+  color: #FFF;
+}
+
+.company-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.company-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.selected-banner {
+  margin-top: 16px;
+  padding: 12px 18px;
+  background: rgba(130, 10, 209, 0.2);
+  border: 1px solid var(--nubank-purple);
+  border-radius: var(--radius-sm);
+  color: #E2B6FF;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* INPUT DE TEXTO E PAINEL DE CONFIRMAÇÃO */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-input {
+  width: 100%;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(130, 10, 209, 0.3);
+  border-radius: var(--radius-md);
+  color: #FFF;
+  font-size: 1.05rem;
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.client-input:focus {
+  border-color: var(--nubank-purple-bright);
+  box-shadow: 0 0 16px var(--nubank-purple-glow);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.input-hint {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.confirmation-panel {
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(130, 10, 209, 0.3);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+}
+
+.confirm-card h4 {
+  font-size: 0.95rem;
+  color: var(--nubank-purple-bright);
+  margin-bottom: 8px;
+}
+
+.confirm-card ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.confirm-card li {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+/* PROGRESS BAR */
+.progress-container {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--nubank-purple), var(--nubank-purple-bright));
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+
+.progress-status-text {
+  font-size: 0.82rem;
+  color: var(--nubank-purple-bright);
+  font-weight: 600;
+}
+
+/* BOTÃO PRINCIPAL NUBANK */
+.btn-primary {
+  margin-top: 20px;
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--nubank-purple), var(--nubank-purple-light));
+  border: none;
+  border-radius: var(--radius-md);
+  color: #FFF;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px var(--nubank-purple-glow);
+  transition: var(--transition-fast);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--nubank-purple-light), var(--nubank-purple-bright));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(155, 20, 238, 0.5);
+}
+
+.btn-primary:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* RODAPÉ */
+.footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 32px;
+  background: rgba(13, 4, 20, 0.9);
+  border-top: 1px solid var(--border-card);
+  font-size: 0.78rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
+.status-title {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.log-console {
+  color: var(--text-dim);
+  font-family: monospace;
+}
+
+/* =========================================================
+   MODAL SOBRE O APP (NUBANK STYLE WITH GITHUB & LINKEDIN)
+   ========================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: #160626;
+  border: 1px solid var(--nubank-purple);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 24px var(--nubank-purple-glow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.modal-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  box-shadow: 0 0 16px var(--nubank-purple-glow);
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.social-links-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.social-link-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: rgba(130, 10, 209, 0.12);
+  border: 1px solid rgba(130, 10, 209, 0.35);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.social-link-card:hover {
+  background: var(--nubank-purple);
+  border-color: var(--nubank-purple-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px var(--nubank-purple-glow);
+  color: #FFF;
+}
+
+.social-svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.btn-modal-close {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-modal-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFF;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
