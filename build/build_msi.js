@@ -68,6 +68,17 @@ async function buildMSI() {
     }
   };
 
+  console.log('[0/3] Compilando React e Electron via npx vite build...');
+  try {
+    execSync('npx vite build', {
+      cwd: projectRoot,
+      stdio: 'inherit'
+    });
+  } catch (e) {
+    console.error('Falha no vite build:', e);
+    process.exit(1);
+  }
+
   console.log('[1/3] Empacotando aplicação via electron-packager...');
   const unpackedDir = path.join(projectRoot, 'dist', 'win-unpacked');
   try {
