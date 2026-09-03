@@ -12,9 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testServerConnection: (company: 'RELIQUIA' | 'RTO') => ipcRenderer.invoke('test-connection', company),
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => ipcRenderer.invoke('build-custom-msi', req),
   selectDirectory: (defaultPath?: string) => ipcRenderer.invoke('select-directory', defaultPath),
-  listSubdirectories: (targetDir: string, company?: string) => ipcRenderer.invoke('list-subdirectories', { targetDir, company }),
   validateBoundary: (req: { targetPath: string; company: string }) => ipcRenderer.invoke('validate-boundary', req),
   inspectFolder: (dirPath: string) => ipcRenderer.invoke('inspect-folder', dirPath),
+  listSubdirectories: (targetDir: string, company?: string) => ipcRenderer.invoke('list-subdirectories', { targetDir, company }),
   safeTransferCopy: (req: { company: 'RELIQUIA' | 'RTO'; sourcePath: string; destParentPath: string }) => ipcRenderer.invoke('safe-transfer-copy', req),
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => ipcRenderer.invoke('delete-source-folders', req),
   onLog: (callback: (log: string) => void) => {

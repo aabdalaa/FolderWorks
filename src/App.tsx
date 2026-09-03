@@ -10,7 +10,7 @@ import { UserGuideView } from './components/manual/UserGuideView';
 import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AppTab>('transfer');
+  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
