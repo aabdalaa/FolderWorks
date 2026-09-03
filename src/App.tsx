@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { TitleBar } from './components/layout/TitleBar';
-import { Sidebar } from './components/layout/Sidebar';
+import { Sidebar, AppTab } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { FolderCreationView } from './components/dashboard/FolderCreationView';
+import { FolderTransferView } from './components/transfer/FolderTransferView';
 import { SettingsView } from './components/settings/SettingsView';
 import { HistoryView } from './components/history/HistoryView';
 import { UserGuideView } from './components/manual/UserGuideView';
-import { MSIBuilderView } from './components/builder/MSIBuilderView';
+import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'settings' | 'history' | 'manual' | 'builder'>('dashboard');
+  const [activeTab, setActiveTab] = useState<AppTab>('transfer');
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     // Initial logs load
-    window.electronAPI?.getRecentLogs().then((l) => setLogs(l));
+    window.electronAPI?.getRecentLogs().then((l) => setLogs(l || []));
 
     // Subscribe to real-time logs
     const unsubLog = window.electronAPI?.onLog((entry) => {
@@ -54,23 +56,38 @@ export const App: React.FC = () => {
 
   const getHeaderDetails = () => {
     switch (activeTab) {
+      case 'transfer':
+        return {
+          title: 'Transferência Segura de Pastas de Clientes',
+          subtitle: 'Selecione as pastas de origem e transfira com validação prévia de integridade e trava de segurança de TI',
+        };
       case 'dashboard':
-        return { title: 'Painel de Criação de Pastas de Rede', subtitle: 'Seleção de empresa, digitação do código do cliente e execução segura com Robocopy' };
+        return {
+          title: 'Painel de Criação de Pastas de Rede',
+          subtitle: 'Seleção de empresa, digitação do código do cliente e execução segura com Robocopy',
+        };
       case 'settings':
-        return { title: 'Parâmetros & Servidores de Rede', subtitle: 'Caminhos UNC de compartilhamentos, IPs de controladores AD e teste de portas' };
-      case 'builder':
-        return { title: 'Gerador de Pacotes MSI Personalizados', subtitle: 'Interface visual para personalização de variáveis de ambiente e geração de instaladores MSI pré-configurados' };
+        return {
+          title: 'Parâmetros & Servidores de Rede',
+          subtitle: 'Caminhos UNC de compartilhamentos, IPs de controladores AD e teste de portas',
+        };
       case 'history':
-        return { title: 'Auditoria & Histórico de Execução', subtitle: 'Registro detalhado das pastas geradas e validações no Active Directory' };
+        return {
+          title: 'Auditoria & Histórico de Execução',
+          subtitle: 'Registro detalhado das pastas geradas, transferências realizadas e validações no Active Directory',
+        };
       case 'manual':
-        return { title: 'Manual do Usuário & Solução de Problemas', subtitle: 'Documentação interativa de operação, arquitetura e diagnósticos de segurança' };
+        return {
+          title: 'Manual do Usuário & Solução de Problemas',
+          subtitle: 'Documentação interativa de operação, arquitetura e diagnósticos de segurança',
+        };
     }
   };
 
   const headerInfo = getHeaderDetails();
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors">
       {/* 1. Custom Frameless TitleBar */}
       <TitleBar />
 
@@ -84,14 +101,17 @@ export const App: React.FC = () => {
         />
 
         {/* Viewport Content */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-950/60">
+        <div className="flex-1 flex flex-col overflow-hidden bg-slate-100/60 dark:bg-neutral-950/80">
           <Header
             title={headerInfo.title}
             subtitle={headerInfo.subtitle}
             onOpenLogs={handleOpenLogs}
+            theme={theme}
+            onSetTheme={setTheme}
           />
 
           <main className="flex-1 overflow-y-auto p-6">
+            {activeTab === 'transfer' && <FolderTransferView logs={logs} onOpenLogs={handleOpenLogs} />}
             {activeTab === 'dashboard' && (
               <FolderCreationView
                 logs={logs}
@@ -100,7 +120,6 @@ export const App: React.FC = () => {
               />
             )}
             {activeTab === 'settings' && <SettingsView onTestConnection={handleTestConnection} />}
-            {activeTab === 'builder' && <MSIBuilderView />}
             {activeTab === 'history' && <HistoryView />}
             {activeTab === 'manual' && <UserGuideView />}
           </main>

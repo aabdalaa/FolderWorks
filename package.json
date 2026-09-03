@@ -1,14 +1,14 @@
 {
   "name": "folderworks",
-  "version": "2.4.3",
+  "version": "2.5.0",
   "productName": "FolderWorks",
   "description": "FolderWorks - Su\u00edte de Automa\u00e7\u00e3o de Criador de Pastas (ENTROPY)",
   "main": "dist-electron/main.js",
   "author": "ENTROPY - Andr\u00e9 Abdala",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder --dir",
-    "build:msi": "tsc && vite build && node build/build_msi.js",
+    "build": "tsc && vite build && node -e \"const fs=require('fs'); fs.mkdirSync('dist-electron/core', {recursive:true}); fs.copyFileSync('electron/core/ExecuteAsUser.exe', 'dist-electron/core/ExecuteAsUser.exe');\" && npx electron-packager . FolderWorks --platform=win32 --arch=x64 --out=dist/win-unpacked --overwrite",
+    "build:msi": "tsc && vite build && node -e \"const fs=require('fs'); fs.mkdirSync('dist-electron/core', {recursive:true}); fs.copyFileSync('electron/core/ExecuteAsUser.exe', 'dist-electron/core/ExecuteAsUser.exe');\" && node build/build_msi.js",
     "preview": "vite preview"
   },
   "dependencies": {

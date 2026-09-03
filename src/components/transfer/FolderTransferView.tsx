@@ -1,0 +1,680 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  FolderOutput,
+  FolderInput,
+  Building2,
+  ShieldCheck,
+  ShieldAlert,
+  Search,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  FolderOpen,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  ArrowRight,
+  Trash2,
+  FileCheck,
+  HardDrive
+} from 'lucide-react';
+
+interface FolderTransferViewProps {
+  logs: string[];
+  onOpenLogs?: () => void;
+}
+
+interface FolderItem {
+  name: string;
+  fullPath: string;
+  mtime?: string;
+}
+
+interface TransferResult {
+  folderName: string;
+  sourcePath: string;
+  finalDestPath: string;
+  fileCount: number;
+  totalSizeMB: number;
+  durationSeconds: number;
+}
+
+export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
+  const [company, setCompany] = useState<'RELIQUIA' | 'RTO'>('RELIQUIA');
+  const [config, setConfig] = useState<any>(null);
+  
+  // Paths
+  const [sourceDir, setSourceDir] = useState<string>('');
+  const [destDir, setDestDir] = useState<string>('');
+  
+  // IT Boundary validation
+  const [boundaryStatus, setBoundaryStatus] = useState<{ isValid: boolean; allowedBase: string; message: string }>({
+    isValid: true,
+    allowedBase: '',
+    message: '',
+  });
+
+  // Folders in source directory
+  const [folders, setFolders] = useState<FolderItem[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState<boolean>(false);
+  const [folderError, setFolderError] = useState<string | null>(null);
+  
+  // Search & Selection
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedFolderNames, setSelectedFolderNames] = useState<Set<string>>(new Set());
+
+  // Execution & Verification State
+  const [isTransferring, setIsTransferring] = useState<boolean>(false);
+  const [currentTransferIndex, setCurrentTransferIndex] = useState<number>(0);
+  const [currentTransferName, setCurrentTransferName] = useState<string>('');
+  const [transferResults, setTransferResults] = useState<TransferResult[]>([]);
+  const [transferError, setTransferError] = useState<string | null>(null);
+
+  // Post-Copy Verification & Human Confirmation
+  const [showConfirmationPrompt, setShowConfirmationPrompt] = useState<boolean>(false);
+  const [isDeletingSource, setIsDeletingSource] = useState<boolean>(false);
+  const [deleteCompleted, setDeleteCompleted] = useState<{ count: number; keptOriginals: boolean } | null>(null);
+
+  // Load config on mount or company change
+  useEffect(() => {
+    window.electronAPI?.getConfig().then((allCfg) => {
+      setConfig(allCfg);
+      const cur = allCfg[company];
+      if (cur) {
+        const src = cur.defaultSourceFolder || cur.destSharePath;
+        setSourceDir(src);
+        const preset = cur.presetDestinations?.[0]?.path || `${cur.destSharePath}\\00 - EX CLIENTES`;
+        setDestDir(preset);
+        loadSubdirectories(src);
+        validateBoundary(preset, company);
+      }
+    });
+  }, [company]);
+
+  const validateBoundary = async (targetPath: string, comp: string) => {
+    if (!window.electronAPI?.validateBoundary) return;
+    const res = await window.electronAPI.validateBoundary({ targetPath, company: comp });
+    setBoundaryStatus(res);
+  };
+
+  const loadSubdirectories = async (dir: string) => {
+    if (!dir) return;
+    setLoadingFolders(true);
+    setFolderError(null);
+    setSelectedFolderNames(new Set());
+    try {
+      const res = await window.electronAPI?.listSubdirectories(dir);
+      if (res?.success) {
+        setFolders(res.folders);
+      } else {
+        setFolderError(res?.error || 'Erro ao listar pastas.');
+        setFolders([]);
+      }
+    } catch (e: any) {
+      setFolderError(e.message || 'Erro inesperado.');
+      setFolders([]);
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
+  const handleBrowseSource = async () => {
+    const picked = await window.electronAPI?.selectDirectory(sourceDir);
+    if (picked) {
+      setSourceDir(picked);
+      loadSubdirectories(picked);
+    }
+  };
+
+  const handleBrowseDest = async () => {
+    const picked = await window.electronAPI?.selectDirectory(destDir);
+    if (picked) {
+      setDestDir(picked);
+      validateBoundary(picked, company);
+    }
+  };
+
+  const handleSelectPreset = (presetPath: string) => {
+    setDestDir(presetPath);
+    validateBoundary(presetPath, company);
+  };
+
+  // Filtered folders
+  const filteredFolders = useMemo(() => {
+    if (!searchQuery.trim()) return folders;
+    const q = searchQuery.toLowerCase();
+    return folders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [folders, searchQuery]);
+
+  const toggleFolder = (name: string) => {
+    const next = new Set(selectedFolderNames);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+    }
+    setSelectedFolderNames(next);
+  };
+
+  const handleSelectAllVisible = () => {
+    const next = new Set(selectedFolderNames);
+    filteredFolders.forEach((f) => next.add(f.name));
+    setSelectedFolderNames(next);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFolderNames(new Set());
+  };
+
+  // 1. Start Safe Transfer
+  const handleStartTransfer = async () => {
+    if (!boundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring) return;
+
+    setIsTransferring(true);
+    setTransferError(null);
+    setTransferResults([]);
+    setShowConfirmationPrompt(false);
+    setDeleteCompleted(null);
+    setCurrentTransferIndex(0);
+
+    const selectedList = folders.filter((f) => selectedFolderNames.has(f.name));
+    const results: TransferResult[] = [];
+
+    for (let i = 0; i < selectedList.length; i++) {
+      const item = selectedList[i];
+      setCurrentTransferIndex(i + 1);
+      setCurrentTransferName(item.name);
+
+      const res = await window.electronAPI?.safeTransferCopy({
+        company,
+        sourcePath: item.fullPath,
+        destParentPath: destDir,
+      });
+
+      if (res?.success) {
+        results.push({
+          folderName: item.name,
+          sourcePath: item.fullPath,
+          finalDestPath: res.finalDestPath || `${destDir}\\${item.name}`,
+          fileCount: res.destMetrics?.fileCount || 0,
+          totalSizeMB: Number(((res.destMetrics?.totalSize || 0) / (1024 * 1024)).toFixed(2)),
+          durationSeconds: res.durationSeconds || 0,
+        });
+      } else {
+        setTransferError(res?.error || `Falha ao copiar pasta: ${item.name}`);
+        break;
+      }
+    }
+
+    setIsTransferring(false);
+
+    if (results.length === selectedList.length) {
+      setTransferResults(results);
+      setShowConfirmationPrompt(true);
+    }
+  };
+
+  // 2. Interactive Human Decision: Confirm Deletion of Source
+  const handleConfirmDeleteSource = async () => {
+    setIsDeletingSource(true);
+    const pathsToDelete = transferResults.map((r) => r.sourcePath);
+    const delRes = await window.electronAPI?.deleteSourceFolders({
+      company,
+      foldersToDelete: pathsToDelete,
+    });
+    setIsDeletingSource(false);
+
+    if (delRes?.success) {
+      setDeleteCompleted({ count: delRes.deleted.length, keptOriginals: false });
+      setShowConfirmationPrompt(false);
+      // Reload source folders after delete
+      loadSubdirectories(sourceDir);
+    } else {
+      setTransferError(delRes?.errors?.join(' | ') || 'Erro ao excluir pastas de origem.');
+    }
+  };
+
+  // 2. Interactive Human Decision: Keep Original Folders
+  const handleKeepOriginals = () => {
+    setDeleteCompleted({ count: transferResults.length, keptOriginals: true });
+    setShowConfirmationPrompt(false);
+  };
+
+  const totalFilesCopied = transferResults.reduce((acc, cur) => acc + cur.fileCount, 0);
+  const totalSizeCopiedMB = Number(transferResults.reduce((acc, cur) => acc + cur.totalSizeMB, 0).toFixed(2));
+  const currentCompanyConfig = config?.[company];
+
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto text-slate-800 dark:text-slate-100 transition-colors">
+      {/* Top Controls: Company Toggle & IT Boundary Banner */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700">
+            <button
+              onClick={() => setCompany('RELIQUIA')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                company === 'RELIQUIA'
+                  ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>RELIQUIA (100.30)</span>
+            </button>
+            <button
+              onClick={() => setCompany('RTO')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                company === 'RTO'
+                  ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>RTO (50.102)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* IT Perimeter Indicator */}
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-neutral-900/80 border border-slate-200 dark:border-neutral-700 text-xs text-slate-600 dark:text-slate-300">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="truncate max-w-lg">
+            <span className="font-semibold text-slate-700 dark:text-slate-200">Perímetro Autorizado pelo TI: </span>
+            <span className="font-mono text-[11px] text-teams-700 dark:text-teams-300">
+              {currentCompanyConfig?.allowedBasePath || 'Configuração padrão de segurança ativa'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Card 1: Seleção de Pastas e Governança de TI */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
+          <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
+            <FolderOutput className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Seleção de Pastas e Destino de Transferência</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Escolha o destino e marque com segurança as pastas de clientes a serem transferidas.
+            </p>
+          </div>
+        </div>
+
+        {/* Source & Destination Rows */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Source Folder Selector */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="flex items-center gap-1.5">
+                <FolderOpen className="w-4 h-4 text-slate-500" />
+                <span>Pasta de Origem (Clientes Ativos)</span>
+              </label>
+              <button
+                onClick={() => loadSubdirectories(sourceDir)}
+                className="text-teams-600 dark:text-teams-400 hover:underline flex items-center gap-1 text-[11px] font-medium"
+              >
+                <RefreshCw className={`w-3 h-3 ${loadingFolders ? 'animate-spin' : ''}`} />
+                <span>Recarregar</span>
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={sourceDir}
+                onChange={(e) => setSourceDir(e.target.value)}
+                onBlur={() => loadSubdirectories(sourceDir)}
+                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teams-500"
+              />
+              <button
+                type="button"
+                onClick={handleBrowseSource}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Procurar...</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Destination Folder Selector */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="flex items-center gap-1.5">
+                <FolderInput className="w-4 h-4 text-slate-500" />
+                <span>Pasta de Destino (Arquivo / Ex-Clientes)</span>
+              </label>
+              {boundaryStatus.isValid ? (
+                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Perímetro Válido</span>
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3" />
+                  <span>Bloqueado pelo TI</span>
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={destDir}
+                onChange={(e) => {
+                  setDestDir(e.target.value);
+                  validateBoundary(e.target.value, company);
+                }}
+                className={`flex-1 px-3 py-2 bg-slate-50 dark:bg-neutral-900 border rounded-lg text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none transition-colors ${
+                  boundaryStatus.isValid
+                    ? 'border-slate-200 dark:border-neutral-700 focus:border-teams-500'
+                    : 'border-rose-500 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={handleBrowseDest}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Procurar...</span>
+              </button>
+            </div>
+
+            {/* IT Presets Buttons */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Atalhos Rápidos:</span>
+              {currentCompanyConfig?.presetDestinations?.map((p: any) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => handleSelectPreset(p.path)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all ${
+                    destDir === p.path
+                      ? 'bg-teams-50 dark:bg-teams-950/50 border-teams-400 dark:border-teams-600 text-teams-700 dark:text-teams-300'
+                      : 'bg-slate-100 dark:bg-neutral-700/60 border-slate-200 dark:border-neutral-600 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Boundary Violation Alert */}
+        {!boundaryStatus.isValid && (
+          <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+            <div>
+              <p className="font-bold">Operação Bloqueada pela Política de Segurança do TI</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed">{boundaryStatus.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Interactive Folder Selection Grid (Zero Typos) */}
+        <div className="space-y-3 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Selecione as Pastas para Transferência em Massa
+              </h4>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-teams-100 dark:bg-teams-900/60 text-teams-700 dark:text-teams-300 font-bold">
+                {selectedFolderNames.size} selecionada{selectedFolderNames.size === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar cliente por código ou nome..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teams-500"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSelectAllVisible}
+                disabled={filteredFolders.length === 0}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors disabled:opacity-50"
+              >
+                Marcar Visíveis
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                disabled={selectedFolderNames.size === 0}
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors disabled:opacity-50"
+              >
+                Limpar
+              </button>
+            </div>
+          </div>
+
+          {/* Folder Grid / Table */}
+          <div className="border border-slate-200 dark:border-neutral-700 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-neutral-900/50">
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-200/70 dark:divide-neutral-700/60">
+              {loadingFolders ? (
+                <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
+                  <span>Carregando pastas do servidor...</span>
+                </div>
+              ) : folderError ? (
+                <div className="p-6 text-center text-xs text-rose-500 dark:text-rose-400">
+                  <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-rose-500" />
+                  <p className="font-semibold">{folderError}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Verifique o caminho da rede ou permissões de acesso.</p>
+                </div>
+              ) : filteredFolders.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs italic">
+                  Nenhuma pasta encontrada para &quot;{searchQuery}&quot;
+                </div>
+              ) : (
+                filteredFolders.map((f) => {
+                  const isSelected = selectedFolderNames.has(f.name);
+                  return (
+                    <div
+                      key={f.name}
+                      onClick={() => toggleFolder(f.name)}
+                      className={`px-4 py-2.5 flex items-center justify-between text-xs cursor-pointer transition-colors select-none ${
+                        isSelected
+                          ? 'bg-teams-50/80 dark:bg-teams-950/40 text-teams-900 dark:text-teams-200'
+                          : 'hover:bg-slate-100/70 dark:hover:bg-neutral-800/60 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFolder(f.name);
+                          }}
+                          className="text-teams-600 dark:text-teams-400 shrink-0"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+                          )}
+                        </button>
+                        <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="font-mono font-medium truncate">{f.name}</span>
+                      </div>
+
+                      {f.mtime && (
+                        <span className="text-[11px] text-slate-400 font-mono shrink-0 ml-4">
+                          {f.mtime}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer Summary of List */}
+            <div className="px-4 py-2 bg-slate-100 dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-700 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <span>Total de pastas listadas: {filteredFolders.length} de {folders.length}</span>
+              <span className="font-semibold text-teams-700 dark:text-teams-300">
+                {selectedFolderNames.size} pasta{selectedFolderNames.size === 1 ? '' : 's'} marcada{selectedFolderNames.size === 1 ? '' : 's'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="pt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={handleStartTransfer}
+            disabled={!boundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring}
+            className="px-6 py-3 bg-teams-600 hover:bg-teams-700 dark:bg-teams-600 dark:hover:bg-teams-500 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isTransferring ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Copiando pasta {currentTransferIndex} de {selectedFolderNames.size}: {currentTransferName}...</span>
+              </>
+            ) : (
+              <>
+                <ArrowRight className="w-4 h-4" />
+                <span>Iniciar Transferência Segura ({selectedFolderNames.size} Pasta{selectedFolderNames.size === 1 ? '' : 's'})</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Card 2: Status, Validação e Confirmação Interativa de Exclusão */}
+      {(isTransferring || showConfirmationPrompt || deleteCompleted || transferError) && (
+        <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-4">
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <FileCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Status, Verificação e Confirmação de Transferência</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Auditoria em tempo real da integridade de cópia antes de qualquer ação sobre a origem.
+              </p>
+            </div>
+          </div>
+
+          {/* Transfer Error Alert */}
+          {transferError && (
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Erro na Execução</p>
+                <p className="mt-1 text-[11px]">{transferError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Active Progress Bar */}
+          {isTransferring && (
+            <div className="space-y-2 p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700">
+              <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <span>Transmitindo com Robocopy & Permissões NTFS...</span>
+                <span className="font-mono">{currentTransferIndex} / {selectedFolderNames.size}</span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-teams-600 transition-all duration-300"
+                  style={{ width: `${(currentTransferIndex / selectedFolderNames.size) * 100}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                Copiando agora: {currentTransferName}
+              </p>
+            </div>
+          )}
+
+          {/* Interactive Human Decision Prompt */}
+          {showConfirmationPrompt && (
+            <div className="p-5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 space-y-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
+                    Cópia concluída com sucesso no destino!
+                  </h4>
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                    Foram validadas <span className="font-bold font-mono">{transferResults.length} pastas</span>, contendo{' '}
+                    <span className="font-bold font-mono">{totalFilesCopied} arquivos</span> (Total:{' '}
+                    <span className="font-bold font-mono">{totalSizeCopiedMB} MB</span>) no diretório de destino.
+                  </p>
+                  <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-100 pt-1">
+                    Deseja excluir as {transferResults.length} pastas originais da pasta de origem agora?
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60">
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteSource}
+                  disabled={isDeletingSource}
+                  className="px-4 py-2.5 bg-teams-600 hover:bg-teams-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
+                >
+                  {isDeletingSource ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Excluindo pastas originais...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Sim, excluir pastas originais</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleKeepOriginals}
+                  disabled={isDeletingSource}
+                  className="px-4 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-600 rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
+                >
+                  <HardDrive className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Não, manter pastas originais</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Final Completed Summary */}
+          {deleteCompleted && (
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>
+                  {deleteCompleted.keptOriginals
+                    ? `Transferência finalizada: ${deleteCompleted.count} pastas mantidas em ambos os locais.`
+                    : `Transferência concluída com sucesso: ${deleteCompleted.count} pastas migradas para o destino e removidas da origem.`}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setDeleteCompleted(null);
+                  setSelectedFolderNames(new Set());
+                }}
+                className="text-teams-600 dark:text-teams-400 hover:underline font-medium"
+              >
+                Nova Transferência
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

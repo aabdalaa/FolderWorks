@@ -1,35 +1,35 @@
 import React from 'react';
-import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, Wrench } from 'lucide-react';
+import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, FolderOutput } from 'lucide-react';
+
+export type AppTab = 'dashboard' | 'transfer' | 'settings' | 'history' | 'manual';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'settings' | 'history' | 'manual' | 'builder';
-  onSelectTab: (tab: 'dashboard' | 'settings' | 'history' | 'manual' | 'builder') => void;
+  activeTab: AppTab;
+  onSelectTab: (tab: AppTab) => void;
   reliquiaStatus: boolean | null;
   rtoStatus: boolean | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliquiaStatus, rtoStatus }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Criar Pastas', icon: LayoutDashboard },
-    { id: 'settings', label: 'Configurações', icon: Settings },
-    { id: 'builder', label: 'Gerador de MSI', icon: Wrench },
-    { id: 'history', label: 'Histórico & Auditoria', icon: History },
-    { id: 'manual', label: 'Manual & Diagnóstico', icon: HelpCircle },
-  ] as const;
+    { id: 'dashboard' as const, label: 'Criar Pastas', icon: LayoutDashboard },
+    { id: 'transfer' as const, label: 'Mover / Transferir Pastas', icon: FolderOutput },
+    { id: 'settings' as const, label: 'Configurações', icon: Settings },
+    { id: 'history' as const, label: 'Histórico & Auditoria', icon: History },
+    { id: 'manual' as const, label: 'Manual & Diagnóstico', icon: HelpCircle },
+  ];
 
   return (
-    <aside className="w-64 bg-slate-900/90 border-r border-slate-800/80 flex flex-col justify-between p-4 select-none">
-      <div className="space-y-6">
+    <aside className="w-64 bg-slate-100/90 dark:bg-neutral-900 border-r border-slate-200 dark:border-neutral-800 flex flex-col justify-between p-3.5 select-none transition-colors">
+      <div className="space-y-5">
         {/* Logo / Brand Header */}
         <div className="px-2 pt-1 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-600 p-0.5 shadow-lg shadow-cyan-500/10">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Server className="w-5 h-5 text-cyan-400" />
-            </div>
+          <div className="w-9 h-9 rounded-lg bg-teams-600 text-white flex items-center justify-center shadow-sm">
+            <Server className="w-5 h-5" />
           </div>
-          <div>
-            <h1 className="font-bold text-sm text-slate-100 tracking-tight">Entropy FolderWorks</h1>
-            <p className="text-[11px] text-slate-400">Criador de Pastas de Rede</p>
+          <div className="truncate">
+            <h1 className="font-bold text-xs text-slate-900 dark:text-white tracking-tight">Entropy FolderWorks</h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Automação de Pastas AD</p>
           </div>
         </div>
 
@@ -44,12 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
                 onClick={() => onSelectTab(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm shadow-cyan-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+                    ? 'bg-teams-50 dark:bg-teams-950/60 text-teams-700 dark:text-teams-300 font-semibold border-l-4 border-teams-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-neutral-800 border-l-4 border-transparent'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
+                <Icon className={`w-4 h-4 ${isActive ? 'text-teams-600 dark:text-teams-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                <span className="truncate">{item.label}</span>
               </button>
             );
           })}
@@ -57,24 +57,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
       </div>
 
       {/* Domain Status Footer */}
-      <div className="bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/80 space-y-3">
-        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400">Versão Atual App</span>
-          <span className="text-xs font-mono font-extrabold text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded border border-cyan-400/50">v2.4.3</span>
+      <div className="bg-white dark:bg-neutral-800/80 rounded-xl p-3 border border-slate-200 dark:border-neutral-700/80 space-y-2.5 shadow-sm">
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-neutral-700/60">
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Versão do App</span>
+          <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-2 py-0.5 rounded border border-teams-200 dark:border-teams-800">
+            v2.5.0
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Status dos Servidores AD</span>
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span>Servidores Active Directory</span>
         </div>
 
-        <div className="space-y-2 text-xs">
+        <div className="space-y-1.5 text-[11px]">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400">RELIQUIA (192.168.100.30)</span>
+            <span className="text-slate-500 dark:text-slate-400">RELIQUIA (100.30)</span>
             <span
               className={`w-2 h-2 rounded-full ${
                 reliquiaStatus === true
-                  ? 'bg-emerald-400 shadow-sm shadow-emerald-400'
+                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
                   : reliquiaStatus === false
                   ? 'bg-rose-500 shadow-sm shadow-rose-500'
                   : 'bg-amber-400 animate-pulse'
@@ -83,11 +85,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-400">RTO (192.168.50.102)</span>
+            <span className="text-slate-500 dark:text-slate-400">RTO (50.102)</span>
             <span
               className={`w-2 h-2 rounded-full ${
                 rtoStatus === true
-                  ? 'bg-emerald-400 shadow-sm shadow-emerald-400'
+                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
                   : rtoStatus === false
                   ? 'bg-rose-500 shadow-sm shadow-rose-500'
                   : 'bg-amber-400 animate-pulse'
