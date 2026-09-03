@@ -47,40 +47,24 @@ const defaultCompanyConfigs: Record<string, any> = {
 const bundledConfigPath = path.join(process.resourcesPath, 'default_config.json');
 
 function loadConfig() {
-  let loaded: any = {};
-  let isLocked = false;
   if (fs.existsSync(bundledConfigPath)) {
     try {
-      loaded = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
-      isLocked = true;
+      const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
+      return { ...defaultCompanyConfigs, ...parsed, isLockedByMSI: true };
     } catch (e) {}
-  } else if (fs.existsSync(configPath)) {
+  }
+  if (fs.existsSync(configPath)) {
     try {
-      loaded = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      return { ...defaultCompanyConfigs, ...parsed };
     } catch (e) {}
   }
-
-  const result: Record<string, any> = { ...defaultCompanyConfigs, isLockedByMSI: isLocked };
-  for (const comp of ['RELIQUIA', 'RTO']) {
-    const def = defaultCompanyConfigs[comp];
-    const usr = loaded[comp] || {};
-    const dest = usr.destSharePath || usr.destinationParentPath || def.destSharePath;
-    result[comp] = {
-      ...def,
-      ...usr,
-      destinationParentPath: dest,
-      destSharePath: dest,
-      defaultSourceFolder: usr.defaultSourceFolder || dest,
-      allowedBasePath: usr.allowedBasePath || def.allowedBasePath,
-      presetDestinations: usr.presetDestinations || def.presetDestinations,
-    };
-  }
-  return result;
+  return defaultCompanyConfigs;
 }
 
 function getCompanyConfig(company: string) {
   const all = loadConfig();
-  return all[company] || all['RELIQUIA'] || defaultCompanyConfigs['RELIQUIA'];
+  return all[company] || defaultCompanyConfigs[company] || defaultCompanyConfigs['RELIQUIA'];
 }
 
 function saveConfig(cfg: any) {
@@ -310,11 +294,16 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
 
     // Se for caminho de rede UNC e dispomos de executor e credenciais de serviço AD:
     if (isNetwork && executor && cfg && cfg.domainUser && cfg.adPass) {
+      appendLog(`[LISTAGEM AD] Listando diretório de rede estritamente sob as credenciais de '${cfg.domainUser}'...`);
       return new Promise((resolve) => {
         execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 25000 }, (err, stdout, stderr) => {
+        execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 35000 }, (err, stdout, stderr) => {
           if (err) {
             appendLog(`[LISTAGEM AD] Aviso ao consultar via token de '${cfg.domainUser}': ${err.message}. Usando leitura direta.`);
             resolve(fallbackListSubdirectories(targetDir));
+            const msg = `Falha na listagem AD sob o usuário '${cfg.domainUser}': ${err.message}`;
+            appendLog(`[LISTAGEM AD ERRO] ${msg}`);
+            resolve({ success: false, error: msg, folders: [] });
             return;
           }
           try {
@@ -322,19 +311,32 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
             const parsed = JSON.parse(outStr);
             if (parsed && parsed.success) {
               parsed.folders.sort((a: any, b: any) => a.name.localeCompare(b.name));
+              appendLog(`[LISTAGEM AD] Sucesso: ${parsed.folders.length} pastas autorizadas listadas sob '${cfg.domainUser}'.`);
               resolve({ success: true, folders: parsed.folders });
               return;
             } else {
               appendLog(`[LISTAGEM AD] Retorno do executor: ${parsed?.error || 'Erro desconhecido'}`);
               resolve(fallbackListSubdirectories(targetDir));
+              const errMsg = parsed?.error || 'Erro retornado pelo motor de listagem AD.';
+              appendLog(`[LISTAGEM AD ERRO] ${errMsg}`);
+              resolve({ success: false, error: errMsg, folders: [] });
               return;
             }
           } catch (pErr: any) {
             appendLog(`[LISTAGEM AD] Erro ao decodificar JSON: ${pErr.message}.`);
             resolve(fallbackListSubdirectories(targetDir));
+            const parseMsg = `Erro ao decodificar JSON do motor AD: ${pErr.message}. Output: ${stdout}`;
+            appendLog(`[LISTAGEM AD ERRO] ${parseMsg}`);
+            resolve({ success: false, error: parseMsg, folders: [] });
           }
         });
       });
+    }
+
+    if (isNetwork) {
+      const netErr = `Impossível listar pasta de rede: motor ExecuteAsUser ou credenciais de '${cfg?.domainUser || 'pasta.paralegal'}' não encontrados.`;
+      appendLog(`[LISTAGEM AD ERRO] ${netErr}`);
+      return { success: false, error: netErr, folders: [] };
     }
 
     return fallbackListSubdirectories(targetDir);
