@@ -47,24 +47,40 @@ const defaultCompanyConfigs: Record<string, any> = {
 const bundledConfigPath = path.join(process.resourcesPath, 'default_config.json');
 
 function loadConfig() {
+  let loaded: any = {};
+  let isLocked = false;
   if (fs.existsSync(bundledConfigPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
-      return { ...defaultCompanyConfigs, ...parsed, isLockedByMSI: true };
+      loaded = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
+      isLocked = true;
     } catch (e) {}
-  }
-  if (fs.existsSync(configPath)) {
+  } else if (fs.existsSync(configPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      return { ...defaultCompanyConfigs, ...parsed };
+      loaded = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     } catch (e) {}
   }
-  return defaultCompanyConfigs;
+
+  const result: Record<string, any> = { ...defaultCompanyConfigs, isLockedByMSI: isLocked };
+  for (const comp of ['RELIQUIA', 'RTO']) {
+    const def = defaultCompanyConfigs[comp];
+    const usr = loaded[comp] || {};
+    const dest = usr.destSharePath || usr.destinationParentPath || def.destSharePath;
+    result[comp] = {
+      ...def,
+      ...usr,
+      destinationParentPath: dest,
+      destSharePath: dest,
+      defaultSourceFolder: usr.defaultSourceFolder || dest,
+      allowedBasePath: usr.allowedBasePath || def.allowedBasePath,
+      presetDestinations: usr.presetDestinations || def.presetDestinations,
+    };
+  }
+  return result;
 }
 
 function getCompanyConfig(company: string) {
   const all = loadConfig();
-  return all[company] || defaultCompanyConfigs[company] || defaultCompanyConfigs['RELIQUIA'];
+  return all[company] || all['RELIQUIA'] || defaultCompanyConfigs['RELIQUIA'];
 }
 
 function saveConfig(cfg: any) {

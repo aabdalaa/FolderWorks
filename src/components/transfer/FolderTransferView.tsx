@@ -81,9 +81,13 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
       setConfig(allCfg);
       const cur = allCfg[company];
       if (cur) {
-        const src = cur.defaultSourceFolder || cur.destSharePath;
+        const fallbackDest = company === 'RELIQUIA'
+          ? String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`
+          : String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`;
+        const dest = cur.destSharePath || cur.destinationParentPath || fallbackDest;
+        const src = cur.defaultSourceFolder || dest;
         setSourceDir(src);
-        const preset = cur.presetDestinations?.[0]?.path || `${cur.destSharePath}\\00 - EX CLIENTES`;
+        const preset = cur.presetDestinations?.[0]?.path || `${dest}\\00 - EX CLIENTES`;
         setDestDir(preset);
         loadSubdirectories(src, company);
         validateBoundary(preset, company);
