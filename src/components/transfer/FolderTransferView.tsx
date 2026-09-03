@@ -81,13 +81,10 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
       setConfig(allCfg);
       const cur = allCfg[company];
       if (cur) {
-        const fallbackDest = company === 'RELIQUIA'
-          ? String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`
-          : String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`;
-        const dest = cur.destSharePath || cur.destinationParentPath || fallbackDest;
-        const src = cur.defaultSourceFolder || dest;
+        const src = cur.defaultSourceFolder || cur.destSharePath;
         setSourceDir(src);
-        const preset = cur.presetDestinations?.[0]?.path || `${dest}\\00 - EX CLIENTES`;
+        const fallbackPreset = cur.allowedBasePath ? `${cur.allowedBasePath}\\00 - EX CLIENTES` : `${cur.destSharePath.replace(/\\EMPRESAS$/i, '')}\\00 - EX CLIENTES`;
+        const preset = cur.presetDestinations?.[0]?.path || fallbackPreset;
         setDestDir(preset);
         loadSubdirectories(src, company);
         validateBoundary(preset, company);
@@ -143,11 +140,12 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
     validateBoundary(presetPath, company);
   };
 
-  // Filtered folders
+  // Filtered folders (hiding governance/ex-client folders from selectable client list)
   const filteredFolders = useMemo(() => {
-    if (!searchQuery.trim()) return folders;
+    const list = folders.filter((f) => !f.name.startsWith('00 -') && !f.name.startsWith('01 -'));
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase();
-    return folders.filter((f) => f.name.toLowerCase().includes(q));
+    return list.filter((f) => f.name.toLowerCase().includes(q));
   }, [folders, searchQuery]);
 
   const toggleFolder = (name: string) => {
@@ -231,6 +229,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
     if (delRes?.success) {
       setDeleteCompleted({ count: delRes.deleted.length, keptOriginals: false });
       setShowConfirmationPrompt(false);
+      setSelectedFolderNames(new Set());
       // Reload source folders after delete
       loadSubdirectories(sourceDir);
     } else {
@@ -242,6 +241,8 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
   const handleKeepOriginals = () => {
     setDeleteCompleted({ count: transferResults.length, keptOriginals: true });
     setShowConfirmationPrompt(false);
+    setSelectedFolderNames(new Set());
+    loadSubdirectories(sourceDir);
   };
 
   const totalFilesCopied = transferResults.reduce((acc, cur) => acc + cur.fileCount, 0);
@@ -580,81 +581,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
             </div>
           )}
 
-          {/* Active Progress Bar */}
-          {isTransferring && (
-            <div className="space-y-2 p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700">
-              <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <span>Transmitindo com Robocopy & Permissões NTFS...</span>
-                <span className="font-mono">{currentTransferIndex} / {selectedFolderNames.size}</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-teams-600 transition-all duration-300"
-                  style={{ width: `${(currentTransferIndex / selectedFolderNames.size) * 100}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                Copiando agora: {currentTransferName}
-              </p>
-            </div>
-          )}
-
-          {/* Interactive Human Decision Prompt */}
-          {showConfirmationPrompt && (
-            <div className="p-5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 space-y-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-200">
-                    Cópia concluída com sucesso no destino!
-                  </h4>
-                  <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                    Foram validadas <span className="font-bold font-mono">{transferResults.length} pastas</span>, contendo{' '}
-                    <span className="font-bold font-mono">{totalFilesCopied} arquivos</span> (Total:{' '}
-                    <span className="font-bold font-mono">{totalSizeCopiedMB} MB</span>) no diretório de destino.
-                  </p>
-                  <p className="text-xs font-semibold text-emerald-950 dark:text-emerald-100 pt-1">
-                    Deseja excluir as {transferResults.length} pastas originais da pasta de origem agora?
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60">
-                <button
-                  type="button"
-                  onClick={handleConfirmDeleteSource}
-                  disabled={isDeletingSource}
-                  className="px-4 py-2.5 bg-teams-600 hover:bg-teams-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-2"
-                >
-                  {isDeletingSource ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Excluindo pastas originais...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Sim, excluir pastas originais</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleKeepOriginals}
-                  disabled={isDeletingSource}
-                  className="px-4 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-600 rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
-                >
-                  <HardDrive className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Não, manter pastas originais</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Final Completed Summary */}
           {deleteCompleted && (
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
@@ -677,6 +603,149 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* 1. Modal Bloqueante durante Transferência em Execução         */}
+      {/* ------------------------------------------------------------- */}
+      {isTransferring && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-teams-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teams-600/20">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+              <div className="space-y-0.5">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Transferência em Execução...
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Robocopy multi-thread via <span className="font-semibold text-teams-600 dark:text-teams-400 font-mono">pasta.paralegal</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <span>Progresso das pastas</span>
+                <span className="font-mono">{currentTransferIndex} de {selectedFolderNames.size}</span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-teams-600 transition-all duration-300"
+                  style={{ width: `${selectedFolderNames.size ? (currentTransferIndex / selectedFolderNames.size) * 100 : 0}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate pt-1">
+                Copiando: {currentTransferName}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* 2. Modal Central de Confirmação com Fundo Opaco (Backdrop)   */}
+      {/* ------------------------------------------------------------- */}
+      {showConfirmationPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 overflow-hidden animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-emerald-500/20 dark:border-emerald-500/10 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Transferência Concluída com Sucesso!
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Arquivos e permissões NTFS foram auditados e transmitidos com integridade para o destino.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Body / Audit Summary */}
+            <div className="p-6 space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 dark:border-neutral-800">
+                  <span className="text-slate-500 dark:text-slate-400">Pastas copiadas:</span>
+                  <span className="font-bold text-slate-900 dark:text-white font-mono">
+                    {transferResults.length} {transferResults.length === 1 ? 'pasta' : 'pastas'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Destino Oficial:
+                  </span>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-xs font-mono text-teams-600 dark:text-teams-400 break-all select-all flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 shrink-0 text-emerald-500" />
+                    <span>{destDir}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
+                  {transferResults.map((r) => (
+                    <span
+                      key={r.folderName}
+                      className="px-2.5 py-1 rounded-lg bg-slate-200/70 dark:bg-neutral-800 text-[11px] font-mono text-slate-800 dark:text-slate-200 truncate max-w-full"
+                    >
+                      📁 {r.folderName} ({r.durationSeconds}s)
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Decision Callout */}
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                    Decisão de Governança
+                  </h4>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                    Deseja <strong>excluir as pastas originais</strong> da Origem para liberar espaço no servidor agora que a cópia no destino foi concluída, ou deseja <strong>mantê-las</strong> como cópia de segurança?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-6 pt-0 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-neutral-900/50">
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSource}
+                disabled={isDeletingSource}
+                className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 order-2 sm:order-1"
+              >
+                {isDeletingSource ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Excluindo da Origem...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Sim, excluir da Origem</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleKeepOriginals}
+                disabled={isDeletingSource}
+                className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
+              >
+                <HardDrive className="w-4 h-4 text-slate-500" />
+                <span>Não, manter na Origem</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

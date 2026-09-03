@@ -23,8 +23,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS\00 - EX CLIENTES` },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS\01 - EMPRESAS ENCERRADAS` }
+      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES` },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS` }
     ]
   },
   RTO: {
@@ -37,8 +37,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     allowedBasePath: String.raw`\\192.168.50.102\rto\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS\00 - EX CLIENTES` },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS\01 - EMPRESAS ENCERRADAS` }
+      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES` },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS` }
     ]
   }
 };
@@ -46,20 +46,41 @@ const defaultCompanyConfigs: Record<string, any> = {
 // Corporate Default Config embedded in MSI resources
 const bundledConfigPath = path.join(process.resourcesPath, 'default_config.json');
 
+function sanitizeConfig(cfg: any): any {
+  if (!cfg || typeof cfg !== 'object') return cfg;
+  for (const comp of ['RELIQUIA', 'RTO']) {
+    const def = defaultCompanyConfigs[comp];
+    if (cfg[comp]) {
+      cfg[comp] = { ...def, ...cfg[comp] };
+      // Always enforce official preset destinations outside EMPRESAS
+      cfg[comp].presetDestinations = def.presetDestinations;
+      cfg[comp].allowedBasePath = def.allowedBasePath;
+      cfg[comp].defaultSourceFolder = def.defaultSourceFolder;
+      if (!cfg[comp].destSharePath) cfg[comp].destSharePath = def.destSharePath;
+    } else {
+      cfg[comp] = { ...def };
+    }
+  }
+  return cfg;
+}
+
 function loadConfig() {
+  let result = { ...defaultCompanyConfigs };
   if (fs.existsSync(bundledConfigPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
-      return { ...defaultCompanyConfigs, ...parsed, isLockedByMSI: true };
+      result = sanitizeConfig({ ...result, ...parsed, isLockedByMSI: true });
+      return result;
     } catch (e) {}
   }
   if (fs.existsSync(configPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      return { ...defaultCompanyConfigs, ...parsed };
+      result = sanitizeConfig({ ...result, ...parsed });
+      return result;
     } catch (e) {}
   }
-  return defaultCompanyConfigs;
+  return sanitizeConfig(result);
 }
 
 function getCompanyConfig(company: string) {
@@ -257,8 +278,9 @@ function fallbackListSubdirectories(targetDir: string) {
     return { success: false, error: `Pasta não encontrada ou inacessível no servidor: ${targetDir}`, folders: [] };
   }
   const entries = fs.readdirSync(targetDir, { withFileTypes: true });
+  const isCompanyRoot = targetDir.replace(/\\+$/, '').toUpperCase().endsWith('\\EMPRESAS');
   const folders = entries
-    .filter((e) => e.isDirectory())
+    .filter((e) => e.isDirectory() && (!isCompanyRoot || (!e.name.startsWith('00 -') && !e.name.startsWith('01 -'))))
     .map((e) => {
       const fullPath = path.join(targetDir, e.name);
       let mtime = '';
@@ -307,9 +329,14 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
             const outStr = (stdout || '').trim();
             const parsed = JSON.parse(outStr);
             if (parsed && parsed.success) {
-              parsed.folders.sort((a: any, b: any) => a.name.localeCompare(b.name));
-              appendLog(`[LISTAGEM AD] Sucesso: ${parsed.folders.length} pastas autorizadas listadas sob '${cfg.domainUser}'.`);
-              resolve({ success: true, folders: parsed.folders });
+              let resultFolders = parsed.folders || [];
+              const isCompanyRoot = targetDir.replace(/\\+$/, '').toUpperCase().endsWith('\\EMPRESAS');
+              if (isCompanyRoot) {
+                resultFolders = resultFolders.filter((f: any) => !f.name.startsWith('00 -') && !f.name.startsWith('01 -'));
+              }
+              resultFolders.sort((a: any, b: any) => a.name.localeCompare(b.name));
+              appendLog(`[LISTAGEM AD] Sucesso: ${resultFolders.length} pastas autorizadas listadas sob '${cfg.domainUser}'.`);
+              resolve({ success: true, folders: resultFolders });
               return;
             } else {
               const errMsg = parsed?.error || 'Erro retornado pelo motor de listagem AD.';
@@ -406,6 +433,10 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   appendLog(`[ORIGEM] ${sourcePath}`);
   appendLog(`[DESTINO] ${finalDestPath}`);
 
+  // Pre-transfer metrics on source
+  const sourceMetrics = getFolderMetrics(sourcePath);
+  appendLog(`[MÉTRICAS ORIGEM] ${sourceMetrics.fileCount} arquivos, ${sourceMetrics.dirCount} subpastas, ${(sourceMetrics.totalSize / 1024 / 1024).toFixed(2)} MB`);
+
   const adUser = config.domainUser;
   const adPass = config.adPass;
   const executorPath = getExecutorPath();
@@ -432,14 +463,17 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
         }
 
         const durationSec = Math.round((Date.now() - startTime) / 1000);
+        const destMetrics = getFolderMetrics(finalDestPath);
 
-        if (exitCode < 8) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s (Código: ${exitCode}).`);
+        if (exitCode === 0 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
+          appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada em ${durationSec}s. Validando destino...`);
           resolve({
             success: true,
             folderName,
             sourcePath,
             finalDestPath,
+            sourceMetrics,
+            destMetrics,
             durationSeconds: durationSec,
           });
         } else {
@@ -457,14 +491,17 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
           exitCode = typeof error.code === 'number' ? error.code : 16;
         }
         const durationSec = Math.round((Date.now() - startTime) / 1000);
+        const destMetrics = getFolderMetrics(finalDestPath);
 
-        if (exitCode < 8) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão direta concluída em ${durationSec}s (Código: ${exitCode}).`);
+        if (exitCode < 8 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
+          appendLog(`[CÓPIA CONCLUÍDA] Transmissão direta concluída em ${durationSec}s.`);
           resolve({
             success: true,
             folderName,
             sourcePath,
             finalDestPath,
+            sourceMetrics,
+            destMetrics,
             durationSeconds: durationSec,
           });
         } else {
