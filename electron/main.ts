@@ -296,11 +296,8 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
     if (isNetwork && executor && cfg && cfg.domainUser && cfg.adPass) {
       appendLog(`[LISTAGEM AD] Listando diretório de rede estritamente sob as credenciais de '${cfg.domainUser}'...`);
       return new Promise((resolve) => {
-        execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 25000 }, (err, stdout, stderr) => {
         execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 35000 }, (err, stdout, stderr) => {
           if (err) {
-            appendLog(`[LISTAGEM AD] Aviso ao consultar via token de '${cfg.domainUser}': ${err.message}. Usando leitura direta.`);
-            resolve(fallbackListSubdirectories(targetDir));
             const msg = `Falha na listagem AD sob o usuário '${cfg.domainUser}': ${err.message}`;
             appendLog(`[LISTAGEM AD ERRO] ${msg}`);
             resolve({ success: false, error: msg, folders: [] });
@@ -315,16 +312,12 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
               resolve({ success: true, folders: parsed.folders });
               return;
             } else {
-              appendLog(`[LISTAGEM AD] Retorno do executor: ${parsed?.error || 'Erro desconhecido'}`);
-              resolve(fallbackListSubdirectories(targetDir));
               const errMsg = parsed?.error || 'Erro retornado pelo motor de listagem AD.';
               appendLog(`[LISTAGEM AD ERRO] ${errMsg}`);
               resolve({ success: false, error: errMsg, folders: [] });
               return;
             }
           } catch (pErr: any) {
-            appendLog(`[LISTAGEM AD] Erro ao decodificar JSON: ${pErr.message}.`);
-            resolve(fallbackListSubdirectories(targetDir));
             const parseMsg = `Erro ao decodificar JSON do motor AD: ${pErr.message}. Output: ${stdout}`;
             appendLog(`[LISTAGEM AD ERRO] ${parseMsg}`);
             resolve({ success: false, error: parseMsg, folders: [] });
@@ -413,10 +406,6 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   appendLog(`[ORIGEM] ${sourcePath}`);
   appendLog(`[DESTINO] ${finalDestPath}`);
 
-  // Pre-transfer metrics on source
-  const sourceMetrics = getFolderMetrics(sourcePath);
-  appendLog(`[MÉTRICAS ORIGEM] ${sourceMetrics.fileCount} arquivos, ${sourceMetrics.dirCount} subpastas, ${(sourceMetrics.totalSize / 1024 / 1024).toFixed(2)} MB`);
-
   const adUser = config.domainUser;
   const adPass = config.adPass;
   const executorPath = getExecutorPath();
@@ -443,17 +432,14 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
         }
 
         const durationSec = Math.round((Date.now() - startTime) / 1000);
-        const destMetrics = getFolderMetrics(finalDestPath);
 
-        if (exitCode === 0 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada em ${durationSec}s. Validando destino...`);
+        if (exitCode < 8) {
+          appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s (Código: ${exitCode}).`);
           resolve({
             success: true,
             folderName,
             sourcePath,
             finalDestPath,
-            sourceMetrics,
-            destMetrics,
             durationSeconds: durationSec,
           });
         } else {
@@ -471,17 +457,14 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
           exitCode = typeof error.code === 'number' ? error.code : 16;
         }
         const durationSec = Math.round((Date.now() - startTime) / 1000);
-        const destMetrics = getFolderMetrics(finalDestPath);
 
-        if (exitCode < 8 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão direta concluída em ${durationSec}s.`);
+        if (exitCode < 8) {
+          appendLog(`[CÓPIA CONCLUÍDA] Transmissão direta concluída em ${durationSec}s (Código: ${exitCode}).`);
           resolve({
             success: true,
             folderName,
             sourcePath,
             finalDestPath,
-            sourceMetrics,
-            destMetrics,
             durationSeconds: durationSec,
           });
         } else {
