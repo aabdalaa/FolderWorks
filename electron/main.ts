@@ -237,25 +237,91 @@ ipcMain.handle('select-directory', async (_, defaultPath?: string) => {
   return res.filePaths[0];
 });
 
-ipcMain.handle('list-subdirectories', async (_, targetDir: string) => {
+function getExecutorPath(): string {
+  const possibleExecutorPaths = [
+    path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'core', 'ExecuteAsUser.exe'),
+    path.join(__dirname, 'core', 'ExecuteAsUser.exe'),
+    path.join(__dirname, 'ExecuteAsUser.exe'),
+    path.join(app.getAppPath(), 'dist-electron', 'core', 'ExecuteAsUser.exe'),
+    path.join(app.getAppPath(), 'electron', 'core', 'ExecuteAsUser.exe'),
+  ];
+  for (const p of possibleExecutorPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return '';
+}
+
+function fallbackListSubdirectories(targetDir: string) {
+  if (!fs.existsSync(targetDir)) {
+    return { success: false, error: `Pasta não encontrada ou inacessível no servidor: ${targetDir}`, folders: [] };
+  }
+  const entries = fs.readdirSync(targetDir, { withFileTypes: true });
+  const folders = entries
+    .filter((e) => e.isDirectory())
+    .map((e) => {
+      const fullPath = path.join(targetDir, e.name);
+      let mtime = '';
+      try {
+        const stat = fs.statSync(fullPath);
+        mtime = stat.mtime.toLocaleDateString('pt-BR');
+      } catch {}
+      return { name: e.name, fullPath, mtime };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { success: true, folders };
+}
+
+ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) => {
   try {
-    if (!targetDir || !fs.existsSync(targetDir)) {
-      return { success: false, error: `Pasta não encontrada ou inacessível no servidor: ${targetDir}`, folders: [] };
+    let targetDir = '';
+    let company = '';
+    if (typeof req === 'string') {
+      targetDir = req;
+      company = compParam || '';
+    } else if (req && typeof req === 'object') {
+      targetDir = req.targetDir || '';
+      company = req.company || '';
     }
-    const entries = fs.readdirSync(targetDir, { withFileTypes: true });
-    const folders = entries
-      .filter((e) => e.isDirectory())
-      .map((e) => {
-        const fullPath = path.join(targetDir, e.name);
-        let mtime = '';
-        try {
-          const stat = fs.statSync(fullPath);
-          mtime = stat.mtime.toLocaleDateString('pt-BR');
-        } catch {}
-        return { name: e.name, fullPath, mtime };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return { success: true, folders };
+
+    if (!targetDir) {
+      return { success: false, error: 'Caminho não informado.', folders: [] };
+    }
+
+    const executor = getExecutorPath();
+    const cfg = company ? getCompanyConfig(company) : null;
+    const isNetwork = targetDir.startsWith('\\\\');
+
+    // Se for caminho de rede UNC e dispomos de executor e credenciais de serviço AD:
+    if (isNetwork && executor && cfg && cfg.domainUser && cfg.adPass) {
+      return new Promise((resolve) => {
+        execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 25000 }, (err, stdout, stderr) => {
+          if (err) {
+            appendLog(`[LISTAGEM AD] Aviso ao consultar via token de '${cfg.domainUser}': ${err.message}. Usando leitura direta.`);
+            resolve(fallbackListSubdirectories(targetDir));
+            return;
+          }
+          try {
+            const outStr = (stdout || '').trim();
+            const parsed = JSON.parse(outStr);
+            if (parsed && parsed.success) {
+              parsed.folders.sort((a: any, b: any) => a.name.localeCompare(b.name));
+              resolve({ success: true, folders: parsed.folders });
+              return;
+            } else {
+              appendLog(`[LISTAGEM AD] Retorno do executor: ${parsed?.error || 'Erro desconhecido'}`);
+              resolve(fallbackListSubdirectories(targetDir));
+              return;
+            }
+          } catch (pErr: any) {
+            appendLog(`[LISTAGEM AD] Erro ao decodificar JSON: ${pErr.message}.`);
+            resolve(fallbackListSubdirectories(targetDir));
+          }
+        });
+      });
+    }
+
+    return fallbackListSubdirectories(targetDir);
   } catch (err: any) {
     return { success: false, error: err.message, folders: [] };
   }
@@ -335,22 +401,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
 
   const adUser = config.domainUser;
   const adPass = config.adPass;
-  
-  const possibleExecutorPaths = [
-    path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
-    path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'core', 'ExecuteAsUser.exe'),
-    path.join(__dirname, 'core', 'ExecuteAsUser.exe'),
-    path.join(__dirname, 'ExecuteAsUser.exe'),
-    path.join(app.getAppPath(), 'dist-electron', 'core', 'ExecuteAsUser.exe'),
-    path.join(app.getAppPath(), 'electron', 'core', 'ExecuteAsUser.exe'),
-  ];
-  let executorPath = '';
-  for (const p of possibleExecutorPaths) {
-    if (fs.existsSync(p)) {
-      executorPath = p;
-      break;
-    }
-  }
+  const executorPath = getExecutorPath();
 
   const srcArg = sourcePath.replace(/\\$/, '');
   const destArg = finalDestPath.replace(/\\$/, '');

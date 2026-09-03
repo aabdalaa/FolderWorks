@@ -85,7 +85,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
         setSourceDir(src);
         const preset = cur.presetDestinations?.[0]?.path || `${cur.destSharePath}\\00 - EX CLIENTES`;
         setDestDir(preset);
-        loadSubdirectories(src);
+        loadSubdirectories(src, company);
         validateBoundary(preset, company);
       }
     });
@@ -97,13 +97,13 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
     setBoundaryStatus(res);
   };
 
-  const loadSubdirectories = async (dir: string) => {
+  const loadSubdirectories = async (dir: string, comp: string = company) => {
     if (!dir) return;
     setLoadingFolders(true);
     setFolderError(null);
     setSelectedFolderNames(new Set());
     try {
-      const res = await window.electronAPI?.listSubdirectories(dir);
+      const res = await window.electronAPI?.listSubdirectories(dir, comp);
       if (res?.success) {
         setFolders(res.folders);
       } else {
@@ -323,7 +323,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
                 type="text"
                 value={sourceDir}
                 onChange={(e) => setSourceDir(e.target.value)}
-                onBlur={() => loadSubdirectories(sourceDir)}
+                onBlur={() => loadSubdirectories(sourceDir, company)}
                 className="flex-1 px-3 py-2 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teams-500"
               />
               <button

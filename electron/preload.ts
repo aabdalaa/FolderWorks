@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testServerConnection: (company: 'RELIQUIA' | 'RTO') => ipcRenderer.invoke('test-connection', company),
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => ipcRenderer.invoke('build-custom-msi', req),
   selectDirectory: (defaultPath?: string) => ipcRenderer.invoke('select-directory', defaultPath),
-  listSubdirectories: (targetDir: string) => ipcRenderer.invoke('list-subdirectories', targetDir),
   validateBoundary: (req: { targetPath: string; company: string }) => ipcRenderer.invoke('validate-boundary', req),
   inspectFolder: (dirPath: string) => ipcRenderer.invoke('inspect-folder', dirPath),
   safeTransferCopy: (req: { company: 'RELIQUIA' | 'RTO'; sourcePath: string; destParentPath: string }) => ipcRenderer.invoke('safe-transfer-copy', req),
