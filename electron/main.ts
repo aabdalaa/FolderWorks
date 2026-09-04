@@ -141,6 +141,8 @@ function getFolderMetrics(dirPath: string): { fileCount: number; dirCount: numbe
   return { fileCount, dirCount, totalSize };
 }
 
+let isTransferInProgress = false;
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -155,6 +157,26 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
+  });
+
+  mainWindow.on('close', (e) => {
+    if (isTransferInProgress) {
+      e.preventDefault();
+      dialog.showMessageBox(mainWindow!, {
+        type: 'warning',
+        buttons: ['Continuar Transferência', 'Cancelar e Fechar Mesmo Assim'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Transferência em Andamento - FolderWorks',
+        message: 'Uma transferência de pastas está em execução neste momento!',
+        detail: 'Fechar o aplicativo agora interromperá o processo de cópia do Robocopy e poderá deixar arquivos incompletos ou corrompidos no destino.\n\nO recomendado é aguardar a conclusão antes de fechar o programa.',
+      }).then(({ response }) => {
+        if (response === 1) {
+          isTransferInProgress = false;
+          mainWindow?.destroy();
+        }
+      });
+    }
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -433,10 +455,6 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   appendLog(`[ORIGEM] ${sourcePath}`);
   appendLog(`[DESTINO] ${finalDestPath}`);
 
-  // Pre-transfer metrics on source
-  const sourceMetrics = getFolderMetrics(sourcePath);
-  appendLog(`[MÉTRICAS ORIGEM] ${sourceMetrics.fileCount} arquivos, ${sourceMetrics.dirCount} subpastas, ${(sourceMetrics.totalSize / 1024 / 1024).toFixed(2)} MB`);
-
   const adUser = config.domainUser;
   const adPass = config.adPass;
   const executorPath = getExecutorPath();
@@ -444,8 +462,28 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   const srcArg = sourcePath.replace(/\\$/, '');
   const destArg = finalDestPath.replace(/\\$/, '');
 
+  isTransferInProgress = true;
+
   return new Promise((resolve) => {
     const startTime = Date.now();
+
+    const finishSuccess = (durationSec: number) => {
+      isTransferInProgress = false;
+      appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s.`);
+      resolve({
+        success: true,
+        folderName,
+        sourcePath,
+        finalDestPath,
+        durationSeconds: durationSec,
+      });
+    };
+
+    const finishError = (errorMsg: string) => {
+      isTransferInProgress = false;
+      appendLog(`[ERRO CRÍTICO] ${errorMsg}`);
+      resolve({ success: false, error: errorMsg });
+    };
 
     if (executorPath) {
       appendLog(`[IMPERSONAÇÃO AD] Disparando Robocopy sob o token de '${adUser}'...`);
@@ -462,52 +500,28 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
           exitCode = typeof error.code === 'number' ? error.code : 16;
         }
 
-        const durationSec = Math.round((Date.now() - startTime) / 1000);
-        const destMetrics = getFolderMetrics(finalDestPath);
+        const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
-        if (exitCode === 0 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada em ${durationSec}s. Validando destino...`);
-          resolve({
-            success: true,
-            folderName,
-            sourcePath,
-            finalDestPath,
-            sourceMetrics,
-            destMetrics,
-            durationSeconds: durationSec,
-          });
+        if (exitCode === 0 || exitCode < 8) {
+          finishSuccess(durationSec);
         } else {
-          const failMsg = `Falha na cópia Robocopy sob '${adUser}' (Código: ${exitCode}).`;
-          appendLog(`[ERRO CRÍTICO] ${failMsg}`);
-          resolve({ success: false, error: failMsg });
+          finishError(`Falha na cópia Robocopy sob '${adUser}' (Código: ${exitCode}).`);
         }
       });
     } else {
       appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:32 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {
           exitCode = typeof error.code === 'number' ? error.code : 16;
         }
-        const durationSec = Math.round((Date.now() - startTime) / 1000);
-        const destMetrics = getFolderMetrics(finalDestPath);
+        const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
-        if (exitCode < 8 || (fs.existsSync(finalDestPath) && destMetrics.fileCount >= sourceMetrics.fileCount)) {
-          appendLog(`[CÓPIA CONCLUÍDA] Transmissão direta concluída em ${durationSec}s.`);
-          resolve({
-            success: true,
-            folderName,
-            sourcePath,
-            finalDestPath,
-            sourceMetrics,
-            destMetrics,
-            durationSeconds: durationSec,
-          });
+        if (exitCode < 8) {
+          finishSuccess(durationSec);
         } else {
-          const failMsg = `Falha no Robocopy direto (Código: ${exitCode}).`;
-          appendLog(`[ERRO CRÍTICO] ${failMsg}`);
-          resolve({ success: false, error: failMsg });
+          finishError(`Falha no Robocopy direto (Código: ${exitCode}).`);
         }
       });
     }

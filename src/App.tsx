@@ -11,6 +11,7 @@ import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
@@ -89,7 +90,7 @@ export const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors">
       {/* 1. Custom Frameless TitleBar */}
-      <TitleBar />
+      <TitleBar isLocked={isModalOpen} />
 
       {/* 2. Main Body with Sidebar Navigation */}
       <div className="flex flex-1 overflow-hidden">
@@ -111,7 +112,13 @@ export const App: React.FC = () => {
           />
 
           <main className="flex-1 overflow-y-auto p-6">
-            {activeTab === 'transfer' && <FolderTransferView logs={logs} onOpenLogs={handleOpenLogs} />}
+            {activeTab === 'transfer' && (
+              <FolderTransferView
+                logs={logs}
+                onOpenLogs={handleOpenLogs}
+                onModalStateChange={setIsModalOpen}
+              />
+            )}
             {activeTab === 'dashboard' && (
               <FolderCreationView
                 logs={logs}

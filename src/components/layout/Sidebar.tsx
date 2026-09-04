@@ -61,8 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
         <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-neutral-700/60">
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Versão do App</span>
           <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-2 py-0.5 rounded border border-teams-200 dark:border-teams-800">
-            v2.5.0
-            v2.5.1
+            v2.5.2
           </span>
         </div>
 

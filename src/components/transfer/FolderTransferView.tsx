@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FolderOutput,
   FolderInput,
@@ -22,6 +23,7 @@ import {
 interface FolderTransferViewProps {
   logs: string[];
   onOpenLogs?: () => void;
+  onModalStateChange?: (isOpen: boolean) => void;
 }
 
 interface FolderItem {
@@ -39,7 +41,7 @@ interface TransferResult {
   durationSeconds: number;
 }
 
-export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
+export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalStateChange }) => {
   const [company, setCompany] = useState<'RELIQUIA' | 'RTO'>('RELIQUIA');
   const [config, setConfig] = useState<any>(null);
   
@@ -74,6 +76,10 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
   const [showConfirmationPrompt, setShowConfirmationPrompt] = useState<boolean>(false);
   const [isDeletingSource, setIsDeletingSource] = useState<boolean>(false);
   const [deleteCompleted, setDeleteCompleted] = useState<{ count: number; keptOriginals: boolean } | null>(null);
+
+  useEffect(() => {
+    onModalStateChange?.(isTransferring || showConfirmationPrompt);
+  }, [isTransferring, showConfirmationPrompt, onModalStateChange]);
 
   // Load config on mount or company change
   useEffect(() => {
@@ -609,145 +615,166 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = () => {
       {/* ------------------------------------------------------------- */}
       {/* 1. Modal Bloqueante durante Transferência em Execução         */}
       {/* ------------------------------------------------------------- */}
-      {isTransferring && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 p-6 space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-teams-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teams-600/20">
-                <Loader2 className="w-5 h-5 animate-spin" />
+      {isTransferring &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 select-none cursor-default app-no-drag"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <div className="w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 p-6 space-y-5 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-teams-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-teams-600/20">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Transferência em Execução...
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Robocopy multi-thread via{' '}
+                    <span className="font-semibold text-teams-600 dark:text-teams-400 font-mono">
+                      pasta.paralegal
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Transferência em Execução...
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Robocopy multi-thread via <span className="font-semibold text-teams-600 dark:text-teams-400 font-mono">pasta.paralegal</span>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <span>Progresso das pastas</span>
+                  <span className="font-mono">
+                    {currentTransferIndex} de {selectedFolderNames.size}
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-teams-600 transition-all duration-300"
+                    style={{
+                      width: `${
+                        selectedFolderNames.size
+                          ? (currentTransferIndex / selectedFolderNames.size) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate pt-1">
+                  Copiando: {currentTransferName}
                 </p>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <span>Progresso das pastas</span>
-                <span className="font-mono">{currentTransferIndex} de {selectedFolderNames.size}</span>
-              </div>
-              <div className="w-full h-2.5 bg-slate-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-teams-600 transition-all duration-300"
-                  style={{ width: `${selectedFolderNames.size ? (currentTransferIndex / selectedFolderNames.size) * 100 : 0}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate pt-1">
-                Copiando: {currentTransferName}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ------------------------------------------------------------- */}
       {/* 2. Modal Central de Confirmação com Fundo Opaco (Backdrop)   */}
       {/* ------------------------------------------------------------- */}
-      {showConfirmationPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+      {showConfirmationPrompt &&
+        createPortal(
           <div
-            className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 overflow-hidden animate-in zoom-in-95 duration-200"
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 select-none cursor-default app-no-drag"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             role="dialog"
             aria-modal="true"
           >
-            {/* Modal Header */}
-            <div className="p-6 bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-emerald-500/20 dark:border-emerald-500/10 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="w-7 h-7" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Transferência Concluída com Sucesso!
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Arquivos e permissões NTFS foram auditados e transmitidos com integridade para o destino.
-                </p>
-              </div>
-            </div>
-
-            {/* Modal Body / Audit Summary */}
-            <div className="p-6 space-y-4">
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
-                <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 dark:border-neutral-800">
-                  <span className="text-slate-500 dark:text-slate-400">Pastas copiadas:</span>
-                  <span className="font-bold text-slate-900 dark:text-white font-mono">
-                    {transferResults.length} {transferResults.length === 1 ? 'pasta' : 'pastas'}
-                  </span>
+            <div
+              className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-neutral-800 overflow-hidden animate-in zoom-in-95 duration-200"
+            >
+              {/* Modal Header */}
+              <div className="p-6 bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-transparent border-b border-emerald-500/20 dark:border-emerald-500/10 flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+                  <CheckCircle2 className="w-7 h-7" />
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Destino Oficial:
-                  </span>
-                  <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-xs font-mono text-teams-600 dark:text-teams-400 break-all select-all flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 shrink-0 text-emerald-500" />
-                    <span>{destDir}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
-                  {transferResults.map((r) => (
-                    <span
-                      key={r.folderName}
-                      className="px-2.5 py-1 rounded-lg bg-slate-200/70 dark:bg-neutral-800 text-[11px] font-mono text-slate-800 dark:text-slate-200 truncate max-w-full"
-                    >
-                      📁 {r.folderName} ({r.durationSeconds}s)
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Decision Callout */}
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
-                    Decisão de Governança
-                  </h4>
-                  <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                    Deseja <strong>excluir as pastas originais</strong> da Origem para liberar espaço no servidor agora que a cópia no destino foi concluída, ou deseja <strong>mantê-las</strong> como cópia de segurança?
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Transferência Concluída com Sucesso!
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Arquivos e permissões NTFS foram auditados e transmitidos com integridade para o destino.
                   </p>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Actions */}
-            <div className="p-6 pt-0 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-neutral-900/50">
-              <button
-                type="button"
-                onClick={handleConfirmDeleteSource}
-                disabled={isDeletingSource}
-                className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 order-2 sm:order-1"
-              >
-                {isDeletingSource ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Excluindo da Origem...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4" />
-                    <span>Sim, excluir da Origem</span>
-                  </>
-                )}
-              </button>
+              {/* Modal Body / Audit Summary */}
+              <div className="p-6 space-y-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 dark:border-neutral-800">
+                    <span className="text-slate-500 dark:text-slate-400">Pastas migradas:</span>
+                    <span className="font-bold text-slate-900 dark:text-white font-mono">
+                      {transferResults.length} {transferResults.length === 1 ? 'pasta' : 'pastas'}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Destino Oficial:
+                    </span>
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-xs font-mono text-teams-600 dark:text-teams-400 break-all select-all flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>{destDir}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pt-1">
+                    {transferResults.map((r) => (
+                      <span
+                        key={r.folderName}
+                        className="px-2.5 py-1 rounded-lg bg-slate-200/70 dark:bg-neutral-800 text-[11px] font-mono text-slate-800 dark:text-slate-200 truncate max-w-full"
+                      >
+                        📁 {r.folderName} ({r.durationSeconds}s)
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={handleKeepOriginals}
-                disabled={isDeletingSource}
-                className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
-              >
-                <HardDrive className="w-4 h-4 text-slate-500" />
-                <span>Não, manter na Origem</span>
-              </button>
+                {/* Decision Callout */}
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                      Decisão de Governança
+                    </h4>
+                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                      Deseja <strong>excluir as pastas originais</strong> da Origem para liberar espaço no servidor agora que a cópia no destino foi concluída, ou deseja <strong>mantê-las</strong> como cópia de segurança?
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="p-6 pt-0 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-neutral-900/50">
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteSource}
+                  disabled={isDeletingSource}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 order-2 sm:order-1"
+                >
+                  {isDeletingSource ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Excluindo da Origem...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Sim, excluir da Origem</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleKeepOriginals}
+                  disabled={isDeletingSource}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
+                >
+                  <HardDrive className="w-4 h-4 text-slate-500" />
+                  <span>Não, manter na Origem</span>
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

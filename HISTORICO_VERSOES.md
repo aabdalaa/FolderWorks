@@ -1,5 +1,10 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.2 (04/09/2026) - **Otimização Extrema de Velocidade de Cópia, Cobertura Total da Janela e Proteção contra Fechamento**
+- **Eliminação de Varreduras Síncronas Lentas**: Removida a rotina `getFolderMetrics` que varria recursivamente toda a rede SMB antes e depois da cópia. A validação agora utiliza as métricas de tempo e integridade nativas entregues pelo Robocopy em C++ (`/MT:32`), reduzindo o tempo de transferência para apenas alguns segundos.
+- **Cobertura Total da Janela (Inclusive TitleBar)**: Os modais translúcidos bloqueantes agora sobem para a camada absoluta mais alta (`z-[99999]`), cobrindo por completo a barra de título e impedindo qualquer interação com os botões Minimizar, Maximizar e Fechar durante a execução da transferência ou na decisão de confirmação.
+- **Proteção Nativa contra Fechamento Acidental (Alt+F4 / Barra de Tarefas)**: Implementada interceptação do evento `window.on('close')` no Electron. Se o usuário tentar fechar o aplicativo durante uma transferência, o app cancela o fechamento e exibe um alerta de confirmação impedindo a corrupção de arquivos.
+
 ## Versão 2.5.1 (04/09/2026) - **Correção de Listagem no Preload, Modal Central com Backdrop Blur e Tela Inicial Padrão**
 - **Correção da Exposição de API no Preload (`listSubdirectories`)**: Exposta explicitamente a função `listSubdirectories` no `contextBridge` (`electron/preload.ts`), eliminando em definitivo a mensagem de erro `ue.listSubdirectories is not a function`.
 - **Tela Inicial Obrigatória em 'Criar Pastas'**: Rota padrão (`activeTab`) definida como `'dashboard'`, garantindo que o aplicativo sempre inicialize na tela principal de criação de pastas.
