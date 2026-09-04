@@ -59,28 +59,28 @@ export const App: React.FC = () => {
     switch (activeTab) {
       case 'transfer':
         return {
-          title: 'Transferência Segura de Pastas de Clientes',
-          subtitle: 'Selecione as pastas de origem e transfira com validação prévia de integridade e trava de segurança de TI',
+          title: 'Transferência de Pastas',
+          subtitle: 'Selecione as pastas e o destino para realizar a transferência',
         };
       case 'dashboard':
         return {
-          title: 'Painel de Criação de Pastas de Rede',
-          subtitle: 'Seleção de empresa, digitação do código do cliente e execução segura com Robocopy',
+          title: 'Criação de Pastas',
+          subtitle: 'Selecione a empresa e digite o código ou nome do cliente',
         };
       case 'settings':
         return {
-          title: 'Parâmetros & Servidores de Rede',
-          subtitle: 'Caminhos UNC de compartilhamentos, IPs de controladores AD e teste de portas',
+          title: 'Configurações',
+          subtitle: 'Pastas padrão e preferências do sistema',
         };
       case 'history':
         return {
-          title: 'Auditoria & Histórico de Execução',
-          subtitle: 'Registro detalhado das pastas geradas, transferências realizadas e validações no Active Directory',
+          title: 'Histórico',
+          subtitle: 'Registro das ações realizadas no aplicativo',
         };
       case 'manual':
         return {
-          title: 'Manual do Usuário & Solução de Problemas',
-          subtitle: 'Documentação interativa de operação, arquitetura e diagnósticos de segurança',
+          title: 'Manual de Uso',
+          subtitle: 'Instruções simples de operação e dúvidas frequentes',
         };
     }
   };

@@ -257,43 +257,33 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto text-slate-800 dark:text-slate-100 transition-colors">
-      {/* Top Controls: Company Toggle & IT Boundary Banner */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Top Controls: Company Toggle */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-sm flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Empresa:</span>
           <div className="flex rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700">
             <button
               onClick={() => setCompany('RELIQUIA')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 company === 'RELIQUIA'
                   ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>RELIQUIA (100.30)</span>
+              <span>RELIQUIA</span>
             </button>
             <button
               onClick={() => setCompany('RTO')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
                 company === 'RTO'
                   ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>RTO (50.102)</span>
+              <span>RTO</span>
             </button>
-          </div>
-        </div>
-
-        {/* IT Perimeter Indicator */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-neutral-900/80 border border-slate-200 dark:border-neutral-700 text-xs text-slate-600 dark:text-slate-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <div className="truncate max-w-lg">
-            <span className="font-semibold text-slate-700 dark:text-slate-200">Perímetro Autorizado pelo TI: </span>
-            <span className="font-mono text-[11px] text-teams-700 dark:text-teams-300">
-              {currentCompanyConfig?.allowedBasePath || 'Configuração padrão de segurança ativa'}
-            </span>
           </div>
         </div>
       </div>
@@ -305,9 +295,9 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             <FolderOutput className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Seleção de Pastas e Destino de Transferência</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">1. Seleção de Pastas e Destino</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Escolha o destino e marque com segurança as pastas de clientes a serem transferidas.
+              Escolha o destino e selecione as pastas a serem transferidas.
             </p>
           </div>
         </div>
@@ -319,7 +309,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
               <label className="flex items-center gap-1.5">
                 <FolderOpen className="w-4 h-4 text-slate-500" />
-                <span>Pasta de Origem (Clientes Ativos)</span>
+                <span>Pasta de Origem</span>
               </label>
               <button
                 onClick={() => loadSubdirectories(sourceDir)}
@@ -353,17 +343,12 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
               <label className="flex items-center gap-1.5">
                 <FolderInput className="w-4 h-4 text-slate-500" />
-                <span>Pasta de Destino (Arquivo / Ex-Clientes)</span>
+                <span>Pasta de Destino</span>
               </label>
-              {boundaryStatus.isValid ? (
-                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Perímetro Válido</span>
-                </span>
-              ) : (
+              {!boundaryStatus.isValid && (
                 <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
                   <ShieldAlert className="w-3 h-3" />
-                  <span>Bloqueado pelo TI</span>
+                  <span>Destino Não Permitido</span>
                 </span>
               )}
             </div>
@@ -417,7 +402,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
             <div>
-              <p className="font-bold">Operação Bloqueada pela Política de Segurança do TI</p>
+              <p className="font-bold">Pasta de Destino Inválida</p>
               <p className="mt-0.5 text-[11px] leading-relaxed">{boundaryStatus.message}</p>
             </div>
           </div>
@@ -428,7 +413,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Selecione as Pastas para Transferência em Massa
+                Selecione as Pastas para Transferência
               </h4>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-teams-100 dark:bg-teams-900/60 text-teams-700 dark:text-teams-300 font-bold">
                 {selectedFolderNames.size} selecionada{selectedFolderNames.size === 1 ? '' : 's'}
@@ -453,7 +438,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 disabled={filteredFolders.length === 0}
                 className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors disabled:opacity-50"
               >
-                Marcar Visíveis
+                SELECIONAR TODAS
               </button>
 
               <button
@@ -554,14 +539,14 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             ) : (
               <>
                 <ArrowRight className="w-4 h-4" />
-                <span>Iniciar Transferência Segura ({selectedFolderNames.size} Pasta{selectedFolderNames.size === 1 ? '' : 's'})</span>
+                <span>Iniciar Transferência ({selectedFolderNames.size} Pasta{selectedFolderNames.size === 1 ? '' : 's'})</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Card 2: Status, Validação e Confirmação Interativa de Exclusão */}
+      {/* Card 2: Status e Confirmação da Transferência */}
       {(isTransferring || showConfirmationPrompt || deleteCompleted || transferError) && (
         <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
@@ -569,9 +554,9 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               <FileCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Status, Verificação e Confirmação de Transferência</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Status e Confirmação da Transferência</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Auditoria em tempo real da integridade de cópia antes de qualquer ação sobre a origem.
+                Acompanhamento da transferência e confirmação das ações.
               </p>
             </div>
           </div>
@@ -628,13 +613,10 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 </div>
                 <div className="space-y-0.5">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Transferência em Execução...
+                    Transferência em Andamento...
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Robocopy multi-thread via{' '}
-                    <span className="font-semibold text-teams-600 dark:text-teams-400 font-mono">
-                      pasta.paralegal
-                    </span>
+                    Copiando arquivos com segurança para o destino...
                   </p>
                 </div>
               </div>
@@ -691,7 +673,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                     Transferência Concluída com Sucesso!
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Arquivos e permissões NTFS foram auditados e transmitidos com integridade para o destino.
+                    Todas as pastas foram copiadas com sucesso para o destino.
                   </p>
                 </div>
               </div>
@@ -700,14 +682,14 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               <div className="p-6 space-y-4">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
                   <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-200 dark:border-neutral-800">
-                    <span className="text-slate-500 dark:text-slate-400">Pastas migradas:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Pastas transferidas:</span>
                     <span className="font-bold text-slate-900 dark:text-white font-mono">
                       {transferResults.length} {transferResults.length === 1 ? 'pasta' : 'pastas'}
                     </span>
                   </div>
                   <div className="space-y-1">
                     <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Destino Oficial:
+                      Destino:
                     </span>
                     <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 text-xs font-mono text-teams-600 dark:text-teams-400 break-all select-all flex items-center gap-2">
                       <HardDrive className="w-4 h-4 shrink-0 text-emerald-500" />
@@ -731,10 +713,10 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
-                      Decisão de Governança
+                      Confirmação de Exclusão da Origem
                     </h4>
                     <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                      Deseja <strong>excluir as pastas originais</strong> da Origem para liberar espaço no servidor agora que a cópia no destino foi concluída, ou deseja <strong>mantê-las</strong> como cópia de segurança?
+                      Deseja <strong>excluir as pastas da Origem</strong> agora que a transferência foi concluída, ou prefere <strong>mantê-las</strong> como cópia de segurança?
                     </p>
                   </div>
                 </div>

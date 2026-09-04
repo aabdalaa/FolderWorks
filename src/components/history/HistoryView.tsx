@@ -20,8 +20,8 @@ export const HistoryView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <History className="w-5 h-5 text-cyan-400" />
             <div>
-              <h3 className="text-base font-bold text-slate-100">Auditoria & Histórico de Criações</h3>
-              <p className="text-xs text-slate-400">Registro completo de operações executadas pela ferramenta</p>
+              <h3 className="text-base font-bold text-slate-100">Histórico de Operações</h3>
+              <p className="text-xs text-slate-400">Registro de criações e transferências executadas</p>
             </div>
           </div>
 
@@ -48,7 +48,7 @@ export const HistoryView: React.FC = () => {
                   <th className="p-3">Data / Hora</th>
                   <th className="p-3">Empresa</th>
                   <th className="p-3">Cliente</th>
-                  <th className="p-3">Usuário AD Executante</th>
+                  <th className="p-3">Responsável</th>
                   <th className="p-3">Duração</th>
                   <th className="p-3">Status</th>
                 </tr>

@@ -29,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
           </div>
           <div className="truncate">
             <h1 className="font-bold text-xs text-slate-900 dark:text-white tracking-tight">Entropy FolderWorks</h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Automação de Pastas AD</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">Gerenciador de Pastas</p>
           </div>
         </div>
 
@@ -61,18 +61,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
         <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-neutral-700/60">
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Versão do App</span>
           <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-2 py-0.5 rounded border border-teams-200 dark:border-teams-800">
-            v2.5.2
+            v2.5.3
           </span>
         </div>
 
         <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Servidores Active Directory</span>
+          <span>Status dos Servidores</span>
         </div>
 
         <div className="space-y-1.5 text-[11px]">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400">RELIQUIA (100.30)</span>
+            <span className="text-slate-600 dark:text-slate-300 font-medium">RELIQUIA</span>
             <span
               className={`w-2 h-2 rounded-full ${
                 reliquiaStatus === true
@@ -85,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400">RTO (50.102)</span>
+            <span className="text-slate-600 dark:text-slate-300 font-medium">RTO</span>
             <span
               className={`w-2 h-2 rounded-full ${
                 rtoStatus === true

@@ -1,5 +1,17 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.3 (04/09/2026) - **Higienização Completa de UX/UI, Ocultação de Dados Técnicos/IPs e Simplificação de Textos**
+- **Ocultação de Dados Técnicos e Infraestrutura**: Removida a exibição de endereços IP de todas as telas (botões de empresa RELIQUIA e RTO, status da barra lateral e configurações).
+- **Remoção de Credenciais e Contas da Interface**: Removida a badge `pasta.paralegal` do cabeçalho superior e de todas as telas operacionais. Removidas credenciais e referências a APIs internas do manual interno do usuário.
+- **Simplificação de Rótulos e Textos para Usuário Comum**:
+  - Botão de seleção em massa renomeado de "Marcar Visíveis" para "SELECIONAR TODAS".
+  - Campos renomeados de forma concisa para "Pasta de Origem" e "Pasta de Destino" (removidas descrições longas entre parênteses).
+  - Removido o banner de perímetro de rede da interface visual (a validação de integridade permanece ativa silenciosamente em segundo plano).
+  - Títulos e subtítulos humanizados, eliminando termos como "Robocopy", "Active Directory", "GPO" e "permissões NTFS".
+- **Reestruturação do Manual do Usuário**: Transformado em guia operacional passo a passo focado no operador comum.
+
+---
+
 ## Versão 2.5.2 (04/09/2026) - **Otimização Extrema de Velocidade de Cópia, Cobertura Total da Janela e Proteção contra Fechamento**
 - **Eliminação de Varreduras Síncronas Lentas**: Removida a rotina `getFolderMetrics` que varria recursivamente toda a rede SMB antes e depois da cópia. A validação agora utiliza as métricas de tempo e integridade nativas entregues pelo Robocopy em C++ (`/MT:32`), reduzindo o tempo de transferência para apenas alguns segundos.
 - **Cobertura Total da Janela (Inclusive TitleBar)**: Os modais translúcidos bloqueantes agora sobem para a camada absoluta mais alta (`z-[99999]`), cobrindo por completo a barra de título e impedindo qualquer interação com os botões Minimizar, Maximizar e Fechar durante a execução da transferência ou na decisão de confirmação.

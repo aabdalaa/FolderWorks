@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, Shield, Sun, Moon, Laptop } from 'lucide-react';
+import { Terminal, Sun, Moon, Laptop } from 'lucide-react';
 import { ThemeMode } from '../../hooks/useTheme';
 
 interface HeaderProps {
@@ -59,13 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, onOpenLogs, the
         {/* Version Badge */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teams-50 dark:bg-teams-950 border border-teams-200 dark:border-teams-800 text-[11px] text-teams-700 dark:text-teams-300 font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-teams-600 dark:bg-teams-400" />
-          <span>v2.5.2</span>
-        </div>
-
-        {/* AD Account Badge */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
-          <Shield className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
-          <span>pasta.paralegal</span>
+          <span>v2.5.3</span>
         </div>
 
         {/* Open Logs Button */}
