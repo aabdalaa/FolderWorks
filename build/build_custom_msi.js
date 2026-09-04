@@ -15,12 +15,33 @@ process.env.PATH = `${process.env.PATH};C:\\Program Files (x86)\\WiX Toolset v3.
 
 async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custom.msi') {
   console.log('[1/3] Empacotando aplicação base via electron-packager...');
+  console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
+  const distDir = path.join(projectRoot, 'dist');
+  if (fs.existsSync(distDir)) {
+    fs.rmSync(distDir, { recursive: true, force: true });
+    console.log('✓ Pasta dist anterior removida com sucesso.');
+  }
+
+  console.log('[0/3] Compilando React e Electron via npx vite build...');
+  try {
+    execSync('npx vite build', {
+      cwd: projectRoot,
+      stdio: 'inherit'
+    });
+  } catch (e) {
+    console.error('Falha no vite build:', e);
+    throw new Error('Falha na compilação do Vite: ' + e.message);
+  }
+
+  console.log('[1/3] Empacotando aplicação base via electron-packager (Otimizado com ASAR e Exclusões)...');
   const unpackedDir = path.join(projectRoot, 'dist', 'win-unpacked');
   try {
     if (fs.existsSync(unpackedDir)) {
       fs.rmSync(unpackedDir, { recursive: true, force: true });
     }
-    execSync('npx electron-packager . FolderWorks --platform=win32 --arch=x64 --out=dist/win-unpacked --overwrite --icon=src/assets/icon.ico', {
+    const ignoreRegex = '^/(src|electron|build|scratch|node_modules|dist/(msi|win-unpacked)|.*\\.cs$|.*\\.ps1$|.*\\.wxs$|\\.git|\\.env)';
+    const packCmd = `npx electron-packager . FolderWorks --platform=win32 --arch=x64 --out=dist/win-unpacked --overwrite --icon=src/assets/icon.ico --asar --prune=true --ignore="${ignoreRegex}"`;
+    execSync(packCmd, {
       cwd: projectRoot,
       stdio: 'inherit'
     });
@@ -31,6 +52,12 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
 
   const appDir = path.join(projectRoot, 'dist', 'win-unpacked', 'FolderWorks-win32-x64');
   console.log(`✓ Aplicação base empacotada em: ${appDir}`);
+
+  // Copiar binário nativo ExecuteAsUser.exe para pasta resources/core
+  const resourcesCoreDir = path.join(appDir, 'resources', 'core');
+  if (!fs.existsSync(resourcesCoreDir)) fs.mkdirSync(resourcesCoreDir, { recursive: true });
+  fs.copyFileSync(path.join(projectRoot, 'electron', 'core', 'ExecuteAsUser.exe'), path.join(resourcesCoreDir, 'ExecuteAsUser.exe'));
+  console.log(`✓ Binário ExecuteAsUser.exe copiado para: ${resourcesCoreDir}`);
 
   // Injetar customConfig como default_config.json na pasta de recursos do aplicativo
   const resourcesDir = path.join(appDir, 'resources');
@@ -56,6 +83,7 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
     version: '2.5.3',
+    version: '2.5.4',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

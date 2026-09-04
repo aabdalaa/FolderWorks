@@ -68,6 +68,13 @@ async function buildMSI() {
     }
   };
 
+  console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
+  const distDir = path.join(projectRoot, 'dist');
+  if (fs.existsSync(distDir)) {
+    fs.rmSync(distDir, { recursive: true, force: true });
+    console.log('✓ Pasta dist anterior removida com sucesso.');
+  }
+
   console.log('[0/3] Compilando React e Electron via npx vite build...');
   try {
     execSync('npx vite build', {
@@ -79,13 +86,15 @@ async function buildMSI() {
     process.exit(1);
   }
 
-  console.log('[1/3] Empacotando aplicação via electron-packager...');
+  console.log('[1/3] Empacotando aplicação via electron-packager (Otimizado com ASAR e Exclusões)...');
   const unpackedDir = path.join(projectRoot, 'dist', 'win-unpacked');
   try {
     if (fs.existsSync(unpackedDir)) {
       fs.rmSync(unpackedDir, { recursive: true, force: true });
     }
-    execSync('npx electron-packager . FolderWorks --platform=win32 --arch=x64 --out=dist/win-unpacked --overwrite --icon=src/assets/icon.ico', {
+    const ignoreRegex = '^/(src|electron|build|scratch|node_modules|dist/(msi|win-unpacked)|.*\\.cs$|.*\\.ps1$|.*\\.wxs$|\\.git|\\.env)';
+    const packCmd = `npx electron-packager . FolderWorks --platform=win32 --arch=x64 --out=dist/win-unpacked --overwrite --icon=src/assets/icon.ico --asar --prune=true --ignore="${ignoreRegex}"`;
+    execSync(packCmd, {
       cwd: projectRoot,
       stdio: 'inherit'
     });
@@ -121,6 +130,7 @@ async function buildMSI() {
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
     version: '2.5.3',
+    version: '2.5.4',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

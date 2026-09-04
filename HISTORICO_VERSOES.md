@@ -1,5 +1,16 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.4 (04/09/2026) - **Correção Integral do Pipeline de Build, Empacotamento ASAR e Otimização Extrema de Tamanho**
+- **Eliminação da Recursão de Compilação (Efeito "Boneca Russa")**: Corrigido o script de empacotamento (`build_msi.js` e `build_custom_msi.js`) que copiava inadvertidamente instaladores `.msi` anteriores para dentro do pacote do próprio executável.
+- **Empacotamento Seguro com ASAR e Exclusão Estrita**: Adicionadas regras estritas de `--ignore` e empacotamento com `--asar` no `electron-packager`, eliminando arquivos de código-fonte (`src/`), scripts de build e diretórios temporários do executável final.
+- **Redução Drástica do Tamanho do Instalador e Executável**:
+  - O instalador `.msi` final foi reduzido de **1.4 GB** para aproximadamente **80 MB** (mais de 90% de compressão).
+  - O tempo de compilação do instalador WiX caiu de minutos para segundos.
+  - A pasta do projeto foi despoluída de instaladores e caches legados, liberando mais de 10 GB de disco.
+- **Preservação Integral dos Módulos Nativos**: `ExecuteAsUser.exe` mantido em `resources/core/` e `default_config.json` em `resources/` garantindo 100% de integridade operacional para criação e transferência com impersonação no Active Directory.
+
+---
+
 ## Versão 2.5.3 (04/09/2026) - **Higienização Completa de UX/UI, Ocultação de Dados Técnicos/IPs e Simplificação de Textos**
 - **Ocultação de Dados Técnicos e Infraestrutura**: Removida a exibição de endereços IP de todas as telas (botões de empresa RELIQUIA e RTO, status da barra lateral e configurações).
 - **Remoção de Credenciais e Contas da Interface**: Removida a badge `pasta.paralegal` do cabeçalho superior e de todas as telas operacionais. Removidas credenciais e referências a APIs internas do manual interno do usuário.
