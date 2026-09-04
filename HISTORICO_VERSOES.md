@@ -1,5 +1,12 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.1 (04/09/2026) - **Correção de Listagem no Preload, Modal Central com Backdrop Blur e Tela Inicial Padrão**
+- **Correção da Exposição de API no Preload (`listSubdirectories`)**: Exposta explicitamente a função `listSubdirectories` no `contextBridge` (`electron/preload.ts`), eliminando em definitivo a mensagem de erro `ue.listSubdirectories is not a function`.
+- **Tela Inicial Obrigatória em 'Criar Pastas'**: Rota padrão (`activeTab`) definida como `'dashboard'`, garantindo que o aplicativo sempre inicialize na tela principal de criação de pastas.
+- **Novo Modal Central Flutuante com Fundo Translúcido (`backdrop-blur-md bg-slate-950/80`)**: Ao concluir a transferência segura, um modal de alto destaque surge centralizado bloqueando qualquer interação em segundo plano até a confirmação humana de manutenção ou exclusão da pasta na origem.
+- **Correção de Caminhos Canônicos de Ex-Clientes**: Presets apontando diretamente para `CLIENTES\00 - EX CLIENTES` (irmã de `EMPRESAS`) e filtro protetivo contra pastas de governança na listagem de clientes ativos.
+- **Upgrade In-Place Automatizado (SemVer)**: Incremento para `2.5.1` acionando a tabela de Major Upgrade do Windows Installer para substituir com 100% de integridade instalações anteriores.
+
 ## Versão 2.5.0 (03/09/2026) - **Módulo de Transferência Segura, Trava de Perímetro de TI & Redesign Teams / Fluent UI**
 - **Módulo de Transferência Segura de Clientes**: Implementado fluxo em 3 etapas para migração de pastas de clientes ativos (ex.: para `00 - EX CLIENTES` ou `01 - EMPRESAS ENCERRADAS`). Realiza primeiro a cópia profunda via Robocopy sob o token `pasta.paralegal`, inspeciona o destino e solicita confirmação humana interativa antes de qualquer exclusão na origem.
 - **Grade Interativa com Seleção em Massa & Busca Instantânea**: Elimina erros de digitação permitindo listar subpastas em tempo real, filtrar por código/nome e selecionar múltiplas pastas simultaneamente.

@@ -60,6 +60,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, onOpenLogs, the
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teams-50 dark:bg-teams-950 border border-teams-200 dark:border-teams-800 text-[11px] text-teams-700 dark:text-teams-300 font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-teams-600 dark:bg-teams-400" />
           <span>v2.5.0</span>
+          <span>v2.5.1</span>
         </div>
 
         {/* AD Account Badge */}
