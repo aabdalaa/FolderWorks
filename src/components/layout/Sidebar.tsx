@@ -58,14 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
 
       {/* Domain Status Footer */}
       <div className="bg-white dark:bg-neutral-800/80 rounded-xl p-3 border border-slate-200 dark:border-neutral-700/80 space-y-2.5 shadow-sm">
-        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-neutral-700/60">
-          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Versão do App</span>
-          <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-2 py-0.5 rounded border border-teams-200 dark:border-teams-800">
-            v2.5.3
-            v2.5.4
-          </span>
-        </div>
-
         <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span>Status dos Servidores</span>

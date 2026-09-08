@@ -1,5 +1,12 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.5 (08/09/2026) - **Remoção de Linha Redundante de Versão na Barra Lateral e Polimento Visual**
+- **Otimização da Barra Lateral**: Removida a linha `"Versão do App"` do card inferior da barra lateral (`Sidebar.tsx`), eliminando a sobreposição visual redundante e mantendo o card exclusivamente focado no `"Status dos Servidores"` (`RELIQUIA` e `RTO` com indicadores luminosos em tempo real).
+- **Consistência de Identidade e Badges**: A versão oficial do aplicativo é exibida de maneira unificada e discreta exclusivamente na barra de título customizada (`TitleBar.tsx`) e no cabeçalho superior (`Header.tsx`).
+- **Novo Pacote MSI v2.5.5**: Gerado instalador leve oficial com WiX Toolset e disponibilizado para atualização transparente in-place.
+
+---
+
 ## Versão 2.5.4 (04/09/2026) - **Correção Integral do Pipeline de Build, Empacotamento ASAR e Otimização Extrema de Tamanho**
 - **Eliminação da Recursão de Compilação (Efeito "Boneca Russa")**: Corrigido o script de empacotamento (`build_msi.js` e `build_custom_msi.js`) que copiava inadvertidamente instaladores `.msi` anteriores para dentro do pacote do próprio executável.
 - **Empacotamento Seguro com ASAR e Exclusão Estrita**: Adicionadas regras estritas de `--ignore` e empacotamento com `--asar` no `electron-packager`, eliminando arquivos de código-fonte (`src/`), scripts de build e diretórios temporários do executável final.
