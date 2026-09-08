@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.6 (08/09/2026) - **Nova Tela 'Sobre o Desenvolvedor' com Redes Sociais e Identidade Entropy**
+- **Nova Visualização 'Sobre o Desenvolvedor & Entropy' (`AboutView.tsx`)**:
+  - Perfil oficial do desenvolvedor **André Abdala** (Desenvolvedor de Software & Arquiteto de Soluções).
+  - Botões interativos com abertura segura no navegador padrão do Windows via `shell.openExternal`:
+    - **GitHub**: `https://github.com/aabdalaa`
+    - **LinkedIn**: `https://www.linkedin.com/in/andreabdala/`
+    - **Instagram**: `https://www.instagram.com/_aabdala_/`
+  - Apresentação da filosofia e pilares do ecossistema **ENTROPY** (Governança Estrita, Alta Performance, UX Familiar & Fluent).
+  - Ficha técnica da aplicação com versão, arquitetura e direitos reservados.
+- **Navegação Integrada**: Nova aba **"Sobre o Desenvolvedor"** adicionada ao menu lateral (`Sidebar.tsx`) com ícone corporativo.
+- **Novo Pacote MSI v2.5.6**: Instalador oficial compilado e disponibilizado para atualização imediata in-place.
+
+---
+
 ## Versão 2.5.5 (08/09/2026) - **Remoção de Linha Redundante de Versão na Barra Lateral e Polimento Visual**
 - **Otimização da Barra Lateral**: Removida a linha `"Versão do App"` do card inferior da barra lateral (`Sidebar.tsx`), eliminando a sobreposição visual redundante e mantendo o card exclusivamente focado no `"Status dos Servidores"` (`RELIQUIA` e `RTO` com indicadores luminosos em tempo real).
 - **Consistência de Identidade e Badges**: A versão oficial do aplicativo é exibida de maneira unificada e discreta exclusivamente na barra de título customizada (`TitleBar.tsx`) e no cabeçalho superior (`Header.tsx`).

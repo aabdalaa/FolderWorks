@@ -24,6 +24,7 @@ export interface ElectronAPI {
     error?: string;
   }>;
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => Promise<{ success: boolean; deleted: string[]; errors: string[] }>;
+  openExternal: (url: string) => Promise<boolean>;
   onLog: (callback: (log: string) => void) => () => void;
   minimize: () => void;
   maximize: () => void;

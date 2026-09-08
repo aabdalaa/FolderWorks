@@ -236,6 +236,14 @@ ipcMain.handle('open-log-file', async () => {
   return false;
 });
 
+ipcMain.handle('open-external', async (_, url: string) => {
+  if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+    await shell.openExternal(url);
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle('get-history', () => {
   if (fs.existsSync(historyPath)) {
     try {

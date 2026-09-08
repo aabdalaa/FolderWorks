@@ -7,6 +7,7 @@ import { FolderTransferView } from './components/transfer/FolderTransferView';
 import { SettingsView } from './components/settings/SettingsView';
 import { HistoryView } from './components/history/HistoryView';
 import { UserGuideView } from './components/manual/UserGuideView';
+import { AboutView } from './components/about/AboutView';
 import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
@@ -82,6 +83,11 @@ export const App: React.FC = () => {
           title: 'Manual de Uso',
           subtitle: 'Instruções simples de operação e dúvidas frequentes',
         };
+      case 'about':
+        return {
+          title: 'Sobre o Desenvolvedor & Entropy',
+          subtitle: 'Informações sobre o projeto, identidade Entropy e canais de contato',
+        };
     }
   };
 
@@ -129,6 +135,7 @@ export const App: React.FC = () => {
             {activeTab === 'settings' && <SettingsView onTestConnection={handleTestConnection} />}
             {activeTab === 'history' && <HistoryView />}
             {activeTab === 'manual' && <UserGuideView />}
+            {activeTab === 'about' && <AboutView />}
           </main>
         </div>
       </div>
