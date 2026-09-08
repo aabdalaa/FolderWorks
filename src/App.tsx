@@ -8,11 +8,18 @@ import { SettingsView } from './components/settings/SettingsView';
 import { HistoryView } from './components/history/HistoryView';
 import { UserGuideView } from './components/manual/UserGuideView';
 import { AboutView } from './components/about/AboutView';
+import { TIAccessModal } from './components/logs/TIAccessModal';
+import { ActivityLogModal } from './components/logs/ActivityLogModal';
+import { Terminal, Shield } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isTIAccessModalOpen, setIsTIAccessModalOpen] = useState(false);
+  const [isActivityLogModalOpen, setIsActivityLogModalOpen] = useState(false);
+  const [isTIAuthenticated, setIsTIAuthenticated] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
@@ -56,6 +63,25 @@ export const App: React.FC = () => {
     return res;
   };
 
+  const handleOpenTILogs = () => {
+    if (isTIAuthenticated) {
+      setIsActivityLogModalOpen(true);
+    } else {
+      setIsTIAccessModalOpen(true);
+    }
+  };
+
+  const handleTISuccess = () => {
+    setIsTIAuthenticated(true);
+    setIsTIAccessModalOpen(false);
+    setIsActivityLogModalOpen(true);
+  };
+
+  const handleLockTISession = () => {
+    setIsTIAuthenticated(false);
+    setIsActivityLogModalOpen(false);
+  };
+
   const getHeaderDetails = () => {
     switch (activeTab) {
       case 'transfer':
@@ -92,11 +118,14 @@ export const App: React.FC = () => {
   };
 
   const headerInfo = getHeaderDetails();
+  const isAnyModalOpen = isTransferModalOpen || isTIAccessModalOpen || isActivityLogModalOpen;
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors">
+    <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors relative">
       {/* 1. Custom Frameless TitleBar */}
       <TitleBar isLocked={isModalOpen} />
+      <TitleBar isLocked={isAnyModalOpen} />
 
       {/* 2. Main Body with Sidebar Navigation */}
       <div className="flex flex-1 overflow-hidden">
@@ -109,6 +138,7 @@ export const App: React.FC = () => {
 
         {/* Viewport Content */}
         <div className="flex-1 flex flex-col overflow-hidden bg-slate-100/60 dark:bg-neutral-950/80">
+        <div className="flex-1 flex flex-col overflow-hidden bg-slate-100/60 dark:bg-neutral-950/80 relative">
           <Header
             title={headerInfo.title}
             subtitle={headerInfo.subtitle}
@@ -118,11 +148,13 @@ export const App: React.FC = () => {
           />
 
           <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-6 pb-12">
             {activeTab === 'transfer' && (
               <FolderTransferView
                 logs={logs}
                 onOpenLogs={handleOpenLogs}
                 onModalStateChange={setIsModalOpen}
+                onModalStateChange={setIsTransferModalOpen}
               />
             )}
             {activeTab === 'dashboard' && (
@@ -139,6 +171,40 @@ export const App: React.FC = () => {
           </main>
         </div>
       </div>
+
+      {/* 3. Botão Discreto e Escondido no Canto Inferior Direito para o TI */}
+      <div className="fixed bottom-2.5 right-3 z-30">
+        <button
+          onClick={handleOpenTILogs}
+          className="group flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-200/40 hover:bg-slate-200 dark:bg-neutral-800/30 dark:hover:bg-neutral-800 border border-slate-300/30 dark:border-neutral-700/30 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-[11px] font-mono opacity-25 hover:opacity-100 transition-all shadow-xs cursor-pointer"
+          title="Acesso Privado TI - Registro de Atividades"
+        >
+          {isTIAuthenticated ? (
+            <Shield className="w-3.5 h-3.5 text-emerald-500" />
+          ) : (
+            <Terminal className="w-3.5 h-3.5" />
+          )}
+          <span className="text-[10px] hidden group-hover:inline tracking-wider">
+            {isTIAuthenticated ? 'TI (CONECTADO)' : 'REGISTRO TI'}
+          </span>
+        </button>
+      </div>
+
+      {/* 4. Modal de Autenticação Segura de TI */}
+      <TIAccessModal
+        isOpen={isTIAccessModalOpen}
+        onClose={() => setIsTIAccessModalOpen(false)}
+        onSuccess={handleTISuccess}
+      />
+
+      {/* 5. Modal de Registro de Atividades (Auditoria TI) */}
+      <ActivityLogModal
+        isOpen={isActivityLogModalOpen}
+        logs={logs}
+        onClose={() => setIsActivityLogModalOpen(false)}
+        onClearLogs={handleClearLogs}
+        onLockSession={handleLockTISession}
+      />
     </div>
   );
 };

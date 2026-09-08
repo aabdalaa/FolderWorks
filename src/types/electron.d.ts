@@ -5,6 +5,7 @@ export interface ElectronAPI {
   getRecentLogs: () => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
   openLogFile: () => Promise<boolean>;
+  verifyTIPassword: (password: string) => Promise<boolean>;
   getHistory: () => Promise<any[]>;
   clearHistory: () => Promise<any[]>;
   testServerConnection: (company: 'RELIQUIA' | 'RTO') => Promise<{ success: boolean; message: string }>;

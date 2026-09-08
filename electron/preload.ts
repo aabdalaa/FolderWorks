@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getRecentLogs: () => ipcRenderer.invoke('get-recent-logs'),
   clearLogs: () => ipcRenderer.invoke('clear-logs'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),
+  verifyTIPassword: (password: string) => ipcRenderer.invoke('verify-ti-password', password),
   getHistory: () => ipcRenderer.invoke('get-history'),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
   testServerConnection: (company: 'RELIQUIA' | 'RTO') => ipcRenderer.invoke('test-connection', company),

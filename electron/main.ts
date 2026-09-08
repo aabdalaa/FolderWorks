@@ -65,11 +65,13 @@ function sanitizeConfig(cfg: any): any {
 }
 
 function loadConfig() {
+function loadConfig(): any {
   let result = { ...defaultCompanyConfigs };
   if (fs.existsSync(bundledConfigPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
       result = sanitizeConfig({ ...result, ...parsed, isLockedByMSI: true });
+      if (parsed.tiLogsPassword) (result as any).tiLogsPassword = parsed.tiLogsPassword;
       return result;
     } catch (e) {}
   }
@@ -77,10 +79,35 @@ function loadConfig() {
     try {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       result = sanitizeConfig({ ...result, ...parsed });
+      if (parsed.tiLogsPassword) (result as any).tiLogsPassword = parsed.tiLogsPassword;
       return result;
     } catch (e) {}
   }
   return sanitizeConfig(result);
+}
+
+function getTIPassword(): string {
+  const cfg = loadConfig();
+  if (cfg && cfg.tiLogsPassword) return String(cfg.tiLogsPassword).trim();
+  if (process.env.TI_LOGS_PASSWORD) return process.env.TI_LOGS_PASSWORD.trim();
+
+  // Tentar encontrar no .env em modo de desenvolvimento ou desempacotado
+  const candidates = [
+    path.join(app.getAppPath(), '.env'),
+    path.join(__dirname, '..', '.env'),
+    path.join(process.cwd(), '.env'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p, 'utf-8');
+        const m = raw.match(/^\s*TI_LOGS_PASSWORD\s*=\s*"?([^"\r\n]+)"?/m);
+        if (m && m[1]) return m[1].trim();
+      } catch {}
+    }
+  }
+
+  return 'Fallima1979';
 }
 
 function getCompanyConfig(company: string) {
@@ -234,6 +261,17 @@ ipcMain.handle('open-log-file', async () => {
     return true;
   }
   return false;
+});
+
+ipcMain.handle('verify-ti-password', async (_event, passwordInput: string) => {
+  const correct = getTIPassword();
+  const isValid = typeof passwordInput === 'string' && passwordInput.trim() === correct.trim();
+  if (isValid) {
+    appendLog('[AUDITORIA TI] Acesso aos registros de atividade desbloqueado pelo operador.');
+  } else {
+    appendLog('[AUDITORIA TI ALERTA] Tentativa de acesso aos registros com senha incorreta.');
+  }
+  return isValid;
 });
 
 ipcMain.handle('open-external', async (_, url: string) => {

@@ -85,6 +85,7 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
     version: '2.5.7',
     version: '2.5.8',
     version: '2.5.9',
+    version: '2.5.10',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

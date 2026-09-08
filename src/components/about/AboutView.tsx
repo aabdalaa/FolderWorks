@@ -70,6 +70,7 @@ export const AboutView: React.FC = () => {
               v2.5.7 Oficial
               v2.5.8 Oficial
               v2.5.9 Oficial
+              v2.5.10 Oficial
             </span>
           </div>
         </div>

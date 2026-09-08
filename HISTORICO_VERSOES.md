@@ -1,5 +1,23 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.10 (08/09/2026) - **Registro de Atividades Privado (TI), Autenticação por Senha via Variável de Ambiente e Correção de Encoding**
+- **Privacidade e Despoluição da Interface do Usuário**:
+  - Removido o terminal de logs ao vivo da tela principal de criação (`FolderCreationView.tsx`), eliminando termos técnicos do escopo visual dos operadores comuns.
+  - Removido o botão de logs do cabeçalho superior (`Header.tsx`).
+- **Botão Escondido no Canto Inferior Direito**:
+  - Posicionado botão minimalista e discreto (`opacity-25 hover:opacity-100`) no canto inferior direito da tela (`fixed bottom-2.5 right-3`), garantindo discrição e acesso restrito para a equipe de TI.
+- **Autenticação por Senha via Variável de Ambiente (`TI_LOGS_PASSWORD`)**:
+  - Implementado modal de segurança Fluent (`TIAccessModal.tsx`) exigindo a credencial do TI para desbloqueio dos registros.
+  - Suporte à variável `TI_LOGS_PASSWORD` configurada no `.env` (valor: `Fallima1979`) e embutida no `default_config.json` dentro dos recursos do MSI.
+- **Modal Completo de Registro de Atividades (`ActivityLogModal.tsx`)**:
+  - Terminal escuro com tipografia monospace, color coding por categoria de log, auto-scroll, botões de "Limpar Logs", "Abrir TXT" e "Bloquear Sessão".
+- **Correção Definitiva de Caracteres no Motor C# (`ExecuteAsUser.cs`)**:
+  - Normalizadas as tags de console para `[AUTENTICACAO REDE AD]` e `[IMPERSONACAO WIN32]`, eliminando corrupção com losangos e interrogações (`\uFFFD`).
+  - Compilação forçada em UTF-8 estrito (`/codepage:65001 /utf8output`).
+- **Novo Pacote MSI v2.5.10**: Compilado com WiX Toolset mantendo tamanho enxuto (~111 MB) e suporte a atualização in-place.
+
+---
+
 ## Versão 2.5.9 (08/09/2026) - **Realocação do Card 'Subpastas Padrão' para a Aba 'Manual & Diagnóstico'**
 - **Despoluição da Tela Inicial (`FolderCreationView.tsx`)**:
   - Removido o card lateral que listava as subpastas padrão, permitindo que o formulário de criação ocupe a tela de forma mais limpa, ampla e focada na tarefa do operador.

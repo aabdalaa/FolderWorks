@@ -1,5 +1,6 @@
 import React from 'react';
 import { Terminal, Sun, Moon, Laptop } from 'lucide-react';
+import { Sun, Moon, Laptop } from 'lucide-react';
 import { ThemeMode } from '../../hooks/useTheme';
 
 interface HeaderProps {
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ title, subtitle, onOpenLogs, theme, onSetTheme }) => {
+export const Header: React.FC<HeaderProps> = ({ title, subtitle, theme, onSetTheme }) => {
   return (
     <header className="bg-white dark:bg-neutral-900 border-b border-slate-200 dark:border-neutral-800 px-6 py-3.5 flex items-center justify-between select-none transition-colors">
       <div>
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, onOpenLogs, the
           <span>v2.5.7</span>
           <span>v2.5.8</span>
           <span>v2.5.9</span>
+          <span>v2.5.10</span>
         </div>
 
         {/* Open Logs Button */}

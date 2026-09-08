@@ -233,6 +233,7 @@ namespace ExecuteAsUser {
             string destServer = ExtractServerName(dest);
 
             Console.WriteLine(String.Format("[AUTENTICAÇÃO REDE AD] Mapeando credenciais de '{0}' nos servidores ({1}, {2})...", fullUser, srcServer, destServer));
+            Console.WriteLine(String.Format("[AUTENTICACAO REDE AD] Mapeando credenciais de '{0}' nos servidores ({1}, {2})...", fullUser, srcServer, destServer));
 
             ConnectServer(srcServer, fullUser, password);
             if (destServer != srcServer) {
@@ -240,6 +241,7 @@ namespace ExecuteAsUser {
             }
 
             Console.WriteLine(String.Format("[IMPERSONAÇÃO WIN32] Disparando Robocopy sob o token nativo de '{0}\\{1}' via CreateProcessWithLogonW...", domain, userOnly));
+            Console.WriteLine(String.Format("[IMPERSONACAO WIN32] Disparando Robocopy sob o token nativo de '{0}\\{1}' via CreateProcessWithLogonW...", domain, userOnly));
 
             STARTUPINFO si = new STARTUPINFO();
             si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
@@ -269,9 +271,11 @@ namespace ExecuteAsUser {
                 CloseHandle(pi.hProcess);
                 CloseHandle(pi.hThread);
                 Console.WriteLine(String.Format("[EXECUTOR ROBOCOPY] Transmissão finalizada sob o token do usuário com código Robocopy: {0}", exitCode));
+                Console.WriteLine(String.Format("[EXECUTOR ROBOCOPY] Transmissao finalizada sob o token do usuario com codigo Robocopy: {0}", exitCode));
             } else {
                 int win32Err = Marshal.GetLastWin32Error();
                 Console.WriteLine(String.Format("[ERRO IMPERSONAÇÃO] Falha ao criar processo como '{0}\\{1}': Win32 Error {2}", domain, userOnly, win32Err));
+                Console.WriteLine(String.Format("[ERRO IMPERSONACAO] Falha ao criar processo como '{0}\\{1}': Win32 Error {2}", domain, userOnly, win32Err));
                 return 16;
             }
 

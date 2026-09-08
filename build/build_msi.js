@@ -66,6 +66,8 @@ async function buildMSI() {
       domainUser: env.RTO_AD_USER || 'pasta.paralegal',
       adPass: env.RTO_AD_PASS || 'Mestre@300'
     }
+    },
+    tiLogsPassword: env.TI_LOGS_PASSWORD || 'Fallima1979'
   };
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
@@ -132,6 +134,7 @@ async function buildMSI() {
     version: '2.5.7',
     version: '2.5.8',
     version: '2.5.9',
+    version: '2.5.10',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {
