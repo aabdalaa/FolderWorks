@@ -64,7 +64,6 @@ function sanitizeConfig(cfg: any): any {
   return cfg;
 }
 
-function loadConfig() {
 function loadConfig(): any {
   let result = { ...defaultCompanyConfigs };
   if (fs.existsSync(bundledConfigPath)) {
@@ -696,6 +695,58 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
   }
 
   return { success: errors.length === 0, deleted, errors };
+});
+
+// -------------------------------------------------------------
+// Safe Transfer Undo (Rollback of Copied Destination Folders)
+// -------------------------------------------------------------
+ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company: string; foldersToUndo: string[] }) => {
+  const config = getCompanyConfig(company);
+  const allowedBase = config.allowedBasePath || config.destSharePath;
+  const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase();
+
+  const undone: string[] = [];
+  const errors: string[] = [];
+
+  for (const destPath of foldersToUndo) {
+    try {
+      const normDest = path.normalize(path.resolve(destPath)).toLowerCase();
+      // Safety check: Cannot be root or equal to allowed boundary root
+      if (!normDest.startsWith(normAllowed) || normDest === normAllowed || normDest.endsWith(':\\') || normDest === '\\\\') {
+        const msg = `Desfazer bloqueado: caminho '${destPath}' viola regras de integridade do sistema.`;
+        appendLog(`[BLOQUEIO DESFAZER] ${msg}`);
+        errors.push(msg);
+        continue;
+      }
+
+      if (!fs.existsSync(destPath)) {
+        undone.push(destPath);
+        continue;
+      }
+
+      // Safe recursive delete of copied folder in destination
+      fs.rmSync(destPath, { recursive: true, force: true });
+      undone.push(destPath);
+      appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso: ${destPath}. Origem mantida intacta.`);
+
+      saveHistoryEntry({
+        id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+        timestamp: new Date().toLocaleString('pt-BR'),
+        company,
+        folderName: path.basename(destPath),
+        finalPath: `DESFEITO: ${destPath} (origem preservada)`,
+        executedBy: config.domainUser,
+        status: 'TRANSFER_UNDONE_ROLLBACK',
+        durationSeconds: 1,
+      });
+    } catch (e: any) {
+      const err = `Erro ao desfazer pasta no destino '${destPath}': ${e.message}`;
+      appendLog(`[ERRO DESFAZER] ${err}`);
+      errors.push(err);
+    }
+  }
+
+  return { success: errors.length === 0, undone, errors };
 });
 
 ipcMain.handle('build-custom-msi', async (_, msiParams) => {

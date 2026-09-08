@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listSubdirectories: (targetDir: string, company?: string) => ipcRenderer.invoke('list-subdirectories', { targetDir, company }),
   safeTransferCopy: (req: { company: 'RELIQUIA' | 'RTO'; sourcePath: string; destParentPath: string }) => ipcRenderer.invoke('safe-transfer-copy', req),
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => ipcRenderer.invoke('delete-source-folders', req),
+  undoTransfer: (req: { company: string; foldersToUndo: string[] }) => ipcRenderer.invoke('undo-transfer', req),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   onLog: (callback: (log: string) => void) => {
     const handler = (_: any, data: string) => callback(data);

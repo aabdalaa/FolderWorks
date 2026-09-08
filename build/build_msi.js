@@ -132,6 +132,7 @@ async function buildMSI() {
     manufacturer: 'ENTROPY - André Abdala',
     version: '2.5.11',
     version: '2.5.12',
+    version: '2.5.13',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

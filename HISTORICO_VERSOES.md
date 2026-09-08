@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.13 (08/09/2026) - **Botões 'Deu Certo' e 'Não Deu Certo' com Rollback Automático da Transferência**
+- **Substituição dos Botões Pós-Transferência (`FolderTransferView.tsx`)**:
+  - Eliminados os termos técnicos anteriores (*"Excluir da Origem"* e *"Não, manter na Origem"*).
+  - Adicionados dois botões orientados à validação humana e segurança:
+    - **"Deu certo (Excluir da Origem)"**: O operador valida visualmente que a pasta está correta no destino. Ao clicar, o aplicativo apaga a pasta da origem com segurança para liberar espaço.
+    - **"Não deu certo (Desfazer)"**: O operador sinaliza qualquer divergência. O aplicativo executa imediatamente o **rollback da transferência**, apagando os arquivos recém-copiados no destino e **mantendo os arquivos originais 100% intactos na pasta de origem**.
+- **Novo Handler IPC `undo-transfer` no Backend (`electron/main.ts`)**:
+  - Validação estrita de perímetro corporativo contra violação de compartilhamentos raiz.
+  - Exclusão recursiva limpa das pastas copiadas no destino com rollback seguro.
+  - Registro de auditoria com status `TRANSFER_UNDONE_ROLLBACK` e log corporativo explicativo.
+- **Feedback Visual Informativo**:
+  - Banners distintos para sucesso na validação (verde) e para transferência desfeita (azul), trazendo tranquilidade operacional ao usuário.
+- **Novo Pacote MSI v2.5.13**: Compilado com WiX Toolset v3.14 mantendo tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.12 (08/09/2026) - **Relocação de 'Sobre o Desenvolvedor' para o Cabeçalho Superior e Despoluição da Barra Lateral**
 - **Despoluição da Barra Lateral (`Sidebar.tsx`)**:
   - Removido o item *"Sobre o Desenvolvedor"* da lista de navegação lateral.
