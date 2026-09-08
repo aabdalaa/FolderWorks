@@ -15,6 +15,7 @@ import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const [previousTab, setPreviousTab] = useState<AppTab>('dashboard');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isTIAccessModalOpen, setIsTIAccessModalOpen] = useState(false);
   const [isActivityLogModalOpen, setIsActivityLogModalOpen] = useState(false);
@@ -23,6 +24,22 @@ export const App: React.FC = () => {
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
   const { theme, setTheme } = useTheme();
+
+  const handleSelectTab = (tab: AppTab) => {
+    if (activeTab !== 'about') {
+      setPreviousTab(activeTab);
+    }
+    setActiveTab(tab);
+  };
+
+  const handleToggleAbout = () => {
+    if (activeTab === 'about') {
+      setActiveTab(previousTab);
+    } else {
+      setPreviousTab(activeTab);
+      setActiveTab('about');
+    }
+  };
 
   useEffect(() => {
     // Initial logs load
@@ -124,7 +141,7 @@ export const App: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={handleSelectTab}
           reliquiaStatus={reliquiaStatus}
           rtoStatus={rtoStatus}
         />
@@ -136,6 +153,8 @@ export const App: React.FC = () => {
             subtitle={headerInfo.subtitle}
             theme={theme}
             onSetTheme={setTheme}
+            onOpenAbout={handleToggleAbout}
+            isAboutActive={activeTab === 'about'}
           />
 
           <main className="flex-1 overflow-y-auto p-6 pb-12">
@@ -153,6 +172,7 @@ export const App: React.FC = () => {
             {activeTab === 'history' && <HistoryView />}
             {activeTab === 'manual' && <UserGuideView />}
             {activeTab === 'about' && <AboutView />}
+            {activeTab === 'about' && <AboutView onBack={() => setActiveTab(previousTab)} />}
           </main>
         </div>
       </div>

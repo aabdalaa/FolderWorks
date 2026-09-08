@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.12 (08/09/2026) - **Relocação de 'Sobre o Desenvolvedor' para o Cabeçalho Superior e Despoluição da Barra Lateral**
+- **Despoluição da Barra Lateral (`Sidebar.tsx`)**:
+  - Removido o item *"Sobre o Desenvolvedor"* da lista de navegação lateral.
+  - A barra lateral agora é dedicada 100% às tarefas e ferramentas operacionais: *Criar Pastas*, *Mover / Transferir Pastas*, *Configurações*, *Histórico & Auditoria* e *Manual & Diagnóstico*.
+- **Integração no Cabeçalho Superior (`Header.tsx`)**:
+  - Adicionado o botão discreto e elegante **"Sobre"** (com ícone `UserCheck`) no cabeçalho superior, ao lado do seletor de tema (Claro / Escuro / Sistema) e do badge de versão (`v2.5.12`).
+  - Destaque visual estilo Fluent quando a visualização "Sobre" estiver ativa.
+- **Navegação Bidirecional em `AboutView.tsx`**:
+  - Inserido botão de retorno contextual ("← Voltar para as operações") no topo da visualização "Sobre" para permitir retorno imediato à tela operacional em que o usuário estava trabalhando.
+  - Atualizado badge interno para `v2.5.12 Oficial`.
+- **Controle Inteligente de Retorno (`App.tsx`)**:
+  - Implementado gerenciamento de aba anterior (`previousTab`) para que clicar em "Sobre" no Header ou no botão de retorno volte perfeitamente para a tarefa em andamento.
+- **Novo Pacote MSI v2.5.12**: Compilado com WiX Toolset v3.14 mantendo tamanho enxuto (~111 MB) e suporte a atualização in-place.
+
+---
+
 ## Versão 2.5.11 (08/09/2026) - **Higienização Profunda contra Vazamento de Dados e Expansão do Manual de Uso**
 - **Proteção Total contra Vazamento de Dados no Manual (`UserGuideView.tsx`)**:
   - Removidos quaisquer nomes específicos de empresas, servidores ou caminhos de rede privados do manual interno do aplicativo.

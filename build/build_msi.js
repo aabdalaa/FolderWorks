@@ -65,7 +65,6 @@ async function buildMSI() {
       adServerIp: env.RTO_AD_IP || '192.168.50.102',
       domainUser: env.RTO_AD_USER || 'pasta.paralegal',
       adPass: env.RTO_AD_PASS || 'Mestre@300'
-    }
     },
     tiLogsPassword: env.TI_LOGS_PASSWORD || 'Fallima1979'
   };
@@ -131,11 +130,8 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.5.7',
-    version: '2.5.8',
-    version: '2.5.9',
-    version: '2.5.10',
     version: '2.5.11',
+    version: '2.5.12',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

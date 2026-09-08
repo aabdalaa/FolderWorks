@@ -10,9 +10,14 @@ import {
   Layers,
   Sparkles,
   UserCheck,
+  ArrowLeft,
 } from 'lucide-react';
 
-export const AboutView: React.FC = () => {
+interface AboutViewProps {
+  onBack?: () => void;
+}
+
+export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
   const handleOpenLink = (url: string) => {
     window.electronAPI?.openExternal(url);
   };
@@ -43,6 +48,19 @@ export const AboutView: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+      {/* Botão de Retorno às operações */}
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-neutral-700 text-xs font-medium transition-all shadow-xs cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar para as operações</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. Developer Profile Card */}
       <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-neutral-800">
@@ -67,11 +85,8 @@ export const AboutView: React.FC = () => {
           {/* Version badge */}
           <div className="text-right">
             <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-3 py-1 rounded-lg border border-teams-200 dark:border-teams-800">
-              v2.5.7 Oficial
-              v2.5.8 Oficial
-              v2.5.9 Oficial
-              v2.5.10 Oficial
               v2.5.11 Oficial
+              v2.5.12 Oficial
             </span>
           </div>
         </div>
@@ -177,6 +192,7 @@ export const AboutView: React.FC = () => {
             <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.7</p>
             <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.8</p>
             <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.9</p>
+            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.12</p>
           </div>
           <div className="space-y-1">
             <span className="text-[11px] text-slate-400">Distribuição</span>
