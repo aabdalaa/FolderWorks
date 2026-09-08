@@ -1,5 +1,13 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.8 (08/09/2026) - **Linguagem Natural e Acessível na Transferência de Pastas ('Onde está a pasta?' / 'Para onde vai a pasta?')**
+- **Humanização dos Rótulos de Transferência (`FolderTransferView.tsx`)**:
+  - Rótulos atualizados de `"Pasta de Origem"` para **`"Onde está a pasta?"`** e de `"Pasta de Destino"` para **`"Para onde vai a pasta?"`**.
+  - Alerta de violação de perímetro renomeado para **`"Local de Destino Inválido"`**, eliminando ambiguidades técnicas para operadores, assistentes e secretárias.
+- **Novo Pacote MSI v2.5.8**: Instalador oficial compilado e disponibilizado para atualização in-place mantendo integridade e tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.7 (08/09/2026) - **Correção Definitiva de Encoding UTF-8 para Caracteres com Cedilha ('Ç') e Acentos**
 - **Padronização UTF-8 no Motor Nativo C# (`ExecuteAsUser.exe`)**:
   - Configurados explicitamente `Console.OutputEncoding = new UTF8Encoding(false)` e `Console.InputEncoding = new UTF8Encoding(false)` no executável nativo Win32.
