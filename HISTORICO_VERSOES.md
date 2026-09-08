@@ -1,5 +1,16 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.7 (08/09/2026) - **Correção Definitiva de Encoding UTF-8 para Caracteres com Cedilha ('Ç') e Acentos**
+- **Padronização UTF-8 no Motor Nativo C# (`ExecuteAsUser.exe`)**:
+  - Configurados explicitamente `Console.OutputEncoding = new UTF8Encoding(false)` e `Console.InputEncoding = new UTF8Encoding(false)` no executável nativo Win32.
+  - Eliminada a emissão de caracteres sob OEM Code Page CP850/Windows-1252, erradicando a corrupção de caracteres especiais como `Ç` (ex: `SERVIÇOS` sendo corrompido para `SERVIOS` com `\uFFFD`).
+- **Decodificação Defensiva no Backend Electron (`electron/main.ts`)**:
+  - Implementada função de decodificação resiliente (`decodeProcessOutput`) que processa streams de subprocessos em `Buffer`, com fallback automático para CP850/CP1252 caso qualquer utilitário legado do Windows emita bytes OEM.
+  - Subpastas em shares de rede e logs de Robocopy agora preservam 100% da acentuação oficial do português brasileiro (`Ç`, `Ã`, `É`, `Ó`, etc.).
+- **Novo Pacote MSI v2.5.7**: Instalador oficial compilado e disponibilizado para atualização in-place.
+
+---
+
 ## Versão 2.5.6 (08/09/2026) - **Nova Tela 'Sobre o Desenvolvedor' com Redes Sociais e Identidade Entropy**
 - **Nova Visualização 'Sobre o Desenvolvedor & Entropy' (`AboutView.tsx`)**:
   - Perfil oficial do desenvolvedor **André Abdala** (Desenvolvedor de Software & Arquiteto de Soluções).

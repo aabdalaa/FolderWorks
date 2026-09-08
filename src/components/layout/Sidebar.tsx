@@ -1,8 +1,6 @@
 import React from 'react';
-import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, FolderOutput } from 'lucide-react';
 import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, FolderOutput, UserCheck } from 'lucide-react';
 
-export type AppTab = 'dashboard' | 'transfer' | 'settings' | 'history' | 'manual';
 export type AppTab = 'dashboard' | 'transfer' | 'settings' | 'history' | 'manual' | 'about';
 
 interface SidebarProps {

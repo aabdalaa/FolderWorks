@@ -1,0 +1,285 @@
+using System;
+using System.IO;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+using System.Text;
+
+namespace ExecuteAsUser {
+    class Program {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct STARTUPINFO {
+            public int cb;
+            public string lpReserved;
+            public string lpDesktop;
+            public string lpTitle;
+            public int dwX;
+            public int dwY;
+            public int dwXSize;
+            public int dwYSize;
+            public int dwXCountChars;
+            public int dwYCountChars;
+            public int dwFillAttribute;
+            public int dwFlags;
+            public short wShowWindow;
+            public short cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
+        }
+
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool CreateProcessWithLogonW(
+            string userName,
+            string domain,
+            string password,
+            int logonFlags,
+            string applicationName,
+            string commandLine,
+            int creationFlags,
+            IntPtr environment,
+            string currentDirectory,
+            ref STARTUPINFO startupInfo,
+            out PROCESS_INFORMATION processInformation
+        );
+
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool LogonUser(
+            string lpszUsername,
+            string lpszPDomain,
+            string lpszPassword,
+            int dwLogonType,
+            int dwLogonProvider,
+            out IntPtr phToken
+        );
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern int WaitForSingleObject(IntPtr hHandle, int dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetExitCodeProcess(IntPtr hProcess, out int lpExitCode);
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int WNetAddConnection2(ref NETRESOURCE lpNetResource, string lpPassword, string lpUsername, int dwFlags);
+
+        [DllImport("mpr.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int WNetCancelConnection2(string lpName, int dwFlags, bool fForce);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NETRESOURCE {
+            public int dwScope;
+            public int dwType;
+            public int dwUsage;
+            public int dwDisplayType;
+            public string lpLocalName;
+            public string lpRemoteName;
+            public string lpComment;
+            public string lpProvider;
+        }
+
+        private const int RESOURCETYPE_DISK = 0x00000001;
+        const int LOGON_NETCREDENTIALS_ONLY = 2;
+        const int CREATE_NO_WINDOW = 0x08000000;
+        const int LOGON32_LOGON_NEW_CREDENTIALS = 9;
+        const int LOGON32_PROVIDER_DEFAULT = 0;
+
+        private static string ExtractServerName(string path) {
+            if (string.IsNullOrEmpty(path)) return "";
+            string clean = path.TrimStart('\\');
+            int slashIdx = clean.IndexOf('\\');
+            if (slashIdx > 0) return @"\\" + clean.Substring(0, slashIdx);
+            return @"\\" + clean;
+        }
+
+        private static void ConnectServer(string server, string user, string password) {
+            if (string.IsNullOrEmpty(server)) return;
+            try { WNetCancelConnection2(server + @"\IPC$", 0, true); } catch {}
+            try { WNetCancelConnection2(server, 0, true); } catch {}
+
+            NETRESOURCE nr = new NETRESOURCE();
+            nr.dwType = RESOURCETYPE_DISK;
+            nr.lpRemoteName = server + @"\IPC$";
+
+            int res = WNetAddConnection2(ref nr, password, user, 0);
+            if (res != 0 && res != 1219) {
+                nr.lpRemoteName = server;
+                WNetAddConnection2(ref nr, password, user, 0);
+            }
+        }
+
+        private static string EscapeJson(string s) {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "").Replace("\n", "");
+        }
+
+        private static int ListDirectories(string fullUser, string password, string targetPath) {
+            targetPath = targetPath.TrimEnd('\\');
+            if (!targetPath.StartsWith(@"\\")) targetPath = @"\\" + targetPath.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            string server = ExtractServerName(targetPath);
+            // ConnectServer not needed here as LogonUser with LOGON32_LOGON_NEW_CREDENTIALS handles network credentials
+
+            IntPtr token = IntPtr.Zero;
+            bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
+
+            WindowsImpersonationContext ctx = null;
+            if (logonOk) {
+                try {
+                    ctx = WindowsIdentity.Impersonate(token);
+                } catch {}
+            }
+
+            try {
+                if (!Directory.Exists(targetPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Diretório não encontrado no servidor\", \"folders\": []}");
+                    return 1;
+                }
+
+                string[] subdirs = Directory.GetDirectories(targetPath);
+                List<string> jsonItems = new List<string>();
+
+                foreach (string d in subdirs) {
+                    try {
+                        Directory.GetFileSystemEntries(d);
+
+                        string name = Path.GetFileName(d);
+                        string mtime = "";
+                        try {
+                            mtime = Directory.GetLastWriteTime(d).ToString("dd/MM/yyyy");
+                        } catch {}
+
+                        jsonItems.Add("{\"name\":\"" + EscapeJson(name) + "\",\"fullPath\":\"" + EscapeJson(d) + "\",\"mtime\":\"" + EscapeJson(mtime) + "\"}");
+                    } catch (UnauthorizedAccessException) {
+                        // PERMISSÃO NEGADA PELO TI NO AD (Ex: _ATA de REUNIOES)!
+                        // Oculta estritamente da tela!
+                        continue;
+                    } catch (Exception) {
+                        continue;
+                    }
+                }
+
+                Console.WriteLine("{\"success\": true, \"folders\": [" + String.Join(",", jsonItems.ToArray()) + "]}");
+                return 0;
+            } catch (Exception ex) {
+                Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\", \"folders\": []}");
+                return 1;
+            } finally {
+                if (ctx != null) { ctx.Dispose(); }
+                if (token != IntPtr.Zero) { CloseHandle(token); }
+            }
+        }
+
+        static int Main(string[] args) {
+            try {
+                Console.OutputEncoding = new UTF8Encoding(false);
+                Console.InputEncoding = new UTF8Encoding(false);
+            } catch {}
+
+            if (args == null || args.Length < 4) {
+                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | Domain\User> <Password> <Source> <TargetPath>");
+                return 16;
+            }
+
+            if (args[0] == "--list") {
+                return ListDirectories(args[1], args[2], args[3]);
+            }
+
+            string fullUser = args[0];
+            string password = args[1];
+            string src = args[2].TrimEnd('\\');
+            string dest = args[3].TrimEnd('\\');
+
+            if (!src.StartsWith(@"\\")) src = @"\\" + src.TrimStart('\\');
+            if (!dest.StartsWith(@"\\")) dest = @"\\" + dest.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            string srcServer = ExtractServerName(src);
+            string destServer = ExtractServerName(dest);
+
+            Console.WriteLine(String.Format("[AUTENTICAÇÃO REDE AD] Mapeando credenciais de '{0}' nos servidores ({1}, {2})...", fullUser, srcServer, destServer));
+
+            ConnectServer(srcServer, fullUser, password);
+            if (destServer != srcServer) {
+                ConnectServer(destServer, fullUser, password);
+            }
+
+            Console.WriteLine(String.Format("[IMPERSONAÇÃO WIN32] Disparando Robocopy sob o token nativo de '{0}\\{1}' via CreateProcessWithLogonW...", domain, userOnly));
+
+            STARTUPINFO si = new STARTUPINFO();
+            si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+            PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+
+            string appPath = @"C:\Windows\System32\robocopy.exe";
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DATS /DCOPY:DAT /MT:32 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+
+            bool ok = CreateProcessWithLogonW(
+                userOnly,
+                domain,
+                password,
+                LOGON_NETCREDENTIALS_ONLY,
+                null,
+                cmdLine,
+                CREATE_NO_WINDOW,
+                IntPtr.Zero,
+                @"C:\Windows\System32",
+                ref si,
+                out pi
+            );
+
+            int exitCode = 16;
+            if (ok) {
+                WaitForSingleObject(pi.hProcess, 180000);
+                GetExitCodeProcess(pi.hProcess, out exitCode);
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+                Console.WriteLine(String.Format("[EXECUTOR ROBOCOPY] Transmissão finalizada sob o token do usuário com código Robocopy: {0}", exitCode));
+            } else {
+                int win32Err = Marshal.GetLastWin32Error();
+                Console.WriteLine(String.Format("[ERRO IMPERSONAÇÃO] Falha ao criar processo como '{0}\\{1}': Win32 Error {2}", domain, userOnly, win32Err));
+                return 16;
+            }
+
+            if (exitCode < 8) {
+                return 0;
+            } else {
+                return exitCode;
+            }
+        }
+    }
+}

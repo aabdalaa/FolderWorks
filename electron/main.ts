@@ -288,6 +288,74 @@ ipcMain.handle('select-directory', async (_, defaultPath?: string) => {
   return res.filePaths[0];
 });
 
+/**
+ * Decodifica buffers de processos externos de forma segura e defensiva.
+ * Tenta UTF-8 nativo primeiro. Se detectar sequências OEM CP850/Windows-1252 corrompidas
+ * (símbolo de interrogação U+FFFD), converte os bytes automaticamente para preservar 'Ç', 'ã', etc.
+ */
+function decodeProcessOutput(data: Buffer | string | null | undefined): string {
+  if (!data) return '';
+  if (typeof data === 'string') {
+    return data;
+  }
+  const utf8Str = data.toString('utf8');
+  if (!utf8Str.includes('\uFFFD')) {
+    return utf8Str;
+  }
+  let decoded = '';
+  for (let i = 0; i < data.length; i++) {
+    const byte = data[i];
+    if (byte < 128) {
+      decoded += String.fromCharCode(byte);
+    } else {
+      switch (byte) {
+        case 0x80: decoded += 'Ç'; break;
+        case 0x81: decoded += 'ü'; break;
+        case 0x82: decoded += 'é'; break;
+        case 0x83: decoded += 'â'; break;
+        case 0x84: decoded += 'ä'; break;
+        case 0x85: decoded += 'à'; break;
+        case 0x87: decoded += 'ç'; break;
+        case 0x88: decoded += 'ê'; break;
+        case 0x89: decoded += 'ë'; break;
+        case 0x8A: decoded += 'è'; break;
+        case 0x8B: decoded += 'ï'; break;
+        case 0x8C: decoded += 'î'; break;
+        case 0x8D: decoded += 'ì'; break;
+        case 0x8E: decoded += 'Ä'; break;
+        case 0x8F: decoded += 'Å'; break;
+        case 0x90: decoded += 'É'; break;
+        case 0x93: decoded += 'ô'; break;
+        case 0x94: decoded += 'ö'; break;
+        case 0x95: decoded += 'ò'; break;
+        case 0x96: decoded += 'û'; break;
+        case 0x97: decoded += 'ù'; break;
+        case 0xA0: decoded += 'á'; break;
+        case 0xA1: decoded += 'í'; break;
+        case 0xA2: decoded += 'ó'; break;
+        case 0xA3: decoded += 'ú'; break;
+        case 0xA4: decoded += 'ñ'; break;
+        case 0xA5: decoded += 'Ñ'; break;
+        case 0xA6: decoded += 'ª'; break;
+        case 0xA7: decoded += 'º'; break;
+        case 0xC6: decoded += 'ã'; break;
+        case 0xC7: decoded += 'Ã'; break;
+        case 0xCA: decoded += 'Ê'; break;
+        case 0xE4: decoded += 'õ'; break;
+        case 0xE5: decoded += 'Õ'; break;
+        default:
+          try {
+            decoded += new TextDecoder('windows-1252').decode(Uint8Array.from([byte]));
+          } catch {
+            decoded += String.fromCharCode(byte);
+          }
+          break;
+      }
+    }
+  }
+  return decoded;
+}
+
 function getExecutorPath(): string {
   const possibleExecutorPaths = [
     path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
@@ -348,7 +416,9 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
     if (isNetwork && executor && cfg && cfg.domainUser && cfg.adPass) {
       appendLog(`[LISTAGEM AD] Listando diretório de rede estritamente sob as credenciais de '${cfg.domainUser}'...`);
       return new Promise((resolve) => {
-        execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 35000 }, (err, stdout, stderr) => {
+        execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 35000, encoding: 'buffer' }, (err, stdout, stderr) => {
+          const stdoutStr = decodeProcessOutput(stdout);
+          const stderrStr = decodeProcessOutput(stderr);
           if (err) {
             const msg = `Falha na listagem AD sob o usuário '${cfg.domainUser}': ${err.message}`;
             appendLog(`[LISTAGEM AD ERRO] ${msg}`);
@@ -356,7 +426,7 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
             return;
           }
           try {
-            const outStr = (stdout || '').trim();
+            const outStr = (stdoutStr || '').trim();
             const parsed = JSON.parse(outStr);
             if (parsed && parsed.success) {
               let resultFolders = parsed.folders || [];
@@ -375,7 +445,7 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
               return;
             }
           } catch (pErr: any) {
-            const parseMsg = `Erro ao decodificar JSON do motor AD: ${pErr.message}. Output: ${stdout}`;
+            const parseMsg = `Erro ao decodificar JSON do motor AD: ${pErr.message}. Output: ${stdoutStr}`;
             appendLog(`[LISTAGEM AD ERRO] ${parseMsg}`);
             resolve({ success: false, error: parseMsg, folders: [] });
           }
@@ -495,12 +565,14 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
 
     if (executorPath) {
       appendLog(`[IMPERSONAÇÃO AD] Disparando Robocopy sob o token de '${adUser}'...`);
-      execFile(executorPath, [adUser, adPass, srcArg, destArg], (error, stdout, stderr) => {
-        if (stdout) {
-          stdout.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDOUT] ${line.trim()}`));
+      execFile(executorPath, [adUser, adPass, srcArg, destArg], { encoding: 'buffer' }, (error, stdout, stderr) => {
+        const stdoutStr = decodeProcessOutput(stdout);
+        const stderrStr = decodeProcessOutput(stderr);
+        if (stdoutStr) {
+          stdoutStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDOUT] ${line.trim()}`));
         }
-        if (stderr) {
-          stderr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDERR] ${line.trim()}`));
+        if (stderrStr) {
+          stderrStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDERR] ${line.trim()}`));
         }
 
         let exitCode = 0;
@@ -698,12 +770,14 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   return new Promise((resolve) => {
     const startTime = Date.now();
 
-    execFile(executorPath, [adUser, adPass, srcArg, destArg], (error, stdout, stderr) => {
-      if (stdout) {
-        stdout.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDOUT] ${line.trim()}`));
+    execFile(executorPath, [adUser, adPass, srcArg, destArg], { encoding: 'buffer' }, (error, stdout, stderr) => {
+      const stdoutStr = decodeProcessOutput(stdout);
+      const stderrStr = decodeProcessOutput(stderr);
+      if (stdoutStr) {
+        stdoutStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDOUT] ${line.trim()}`));
       }
-      if (stderr) {
-        stderr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDERR] ${line.trim()}`));
+      if (stderrStr) {
+        stderrStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[ROBOCOPY STDERR] ${line.trim()}`));
       }
 
       let exitCode = 0;
