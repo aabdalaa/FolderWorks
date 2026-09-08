@@ -135,6 +135,7 @@ async function buildMSI() {
     version: '2.5.8',
     version: '2.5.9',
     version: '2.5.10',
+    version: '2.5.11',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

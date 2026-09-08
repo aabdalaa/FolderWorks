@@ -18,6 +18,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ isLocked = false }) => {
           v2.5.8
           v2.5.9
           v2.5.10
+          v2.5.11
         </span>
       </div>
 

@@ -1,5 +1,20 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.11 (08/09/2026) - **Higienização Profunda contra Vazamento de Dados e Expansão do Manual de Uso**
+- **Proteção Total contra Vazamento de Dados no Manual (`UserGuideView.tsx`)**:
+  - Removidos quaisquer nomes específicos de empresas, servidores ou caminhos de rede privados do manual interno do aplicativo.
+  - Eliminado o exemplo real de código de cliente (`10572 - AERO 0010`) e adotado exemplo neutro e ilustrativo (`0001 - CLIENTE EXEMPLO LTDA`).
+  - Nenhuma senha ou credencial de acesso é citada ou exposta na interface do manual.
+- **Instruções de Auditoria e Acesso a Logs para TI**:
+  - Adicionada seção detalhada explicando a localização do botão discreto no canto inferior direito (`REGISTRO TI`).
+  - Esclarecida a política de proteção por credencial corporativa e os recursos de telemetria, color coding de eventos, limpeza e exportação em `.txt`.
+- **Enriquecimento do Guia Operacional**:
+  - Seções completas de *Criação de Pastas*, finalidade das *7 Subpastas Departamentais*, *Transferência Segura* com perguntas intuitivas e *Histórico de Auditoria*.
+  - Expansão de *Dúvidas Frequentes & Governança* sobre verificação de pastas já existentes e bloqueio de janela durante transmissões ativas.
+- **Novo Pacote MSI v2.5.11**: Compilado com WiX Toolset mantendo tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.10 (08/09/2026) - **Registro de Atividades Privado (TI), Autenticação por Senha via Variável de Ambiente e Correção de Encoding**
 - **Privacidade e Despoluição da Interface do Usuário**:
   - Removido o terminal de logs ao vivo da tela principal de criação (`FolderCreationView.tsx`), eliminando termos técnicos do escopo visual dos operadores comuns.

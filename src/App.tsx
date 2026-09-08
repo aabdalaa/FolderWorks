@@ -15,7 +15,6 @@ import { useTheme } from './hooks/useTheme';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isTIAccessModalOpen, setIsTIAccessModalOpen] = useState(false);
   const [isActivityLogModalOpen, setIsActivityLogModalOpen] = useState(false);
@@ -46,10 +45,6 @@ export const App: React.FC = () => {
   const handleClearLogs = async () => {
     await window.electronAPI?.clearLogs();
     setLogs([]);
-  };
-
-  const handleOpenLogs = async () => {
-    await window.electronAPI?.openLogFile();
   };
 
   const handleCreateFolder = async (company: 'RELIQUIA' | 'RTO', folderName: string) => {
@@ -121,10 +116,8 @@ export const App: React.FC = () => {
   const isAnyModalOpen = isTransferModalOpen || isTIAccessModalOpen || isActivityLogModalOpen;
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors">
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors relative">
       {/* 1. Custom Frameless TitleBar */}
-      <TitleBar isLocked={isModalOpen} />
       <TitleBar isLocked={isAnyModalOpen} />
 
       {/* 2. Main Body with Sidebar Navigation */}
@@ -137,30 +130,22 @@ export const App: React.FC = () => {
         />
 
         {/* Viewport Content */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-100/60 dark:bg-neutral-950/80">
         <div className="flex-1 flex flex-col overflow-hidden bg-slate-100/60 dark:bg-neutral-950/80 relative">
           <Header
             title={headerInfo.title}
             subtitle={headerInfo.subtitle}
-            onOpenLogs={handleOpenLogs}
             theme={theme}
             onSetTheme={setTheme}
           />
 
-          <main className="flex-1 overflow-y-auto p-6">
           <main className="flex-1 overflow-y-auto p-6 pb-12">
             {activeTab === 'transfer' && (
               <FolderTransferView
-                logs={logs}
-                onOpenLogs={handleOpenLogs}
-                onModalStateChange={setIsModalOpen}
                 onModalStateChange={setIsTransferModalOpen}
               />
             )}
             {activeTab === 'dashboard' && (
               <FolderCreationView
-                logs={logs}
-                onClearLogs={handleClearLogs}
                 onCreateFolder={handleCreateFolder}
               />
             )}

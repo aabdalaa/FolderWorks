@@ -65,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, theme, onSetThe
           <span>v2.5.8</span>
           <span>v2.5.9</span>
           <span>v2.5.10</span>
+          <span>v2.5.11</span>
         </div>
 
         {/* Open Logs Button */}
