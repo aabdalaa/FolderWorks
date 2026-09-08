@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Building2, FolderPlus, Terminal, Trash2, CheckCircle2, AlertTriangle, Layers, Loader2, Sparkles } from 'lucide-react';
+import { Building2, FolderPlus, Terminal, Trash2, CheckCircle2, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 
 interface FolderCreationViewProps {
   logs: string[];
@@ -47,6 +48,8 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ logs, on
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Form Card */}
         <div className="lg:col-span-2 bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm relative overflow-hidden">
+      {/* Selection Form Card */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm relative overflow-hidden">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
               <FolderPlus className="w-5 h-5" />

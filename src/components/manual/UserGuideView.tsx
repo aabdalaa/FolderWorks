@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, FolderPlus, FolderOutput, CheckCircle2, HelpCircle } from 'lucide-react';
+import { BookOpen, FolderPlus, FolderOutput, CheckCircle2, HelpCircle, Layers } from 'lucide-react';
 
 export const UserGuideView: React.FC = () => {
   return (
@@ -28,6 +29,47 @@ export const UserGuideView: React.FC = () => {
             <li>O aplicativo criará automaticamente a pasta principal e todas as 7 subpastas padrão no servidor da empresa selecionada.</li>
             <li>Uma mensagem de confirmação em verde indicará que a operação foi concluída.</li>
           </ol>
+
+          {/* Subpastas Padrão Criadas pelo Sistema */}
+          <div className="mt-3 p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 space-y-3">
+            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+              <Layers className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+              <span>Subpastas Padrão Geradas Automaticamente (7 Pastas)</span>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+              Ao criar um cliente, a estrutura abaixo é replicada integralmente no servidor com as permissões restritas de cada departamento:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">CONTABILIDADE</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Livros diários e balancetes</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">DP</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Folha de pagamento e guias</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">EXPEDIÇÃO</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Documentos e transporte</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">FISCAL</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Notas fiscais e impostos</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">PARALEGAL</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Contratos e certidões</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">RH</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Treinamentos e medicina</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs sm:col-span-2">
+                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">SPED</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Arquivos de obrigações acessórias eletrônicas</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <hr className="border-slate-100 dark:border-neutral-700" />

@@ -1,5 +1,14 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.9 (08/09/2026) - **Realocação do Card 'Subpastas Padrão' para a Aba 'Manual & Diagnóstico'**
+- **Despoluição da Tela Inicial (`FolderCreationView.tsx`)**:
+  - Removido o card lateral que listava as subpastas padrão, permitindo que o formulário de criação ocupe a tela de forma mais limpa, ampla e focada na tarefa do operador.
+- **Enriquecimento do Manual do Usuário (`UserGuideView.tsx`)**:
+  - Inserida a seção visual detalhada **"Subpastas Padrão Geradas Automaticamente (7 Pastas)"** com o detalhamento operacional de cada pasta (`CONTABILIDADE`, `DP`, `EXPEDIÇÃO`, `FISCAL`, `PARALEGAL`, `RH`, `SPED`) diretamente no guia de criação de clientes.
+- **Novo Pacote MSI v2.5.9**: Instalador oficial compilado e disponibilizado para atualização in-place mantendo integridade e tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.8 (08/09/2026) - **Linguagem Natural e Acessível na Transferência de Pastas ('Onde está a pasta?' / 'Para onde vai a pasta?')**
 - **Humanização dos Rótulos de Transferência (`FolderTransferView.tsx`)**:
   - Rótulos atualizados de `"Pasta de Origem"` para **`"Onde está a pasta?"`** e de `"Pasta de Destino"` para **`"Para onde vai a pasta?"`**.

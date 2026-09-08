@@ -1,6 +1,8 @@
 {
   "name": "folderworks",
+  "version": "2.5.7",
   "version": "2.5.8",
+  "version": "2.5.9",
   "productName": "FolderWorks",
   "description": "FolderWorks - Suíte de Automação de Criador de Pastas (ENTROPY)",
   "main": "dist-electron/main.js",
