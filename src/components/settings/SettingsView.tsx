@@ -5,8 +5,6 @@ import {
   XCircle,
   Lock,
   Unlock,
-  ShieldCheck,
-  ShieldAlert,
   Plus,
   Trash2,
   FolderOpen,
@@ -19,6 +17,7 @@ import {
   AlertTriangle,
   FolderTree,
   FolderOutput,
+  ShieldCheck,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
 
@@ -62,6 +61,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  // Helper to extract company keys
+  const getCompanyKeys = (cfg: any): string[] => {
+    if (!cfg || typeof cfg !== 'object') return [];
+    return Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+  };
+
   // Sync external TI authentication state
   useEffect(() => {
     if (externalIsTIAuth !== undefined) {
@@ -69,7 +74,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }, [externalIsTIAuth]);
 
-  // Load config on mount
+  // Load config on mount and listen to updates
   useEffect(() => {
     window.electronAPI?.getConfig().then((cfg) => {
       setConfig(cfg);
@@ -86,11 +91,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       if (unsub) unsub();
     };
   }, []);
-
-  const getCompanyKeys = (cfg: any): string[] => {
-    if (!cfg || typeof cfg !== 'object') return [];
-    return Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-  };
 
   const companyKeys = getCompanyKeys(config);
 
@@ -131,7 +131,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       [compKey]: {
         ...prev[compKey],
         [fieldKey]: val,
-        // sync destSharePath and destinationParentPath for backwards compatibility
         ...(fieldKey === 'destSharePath' ? { destinationParentPath: val } : {}),
         ...(fieldKey === 'destinationParentPath' ? { destSharePath: val } : {}),
       },
@@ -153,8 +152,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const newIndex = curShortcuts.length + 1;
     const basePath = config[compKey]?.allowedBasePath || config[compKey]?.destSharePath || '';
     curShortcuts.push({
-      name: `NOVO ATALHO ${newIndex}`,
-      path: basePath ? `${basePath}\\NOVO ATALHO ${newIndex}` : '',
+      name: `ATALHO ${newIndex}`,
+      path: basePath ? `${basePath}\\PASTA_${newIndex}` : '',
     });
     handleFieldChange(compKey, 'presetDestinations', curShortcuts);
   };
@@ -171,25 +170,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (!rawName) return;
 
     if (config[rawName]) {
-      alert('Já existe uma empresa cadastrada com esse identificador!');
+      alert('Já existe uma empresa cadastrada com esse identificador.');
       return;
     }
 
     const newCompanyObj = {
       name: rawName,
       companyName: rawName,
-      sourcePath: `\\\\192.168.1.1\\gpo\\criarpastas_paralegal\\MODELO`,
-      destSharePath: `\\\\192.168.1.1\\arquivos\\CLIENTES\\EMPRESAS`,
-      destinationParentPath: `\\\\192.168.1.1\\arquivos\\CLIENTES\\EMPRESAS`,
-      allowedBasePath: `\\\\192.168.1.1\\arquivos\\CLIENTES`,
-      defaultSourceFolder: `\\\\192.168.1.1\\arquivos\\CLIENTES\\EMPRESAS`,
-      presetDestinations: [
-        { name: '00 - EX CLIENTES', path: `\\\\192.168.1.1\\arquivos\\CLIENTES\\00 - EX CLIENTES` },
-        { name: '01 - EMPRESAS ENCERRADAS', path: `\\\\192.168.1.1\\arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS` },
-      ],
+      sourcePath: '',
+      destSharePath: '',
+      destinationParentPath: '',
+      allowedBasePath: '',
+      defaultSourceFolder: '',
+      presetDestinations: [],
       adServerIp: '',
-      domainUser: `${rawName}\\pasta.paralegal`,
-      adPass: 'Mestre@300',
+      domainUser: '',
+      adPass: '',
     };
 
     setConfig((prev: any) => ({
@@ -205,7 +201,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleConfirmDeleteCompany = () => {
     if (!companyToDelete) return;
     if (companyKeys.length <= 1) {
-      alert('É necessário manter pelo menos uma empresa cadastrada no sistema.');
+      alert('É obrigatório manter pelo menos uma empresa configurada no sistema.');
       setCompanyToDelete(null);
       return;
     }
@@ -229,13 +225,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       await window.electronAPI?.saveConfig(config);
       setSaveStatus({
         type: 'success',
-        message: 'Todas as configurações corporativas, empresas, perímetros e atalhos foram salvas com sucesso!',
+        message: 'Configurações corporativas salvas com sucesso.',
       });
-      setTimeout(() => setSaveStatus(null), 5000);
+      setTimeout(() => setSaveStatus(null), 4000);
     } catch (e: any) {
       setSaveStatus({
         type: 'error',
-        message: 'Falha ao salvar configurações: ' + (e?.message || 'Erro desconhecido.'),
+        message: 'Falha ao salvar configurações: ' + (e?.message || 'Erro inesperado.'),
       });
     } finally {
       setIsSaving(false);
@@ -255,13 +251,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setShowResetConfirm(false);
       setSaveStatus({
         type: 'success',
-        message: 'Configurações redefinidas com sucesso para os padrões originais de fábrica!',
+        message: 'Configurações redefinidas para os padrões originais de instalação.',
       });
-      setTimeout(() => setSaveStatus(null), 5000);
+      setTimeout(() => setSaveStatus(null), 4000);
     } catch (e: any) {
       setSaveStatus({
         type: 'error',
-        message: 'Falha ao restaurar padrões: ' + (e?.message || 'Erro desconhecido.'),
+        message: 'Falha ao restaurar padrões: ' + (e?.message || 'Erro inesperado.'),
       });
     } finally {
       setIsSaving(false);
@@ -283,7 +279,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return (
       <div className="p-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
         <RefreshCw className="w-4 h-4 animate-spin text-teams-600" />
-        <span>Carregando parâmetros corporativos...</span>
+        <span>Carregando parâmetros...</span>
       </div>
     );
   }
@@ -292,92 +288,92 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const currentShortcuts: ShortcutItem[] = activeComp.presetDestinations || [];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 select-none">
-      {/* 1. Header & TI Lock Status Banner */}
+    <div className="space-y-5 max-w-5xl mx-auto pb-10 select-none">
+      {/* 1. Header & TI Status Banner */}
       <div
-        className={`p-5 rounded-2xl border transition-all shadow-sm ${
+        className={`p-4 rounded-xl border transition-all ${
           isTIUnlocked
-            ? 'bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 border-emerald-500/30 dark:border-emerald-500/20'
+            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/30'
             : 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700'
         }`}
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-xs ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center ${
                 isTIUnlocked
-                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : 'bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 text-teams-600 dark:text-teams-400'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800'
               }`}
             >
-              {isTIUnlocked ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+              {isTIUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  {isTIUnlocked ? 'Modo Administrador TI Ativo' : 'Configurações Corporativas do Sistema'}
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {isTIUnlocked ? 'Configurações de TI Liberadas' : 'Configurações do Sistema'}
                 </h3>
                 <span
-                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                     isTIUnlocked
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-neutral-600'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  {isTIUnlocked ? 'LIBERADO PARA EDIÇÃO' : 'PROTEGIDO POR SENHA'}
+                  {isTIUnlocked ? 'Edição Ativa' : 'Somente Leitura'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isTIUnlocked
-                  ? 'Você tem controle total sobre empresas, caminhos UNC, perímetro de segurança (allowedBasePath) e atalhos rápidos.'
-                  : 'Os caminhos de rede e o perímetro de governança foram pré-configurados pela equipe de TI.'}
+                  ? 'Gerencie empresas, caminhos de rede, perímetro de segurança e atalhos rápidos.'
+                  : 'Parâmetros corporativos de rede. Desbloqueie com a senha do TI para fazer alterações.'}
               </p>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center flex-wrap gap-2.5">
+          {/* Header Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             {!isTIUnlocked ? (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-teams-600 hover:bg-teams-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-teams-600 hover:bg-teams-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
               >
-                <KeyRound className="w-4 h-4" />
-                <span>Desbloquear Configurações (Acesso TI)</span>
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Desbloquear (Acesso TI)</span>
               </button>
             ) : (
               <>
                 <button
                   onClick={() => setIsAddCompanyModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-neutral-600 transition-colors cursor-pointer"
-                  title="Cadastrar uma nova empresa no sistema"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  title="Adicionar nova empresa"
                 >
-                  <Plus className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nova Empresa</span>
                 </button>
 
                 <button
                   onClick={() => setShowResetConfirm(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-neutral-600 transition-colors cursor-pointer"
-                  title="Restaurar para os padrões de fábrica do instalador"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  title="Restaurar padrões de fábrica"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Restaurar Padrões</span>
+                  <span>Restaurar</span>
                 </button>
 
                 <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
-                  <span>{isSaving ? 'Salvando...' : 'Salvar Configurações'}</span>
+                  <Save className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin' : ''}`} />
+                  <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
                 </button>
 
                 <button
                   onClick={handleLockClick}
-                  className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-xl border border-slate-300 dark:border-neutral-600 transition-colors cursor-pointer"
-                  title="Bloquear Sessão de Edição do TI"
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Bloquear configurações"
                 >
                   <Lock className="w-4 h-4" />
                 </button>
@@ -386,40 +382,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Save Status Banner */}
+        {/* Save Status Notification */}
         {saveStatus && (
           <div
-            className={`mt-4 p-3 rounded-xl text-xs flex items-center gap-2.5 transition-all ${
+            className={`mt-3 p-2.5 rounded-lg text-xs flex items-center gap-2 ${
               saveStatus.type === 'success'
-                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
             }`}
           >
             {saveStatus.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
             )}
             <span className="font-medium">{saveStatus.message}</span>
           </div>
         )}
       </div>
 
-      {/* 2. Main Company Management Body */}
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-sm overflow-hidden">
-        {/* Navigation Tabs for Companies */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-neutral-700 bg-slate-50/50 dark:bg-neutral-900/50 px-6 pt-3">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+      {/* 2. Main Company Box */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs">
+        {/* Company Tabs Bar */}
+        <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/60 px-4 pt-2 gap-2">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
             {companyKeys.map((key) => {
               const isActive = activeCompanyTab === key;
               return (
                 <button
                   key={key}
                   onClick={() => setActiveCompanyTab(key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-t border-x cursor-pointer ${
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-teams-600 dark:text-teams-400 -mb-[1px] shadow-xs'
-                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800/50'
+                      ? 'bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-teams-600 dark:text-teams-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800/60'
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5" />
@@ -432,118 +429,83 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             })}
           </div>
 
-          <div className="flex items-center gap-2 pb-3">
+          {/* Tab Actions: Test Connection & Delete Company */}
+          <div className="flex items-center gap-2 pb-2">
             <button
               onClick={() => handleTest(activeCompanyTab)}
               disabled={testing[activeCompanyTab]}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 text-xs rounded-lg border border-slate-300 dark:border-neutral-600 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-600 transition-colors cursor-pointer"
+              title="Testar comunicação com o servidor desta empresa"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${testing[activeCompanyTab] ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3 h-3 ${testing[activeCompanyTab] ? 'animate-spin text-teams-600' : ''}`} />
               <span>Testar Conexão</span>
             </button>
 
             {isTIUnlocked && companyKeys.length > 1 && (
               <button
                 onClick={() => setCompanyToDelete(activeCompanyTab)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs rounded-lg border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
-                title="Excluir esta empresa do sistema"
+                className="flex items-center gap-1 px-2.5 py-1 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                title="Excluir esta empresa"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Excluir Empresa</span>
+                <Trash2 className="w-3 h-3" />
+                <span>Excluir</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Connection Test Result Feedback */}
+        {/* Test Result Message */}
         {testResults[activeCompanyTab] && (
-          <div className="p-4 border-b border-slate-100 dark:border-neutral-700">
-            <div
-              className={`p-3 rounded-xl text-xs flex items-center gap-2.5 ${
-                testResults[activeCompanyTab].success
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
-              }`}
-            >
-              {testResults[activeCompanyTab].success ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-              ) : (
-                <XCircle className="w-4 h-4 shrink-0 text-rose-500" />
-              )}
-              <span className="font-medium">{testResults[activeCompanyTab].message}</span>
-            </div>
+          <div
+            className={`mx-5 mt-4 p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+              testResults[activeCompanyTab].success
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+            }`}
+          >
+            {testResults[activeCompanyTab].success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            ) : (
+              <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            )}
+            <span className="font-medium">{testResults[activeCompanyTab].message}</span>
           </div>
         )}
 
-        {/* Active Company Configuration Form */}
-        <div className="p-6 space-y-8">
-          {/* Section 1: Identificação da Empresa */}
+        {/* Form Body */}
+        <div className="p-5 space-y-6">
+          {/* Identificação */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-                  <span>Identificação da Empresa</span>
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Nome exibido na interface para os operadores
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Nome da Empresa (Exibição)
-                </label>
-                <input
-                  type="text"
-                  readOnly={!isTIUnlocked}
-                  value={activeComp.companyName || ''}
-                  onChange={(e) => handleFieldChange(activeCompanyTab, 'companyName', e.target.value)}
-                  className={`w-full p-2.5 rounded-lg text-xs font-semibold ${
-                    isTIUnlocked
-                      ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:ring-2 focus:ring-teams-500/30'
-                      : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Chave Interna Identificadora
-                </label>
-                <input
-                  type="text"
-                  readOnly
-                  value={activeCompanyTab}
-                  className="w-full p-2.5 rounded-lg text-xs font-mono bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                />
-              </div>
-            </div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Nome da Empresa / Filial
+            </label>
+            <input
+              type="text"
+              readOnly={!isTIUnlocked}
+              value={activeComp.companyName || ''}
+              onChange={(e) => handleFieldChange(activeCompanyTab, 'companyName', e.target.value)}
+              className={`w-full max-w-sm p-2 rounded-lg text-xs font-semibold ${
+                isTIUnlocked
+                  ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                  : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+              }`}
+            />
           </div>
 
           <hr className="border-slate-100 dark:border-neutral-700" />
 
-          {/* Section 2: Criação de Pastas de Clientes */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <FolderTree className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Criação de Pastas de Clientes
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Diretório do modelo com as 7 subpastas e destino de armazenamento das pastas criadas
-                </p>
-              </div>
-            </div>
+          {/* Pastas de Rede */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <FolderTree className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+              <span>Diretórios de Rede</span>
+            </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Modelo de Pastas */}
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Caminho do Modelo (Origem GPO)</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Modelo de Pastas (Origem da Estrutura)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -551,7 +513,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     readOnly={!isTIUnlocked}
                     value={activeComp.sourcePath || ''}
                     onChange={(e) => handleFieldChange(activeCompanyTab, 'sourcePath', e.target.value)}
-                    className={`flex-1 p-2.5 rounded-lg font-mono text-[11px] ${
+                    className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
                       isTIUnlocked
                         ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
                         : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
@@ -561,8 +523,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleBrowseFolder(activeCompanyTab, 'sourcePath', activeComp.sourcePath)}
-                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Procurar pasta de rede"
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-neutral-600 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                      title="Procurar pasta"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span>Procurar...</span>
@@ -571,10 +533,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
 
+              {/* Destino das Criações */}
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Caminho de Destino das Novas Pastas</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Destino das Novas Pastas
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -582,7 +544,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     readOnly={!isTIUnlocked}
                     value={activeComp.destSharePath || activeComp.destinationParentPath || ''}
                     onChange={(e) => handleFieldChange(activeCompanyTab, 'destSharePath', e.target.value)}
-                    className={`flex-1 p-2.5 rounded-lg font-mono text-[11px] ${
+                    className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
                       isTIUnlocked
                         ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
                         : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
@@ -598,8 +560,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           activeComp.destSharePath || activeComp.destinationParentPath
                         )
                       }
-                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Procurar pasta de rede"
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-neutral-600 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                      title="Procurar pasta"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span>Procurar...</span>
@@ -607,214 +569,183 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Pasta Padrão de Origem da Transferência */}
+            <div className="text-xs">
+              <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Pasta Padrão de Origem (Tela de Mover Pastas)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly={!isTIUnlocked}
+                  value={activeComp.defaultSourceFolder || ''}
+                  onChange={(e) => handleFieldChange(activeCompanyTab, 'defaultSourceFolder', e.target.value)}
+                  className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
+                    isTIUnlocked
+                      ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                      : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                  }`}
+                />
+                {isTIUnlocked && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleBrowseFolder(activeCompanyTab, 'defaultSourceFolder', activeComp.defaultSourceFolder)
+                    }
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-neutral-600 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                    title="Procurar pasta"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    <span>Procurar...</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Perímetro de Segurança - Zero Vazamento de Dados */}
+            <div className="text-xs space-y-1">
+              <label className="block font-medium text-slate-700 dark:text-slate-300">
+                Perímetro de Segurança (Pasta Base Permitida)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly={!isTIUnlocked}
+                  value={activeComp.allowedBasePath || ''}
+                  onChange={(e) => handleFieldChange(activeCompanyTab, 'allowedBasePath', e.target.value)}
+                  className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
+                    isTIUnlocked
+                      ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                      : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                  }`}
+                />
+                {isTIUnlocked && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleBrowseFolder(activeCompanyTab, 'allowedBasePath', activeComp.allowedBasePath)
+                    }
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-neutral-600 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                    title="Procurar pasta"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    <span>Procurar...</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Delimita o diretório base autorizado. Operações em pastas fora deste caminho são bloqueadas automaticamente pelo sistema.
+              </p>
             </div>
           </div>
 
           <hr className="border-slate-100 dark:border-neutral-700" />
 
-          {/* Section 3: Mover / Transferir Pastas & Perímetro de Governança */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <FolderOutput className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Mover / Transferir Pastas (Onde está a pasta? & Para onde vai a pasta?)
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Parâmetros de movimentação de pastas, perímetro de segurança e atalhos rápidos
-                </p>
-              </div>
+          {/* Atalhos Rápidos de Destino */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <FolderOutput className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+                <span>Atalhos Rápidos de Destino</span>
+              </h4>
+              {isTIUnlocked && (
+                <button
+                  type="button"
+                  onClick={() => handleAddShortcut(activeCompanyTab)}
+                  className="flex items-center gap-1 text-xs font-bold text-teams-600 dark:text-teams-400 hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Adicionar Atalho</span>
+                </button>
+              )}
             </div>
 
-            <div className="space-y-4 text-xs">
-              {/* Pasta Padrão de Origem */}
-              <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Pasta Padrão de Origem ("Onde está a pasta?")</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly={!isTIUnlocked}
-                    value={activeComp.defaultSourceFolder || ''}
-                    onChange={(e) => handleFieldChange(activeCompanyTab, 'defaultSourceFolder', e.target.value)}
-                    className={`flex-1 p-2.5 rounded-lg font-mono text-[11px] ${
-                      isTIUnlocked
-                        ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                        : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                    }`}
-                  />
-                  {isTIUnlocked && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleBrowseFolder(activeCompanyTab, 'defaultSourceFolder', activeComp.defaultSourceFolder)
-                      }
-                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Procurar pasta de rede"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      <span>Procurar...</span>
-                    </button>
-                  )}
+            <div className="space-y-2">
+              {currentShortcuts.length === 0 ? (
+                <div className="p-3 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-neutral-700 rounded-lg">
+                  Nenhum atalho rápido configurado para esta empresa.
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                  Diretório padrão pré-carregado no campo "Onde está a pasta?" na tela de Transferência.
-                </p>
-              </div>
-
-              {/* Perímetro de Governança de TI */}
-              <div className="p-4 rounded-xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-2">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>Perímetro de Governança de TI (A partir de qual pasta o usuário pode mexer)</span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly={!isTIUnlocked}
-                    value={activeComp.allowedBasePath || ''}
-                    onChange={(e) => handleFieldChange(activeCompanyTab, 'allowedBasePath', e.target.value)}
-                    className={`flex-1 p-2.5 rounded-lg font-mono text-[11px] ${
-                      isTIUnlocked
-                        ? 'bg-white dark:bg-neutral-900 border border-amber-500/30 text-slate-900 dark:text-white'
-                        : 'bg-white/80 dark:bg-neutral-900/50 border border-amber-500/20 text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                    }`}
-                  />
-                  {isTIUnlocked && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleBrowseFolder(activeCompanyTab, 'allowedBasePath', activeComp.allowedBasePath)
-                      }
-                      className="px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-lg border border-amber-300 dark:border-amber-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Procurar pasta de rede"
-                    >
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      <span>Procurar...</span>
-                    </button>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                  <strong>Trava de Segurança:</strong> O operador só tem permissão para mover arquivos dessa pasta para frente.
-                  Se tentar selecionar pastas externas proibidas (como <code>DEPARTAMENTOS</code>, <code>JURIDICO</code>, etc.), o sistema
-                  bloqueia imediatamente a transferência.
-                </p>
-              </div>
-
-              {/* Atalhos Rápidos de Destino */}
-              <div className="space-y-2.5 pt-2">
-                <div className="flex items-center justify-between">
-                  <label className="block font-medium text-slate-700 dark:text-slate-300">
-                    Atalhos Rápidos de Destino ("Para onde vai a pasta?")
-                  </label>
-                  {isTIUnlocked && (
-                    <button
-                      type="button"
-                      onClick={() => handleAddShortcut(activeCompanyTab)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-teams-600 dark:text-teams-400 hover:underline cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Adicionar Atalho</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  {currentShortcuts.length === 0 ? (
-                    <div className="p-3 text-center text-[11px] text-slate-400 border border-dashed border-slate-200 dark:border-neutral-700 rounded-lg">
-                      Nenhum atalho rápido configurado.
+              ) : (
+                currentShortcuts.map((shortcut, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-xs"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Nome do Atalho"
+                      readOnly={!isTIUnlocked}
+                      value={shortcut.name}
+                      onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'name', e.target.value)}
+                      className={`sm:w-1/3 p-1.5 rounded-md font-semibold text-xs ${
+                        isTIUnlocked
+                          ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                          : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                      }`}
+                    />
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Caminho UNC"
+                        readOnly={!isTIUnlocked}
+                        value={shortcut.path}
+                        onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'path', e.target.value)}
+                        className={`flex-1 p-1.5 rounded-md font-mono text-[11px] ${
+                          isTIUnlocked
+                            ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                            : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                        }`}
+                      />
+                      {isTIUnlocked && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
+                            className="p-1.5 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
+                            title="Procurar pasta"
+                          >
+                            <FolderOpen className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveShortcut(activeCompanyTab, idx)}
+                            className="p-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-md transition-colors cursor-pointer"
+                            title="Excluir atalho"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    currentShortcuts.map((shortcut, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700"
-                      >
-                        <input
-                          type="text"
-                          placeholder="Nome do Atalho"
-                          readOnly={!isTIUnlocked}
-                          value={shortcut.name}
-                          onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'name', e.target.value)}
-                          className={`sm:w-1/3 p-2 rounded-md font-semibold text-xs ${
-                            isTIUnlocked
-                              ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                              : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                          }`}
-                        />
-                        <div className="flex-1 flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Caminho de Rede UNC"
-                            readOnly={!isTIUnlocked}
-                            value={shortcut.path}
-                            onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'path', e.target.value)}
-                            className={`flex-1 p-2 rounded-md font-mono text-[11px] ${
-                              isTIUnlocked
-                                ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                                : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                            }`}
-                          />
-                          {isTIUnlocked && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
-                                className="p-2 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
-                                title="Procurar pasta"
-                              >
-                                <FolderOpen className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveShortcut(activeCompanyTab, idx)}
-                                className="p-2 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-md transition-colors cursor-pointer"
-                                title="Excluir atalho"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <hr className="border-slate-100 dark:border-neutral-700" />
 
-          {/* Section 4: Active Directory & Credenciais de Domínio */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <ShieldCheck className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Active Directory & Conta de Serviço Corporativa
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Parâmetros de autenticação e impersonação isolada de token de domínio
-                </p>
-              </div>
-            </div>
+          {/* Active Directory & Credenciais */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+              <span>Autenticação de Domínio (Active Directory)</span>
+            </h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Servidor AD (IP / Host)</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Servidor AD (IP ou Host)
                 </label>
                 <input
                   type="text"
                   readOnly={!isTIUnlocked}
                   value={activeComp.adServerIp || ''}
                   onChange={(e) => handleFieldChange(activeCompanyTab, 'adServerIp', e.target.value)}
-                  placeholder="Ex: 192.168.100.30"
-                  className={`w-full p-2.5 rounded-lg font-mono text-[11px] ${
+                  placeholder="Ex: 192.168.1.10"
+                  className={`w-full p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
                       : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
@@ -823,17 +754,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Usuário de Domínio</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Usuário de Serviço
                 </label>
                 <input
                   type="text"
                   readOnly={!isTIUnlocked}
                   value={activeComp.domainUser || ''}
                   onChange={(e) => handleFieldChange(activeCompanyTab, 'domainUser', e.target.value)}
-                  placeholder="Ex: DOMINIO\pasta.paralegal"
-                  className={`w-full p-2.5 rounded-lg font-mono text-[11px] ${
+                  placeholder="DOMINIO\\usuario"
+                  className={`w-full p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
                       : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
@@ -842,9 +772,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                  <span>Senha da Conta de Serviço</span>
-                  {!isTIUnlocked && <Lock className="w-3 h-3 text-slate-400" />}
+                <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Senha da Conta
                 </label>
                 <div className="relative">
                   <input
@@ -853,7 +782,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     value={activeComp.adPass || ''}
                     onChange={(e) => handleFieldChange(activeCompanyTab, 'adPass', e.target.value)}
                     placeholder="••••••••"
-                    className={`w-full p-2.5 pr-9 rounded-lg font-mono text-[11px] ${
+                    className={`w-full p-2 pr-8 rounded-lg font-mono text-[11px] ${
                       isTIUnlocked
                         ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
                         : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
@@ -867,7 +796,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         [activeCompanyTab]: !prev[activeCompanyTab],
                       }))
                     }
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                     title={showPasswords[activeCompanyTab] ? 'Ocultar senha' : 'Ver senha'}
                   >
                     {showPasswords[activeCompanyTab] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -884,23 +813,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onSuccess={handleUnlockSuccess}
-        title="Desbloquear Configurações do TI"
-        description="Digite a senha de administrador (Fallima1979) para liberar as variáveis, empresas e atalhos."
+        title="Desbloquear Configurações"
+        description="Digite a senha de administrador para liberar a edição de empresas e parâmetros."
       />
 
       {/* Modal: Adicionar Nova Empresa */}
       {isAddCompanyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none">
-          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-neutral-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Adicionar Nova Empresa</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Cadastre uma nova filial ou unidade de negócio</p>
-                </div>
+          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-neutral-800 flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400">
+                <Building2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Adicionar Empresa</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Cadastre uma nova filial ou divisão</p>
               </div>
             </div>
 
@@ -909,36 +836,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 e.preventDefault();
                 handleAddCompany();
               }}
-              className="p-6 space-y-4"
+              className="p-5 space-y-4"
             >
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Nome / Código da Nova Empresa
+                  Nome / Sigla da Empresa
                 </label>
                 <input
                   type="text"
                   required
                   autoFocus
-                  placeholder="Ex: FILIAL_SUL, MATRIZ, etc."
+                  placeholder="Ex: MATRIZ, FILIAL_01, etc."
                   value={newCompanyName}
                   onChange={(e) => setNewCompanyName(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-teams-500/30"
+                  className="w-full p-2 rounded-lg border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-bold uppercase text-slate-900 dark:text-white"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsAddCompanyModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-teams-600 hover:bg-teams-700 text-white shadow-xs transition-all"
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-teams-600 hover:bg-teams-700 text-white transition-colors"
                 >
-                  Adicionar Empresa
+                  Adicionar
                 </button>
               </div>
             </form>
@@ -949,39 +876,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal: Confirmar Exclusão de Empresa */}
       {companyToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none">
-          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Confirmar Exclusão de Empresa</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Esta ação não pode ser desfeita automaticamente.</p>
-                </div>
+          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="w-4 h-4" />
               </div>
-
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Tem certeza de que deseja excluir a empresa <strong>{companyToDelete}</strong> das configurações do FolderWorks?
-                As telas de Criação e Transferência de pastas não exibirão mais esta empresa.
-              </p>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCompanyToDelete(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDeleteCompany}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-all"
-                >
-                  Confirmar Exclusão
-                </button>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Excluir Empresa</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Esta ação remove a empresa da lista ativa</p>
               </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Tem certeza de que deseja remover <strong>{companyToDelete}</strong>?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setCompanyToDelete(null)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteCompany}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
+              >
+                Excluir
+              </button>
             </div>
           </div>
         </div>
@@ -990,39 +914,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal: Confirmar Restauração de Padrões */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 select-none">
-          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Restaurar Padrões de Fábrica?</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Reversão de parâmetros corporativos</p>
-                </div>
+          <div className="bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <RotateCcw className="w-4 h-4" />
               </div>
-
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Deseja restaurar as configurações originais corporativas embutidas no pacote de instalação?
-                Todas as alterações manuais e novas empresas criadas serão redefinidas para o padrão inicial.
-              </p>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetDefaults}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all"
-                >
-                  Restaurar Padrões
-                </button>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Restaurar Padrões?</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Reversão de configurações de instalação</p>
               </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Deseja restaurar as configurações originais do pacote de instalação? Modificações recentes serão desfeitas.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleResetDefaults}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+              >
+                Restaurar Padrões
+              </button>
             </div>
           </div>
         </div>
@@ -1030,4 +951,3 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 };
-

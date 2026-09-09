@@ -332,7 +332,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
               <label className="flex items-center gap-1.5">
                 <FolderOpen className="w-4 h-4 text-slate-500" />
-                <span>Pasta de Origem</span>
                 <span>Onde está a pasta?</span>
               </label>
               <button
@@ -367,7 +366,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
               <label className="flex items-center gap-1.5">
                 <FolderInput className="w-4 h-4 text-slate-500" />
-                <span>Pasta de Destino</span>
                 <span>Para onde vai a pasta?</span>
               </label>
               {!boundaryStatus.isValid && (
@@ -427,7 +425,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
             <div>
-              <p className="font-bold">Pasta de Destino Inválida</p>
               <p className="font-bold">Local de Destino Inválido</p>
               <p className="mt-0.5 text-[11px] leading-relaxed">{boundaryStatus.message}</p>
             </div>

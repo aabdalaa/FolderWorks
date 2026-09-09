@@ -1,5 +1,24 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.6.1 (09/09/2026) - **Correção de Layout das Abas, Simplificação da Interface e Eliminação de Vazamento de Dados**
+- **Correção dos Botões e Abas de Empresas no Topo**:
+  - Eliminada a renderização duplicada de botões estáticos no seletor de empresas em `SettingsView.tsx`, `FolderTransferView.tsx` e `FolderCreationView.tsx`.
+  - Layout das abas corrigido para evitar bordas cortadas, overflow ou scrollbars desnecessárias, proporcionando uma navegação limpa e fluida.
+- **Simplificação e Despoluição Visual em Configurações (`SettingsView.tsx`)**:
+  - Redução drástica de textos longos, avisos redundantes e parágrafos burocráticos.
+  - Interface enxuta, moderna e direta inspirada nos princípios do Microsoft Teams e Fluent Design.
+- **Proteção Total contra Vazamento de Dados (Zero Data Leakage)**:
+  - Removido qualquer exemplo contendo nomes reais de pastas ou departamentos internos em descrições, campos ou manuais.
+  - A explicação do Perímetro de Segurança agora é puramente descritiva: delimita o diretório base autorizado e informa que operações fora deste caminho são bloqueadas automaticamente.
+- **Rótulos Amigáveis e Limpos na Transferência (`FolderTransferView.tsx`)**:
+  - Removidos títulos duplicados, mantendo exclusivamente as perguntas intuitivas: *"Onde está a pasta?"* e *"Para onde vai a pasta?"*.
+  - Mensagem de alerta de destino corrigida para evitar parágrafos redundantes.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.6.1** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts de geração de MSI (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote MSI v2.6.1**: Compilado com WiX Toolset v3.14 mantendo compatibilidade in-place upgrade e tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.6.0 (09/09/2026) - **Desbloqueio TI com Senha, Gestão Dinâmica de Empresas e Perímetro de Governança**
 - **Painel de Configurações Protegido por Senha de Administrador TI (`SettingsView.tsx`)**:
   - Acesso à edição de configurações bloqueado por padrão para operadores comuns.
@@ -11,7 +30,7 @@
   - Seletor de diretórios nativo (`selectDirectory`) com botão "Procurar..." integrado aos campos de caminho.
 - **Perímetro de Governança de Arquivos Configurável (`allowedBasePath`)**:
   - O perímetro que delimita onde os operadores podem criar e mover pastas agora é 100% configurável pela equipe de TI.
-  - Bloqueio rígido de segurança: impede que qualquer operação afete pastas raízes ou sensíveis (como `DEPARTAMENTOS`, `JURIDICO`, etc.).
+  - Bloqueio rígido de segurança: impede que qualquer operação afete pastas raízes ou diretórios fora do perímetro autorizado.
 - **Gerenciador Dinâmico de Atalhos Rápidos (`presetDestinations`)**:
   - Permite ao TI configurar a lista dinâmica de botões de atalho de destino ("Para onde vai a pasta?"), com ações de adicionar, editar e excluir atalhos por empresa.
 - **Persistência Inteligente & Restauração de Fábrica (`main.ts`)**:
