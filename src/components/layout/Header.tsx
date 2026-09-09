@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Laptop, UserCheck } from 'lucide-react';
+import { Sun, Moon, Laptop, Info } from 'lucide-react';
 import { ThemeMode } from '../../hooks/useTheme';
 
 interface HeaderProps {
@@ -26,23 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Botão Sobre o Desenvolvedor */}
-        {onOpenAbout && (
-          <button
-            onClick={onOpenAbout}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all shadow-xs cursor-pointer ${
-              isAboutActive
-                ? 'bg-teams-600 border-teams-600 text-white shadow-sm'
-                : 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-slate-900 dark:hover:text-white'
-            }`}
-            title="Sobre o Desenvolvedor & Entropy"
-          >
-            <UserCheck className={`w-3.5 h-3.5 ${isAboutActive ? 'text-white' : 'text-teams-600 dark:text-teams-400'}`} />
-            <span>Sobre</span>
-          </button>
-        )}
-
+      <div className="flex items-center gap-2.5">
         {/* Theme Switcher: Light / Dark / System */}
         <div className="flex items-center bg-slate-100 dark:bg-neutral-800 p-1 rounded-lg border border-slate-200 dark:border-neutral-700">
           <button
@@ -83,9 +67,24 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Version Badge */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teams-50 dark:bg-teams-950 border border-teams-200 dark:border-teams-800 text-[11px] text-teams-700 dark:text-teams-300 font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-teams-600 dark:bg-teams-400" />
-          <span>v2.5.12</span>
-          <span>v2.5.13</span>
+          <span>v2.5.14</span>
         </div>
+
+        {/* Botão de Informações / Sobre o Desenvolvedor (i) */}
+        {onOpenAbout && (
+          <button
+            onClick={onOpenAbout}
+            className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all shadow-xs cursor-pointer ${
+              isAboutActive
+                ? 'bg-teams-600 border-teams-600 text-white shadow-sm ring-2 ring-teams-400/30'
+                : 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-slate-500 hover:text-teams-600 dark:text-slate-400 dark:hover:text-teams-300 hover:bg-slate-50 dark:hover:bg-neutral-700'
+            }`}
+            title="Informações sobre o Desenvolvedor & Entropy"
+            aria-label="Informações sobre o Desenvolvedor"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </header>
   );

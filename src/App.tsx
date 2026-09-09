@@ -171,7 +171,6 @@ export const App: React.FC = () => {
             {activeTab === 'settings' && <SettingsView onTestConnection={handleTestConnection} />}
             {activeTab === 'history' && <HistoryView />}
             {activeTab === 'manual' && <UserGuideView />}
-            {activeTab === 'about' && <AboutView />}
             {activeTab === 'about' && <AboutView onBack={() => setActiveTab(previousTab)} />}
           </main>
         </div>

@@ -85,9 +85,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
           {/* Version badge */}
           <div className="text-right">
             <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-3 py-1 rounded-lg border border-teams-200 dark:border-teams-800">
-              v2.5.11 Oficial
-              v2.5.12 Oficial
-              v2.5.13 Oficial
+              v2.5.14 Oficial
             </span>
           </div>
         </div>
@@ -190,11 +188,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div className="space-y-1">
             <span className="text-[11px] text-slate-400">Versão da Build</span>
-            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.7</p>
-            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.8</p>
-            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.9</p>
-            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.12</p>
-            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.13</p>
+            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.5.14</p>
           </div>
           <div className="space-y-1">
             <span className="text-[11px] text-slate-400">Distribuição</span>

@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.5.14 (09/09/2026) - **Correção de Duplicação na Tela Sobre e Botão Minimalista de Informações (i)**
+- **Eliminação da Renderização Duplicada (`App.tsx`)**:
+  - Corrigido o bug onde o componente `<AboutView />` era instanciado em duplicidade no corpo principal da aplicação.
+  - Mantida apenas a instância com suporte ao botão de retorno inteligente (`onBack={() => setActiveTab(previousTab)}`), restaurando a visualização limpa e única do perfil do desenvolvedor, links sociais e especificações da arquitetura.
+- **Botão Minimalista de Informações no Cabeçalho (`Header.tsx`)**:
+  - Reposicionado o botão de acesso às informações para a **direita** do badge de versão (`[ Tema ]` → `[ Versão ]` → `[ Botão 'i' ]`).
+  - Substituído o texto `"Sobre"` por um botão compacto e elegante (`w-7 h-7`) contendo o ícone universal de informações `(i)` (`Info` da biblioteca `lucide-react`).
+  - Adicionado estilo Fluent com bordas suaves, tooltip explicativo e estado ativo em destaque na paleta corporativa Teams.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.5.14** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts de geração de MSI (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote MSI v2.5.14**: Compilado com WiX Toolset v3.14 mantendo compatibilidade in-place upgrade e tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.13 (08/09/2026) - **Botões 'Deu Certo' e 'Não Deu Certo' com Rollback Automático da Transferência**
 - **Substituição dos Botões Pós-Transferência (`FolderTransferView.tsx`)**:
   - Eliminados os termos técnicos anteriores (*"Excluir da Origem"* e *"Não, manter na Origem"*).
