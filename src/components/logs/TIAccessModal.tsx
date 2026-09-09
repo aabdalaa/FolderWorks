@@ -5,9 +5,17 @@ interface TIAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  title?: string;
+  description?: string;
 }
 
-export const TIAccessModal: React.FC<TIAccessModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const TIAccessModal: React.FC<TIAccessModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  title = 'Acesso Restrito ao TI',
+  description = 'Digite a senha de segurança corporativa para continuar.',
+}) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,13 +81,13 @@ export const TIAccessModal: React.FC<TIAccessModalProps> = ({ isOpen, onClose, o
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Acesso Restrito ao TI</span>
+                <span>{title}</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   PRIVADO
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Digite a senha de segurança para acessar o Registro de Atividades.
+                {description}
               </p>
             </div>
           </div>

@@ -23,6 +23,7 @@ export const App: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
+  const [serverStatuses, setServerStatuses] = useState<Record<string, boolean | null>>({});
   const { theme, setTheme } = useTheme();
 
   const handleSelectTab = (tab: AppTab) => {
@@ -50,12 +51,29 @@ export const App: React.FC = () => {
       setLogs((prev) => [...prev, entry]);
     });
 
-    // Test server connections
-    window.electronAPI?.testServerConnection('RELIQUIA').then((res) => setReliquiaStatus(res.success));
-    window.electronAPI?.testServerConnection('RTO').then((res) => setRtoStatus(res.success));
+    const testAllServers = (cfg: any) => {
+      if (!cfg) return;
+      const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+      keys.forEach((comp) => {
+        window.electronAPI?.testServerConnection(comp).then((res) => {
+          setServerStatuses((prev) => ({ ...prev, [comp]: res.success }));
+          if (comp === 'RELIQUIA') setReliquiaStatus(res.success);
+          if (comp === 'RTO') setRtoStatus(res.success);
+        });
+      });
+    };
+
+    window.electronAPI?.getConfig().then((cfg) => {
+      testAllServers(cfg);
+    });
+
+    const unsubConfig = window.electronAPI?.onConfigUpdated?.((cfg) => {
+      testAllServers(cfg);
+    });
 
     return () => {
       if (unsubLog) unsubLog();
+      if (unsubConfig) unsubConfig();
     };
   }, []);
 
@@ -64,12 +82,13 @@ export const App: React.FC = () => {
     setLogs([]);
   };
 
-  const handleCreateFolder = async (company: 'RELIQUIA' | 'RTO', folderName: string) => {
+  const handleCreateFolder = async (company: string, folderName: string) => {
     return window.electronAPI?.createFolder({ company, folderName });
   };
 
-  const handleTestConnection = async (company: 'RELIQUIA' | 'RTO') => {
+  const handleTestConnection = async (company: string) => {
     const res = await window.electronAPI?.testServerConnection(company);
+    setServerStatuses((prev) => ({ ...prev, [company]: res.success }));
     if (company === 'RELIQUIA') setReliquiaStatus(res.success);
     if (company === 'RTO') setRtoStatus(res.success);
     return res;
@@ -144,6 +163,7 @@ export const App: React.FC = () => {
           onSelectTab={handleSelectTab}
           reliquiaStatus={reliquiaStatus}
           rtoStatus={rtoStatus}
+          serverStatuses={serverStatuses}
         />
 
         {/* Viewport Content */}
@@ -168,7 +188,14 @@ export const App: React.FC = () => {
                 onCreateFolder={handleCreateFolder}
               />
             )}
-            {activeTab === 'settings' && <SettingsView onTestConnection={handleTestConnection} />}
+            {activeTab === 'settings' && (
+              <SettingsView
+                onTestConnection={handleTestConnection}
+                isTIAuthenticated={isTIAuthenticated}
+                onUnlockTI={() => setIsTIAuthenticated(true)}
+                onLockTI={handleLockTISession}
+              />
+            )}
             {activeTab === 'history' && <HistoryView />}
             {activeTab === 'manual' && <UserGuideView />}
             {activeTab === 'about' && <AboutView onBack={() => setActiveTab(previousTab)} />}

@@ -6,11 +6,18 @@ export type AppTab = 'dashboard' | 'transfer' | 'settings' | 'history' | 'manual
 interface SidebarProps {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
-  reliquiaStatus: boolean | null;
-  rtoStatus: boolean | null;
+  reliquiaStatus?: boolean | null;
+  rtoStatus?: boolean | null;
+  serverStatuses?: Record<string, boolean | null>;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliquiaStatus, rtoStatus }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  onSelectTab,
+  reliquiaStatus,
+  rtoStatus,
+  serverStatuses,
+}) => {
   const navItems = [
     { id: 'dashboard' as const, label: 'Criar Pastas', icon: LayoutDashboard },
     { id: 'transfer' as const, label: 'Mover / Transferir Pastas', icon: FolderOutput },
@@ -28,8 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
             <Server className="w-5 h-5" />
           </div>
           <div className="truncate">
-            <h1 className="font-bold text-xs text-slate-900 dark:text-white tracking-tight">Entropy FolderWorks</h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Gerenciador de Pastas</p>
+            <h1 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white leading-none">FolderWorks</h1>
+            <span className="text-[10px] text-slate-400 font-mono tracking-wider">ENTROPY CORE</span>
           </div>
         </div>
 
@@ -42,10 +49,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
               <button
                 key={item.id}
                 onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-teams-50 dark:bg-teams-950/60 text-teams-700 dark:text-teams-300 font-semibold border-l-4 border-teams-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-neutral-800 border-l-4 border-transparent'
+                    ? 'bg-white dark:bg-neutral-800 text-teams-600 dark:text-teams-400 shadow-xs border border-slate-200/80 dark:border-neutral-700/80'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-neutral-800/50 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-teams-600 dark:text-teams-400' : 'text-slate-400 dark:text-slate-500'}`} />
@@ -64,31 +71,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, reliqu
         </div>
 
         <div className="space-y-1.5 text-[11px]">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600 dark:text-slate-300 font-medium">RELIQUIA</span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                reliquiaStatus === true
-                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
-                  : reliquiaStatus === false
-                  ? 'bg-rose-500 shadow-sm shadow-rose-500'
-                  : 'bg-amber-400 animate-pulse'
-              }`}
-            />
-          </div>
+          {serverStatuses && Object.keys(serverStatuses).length > 0 ? (
+            Object.entries(serverStatuses).map(([compName, status]) => (
+              <div key={compName} className="flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[160px]">{compName}</span>
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ml-2 ${
+                    status === true
+                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
+                      : status === false
+                      ? 'bg-rose-500 shadow-sm shadow-rose-500'
+                      : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-300 font-medium">RELIQUIA</span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    reliquiaStatus === true
+                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
+                      : reliquiaStatus === false
+                      ? 'bg-rose-500 shadow-sm shadow-rose-500'
+                      : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
+              </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600 dark:text-slate-300 font-medium">RTO</span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                rtoStatus === true
-                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
-                  : rtoStatus === false
-                  ? 'bg-rose-500 shadow-sm shadow-rose-500'
-                  : 'bg-amber-400 animate-pulse'
-              }`}
-            />
-          </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-300 font-medium">RTO</span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    rtoStatus === true
+                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
+                      : rtoStatus === false
+                      ? 'bg-rose-500 shadow-sm shadow-rose-500'
+                      : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </aside>

@@ -17,7 +17,6 @@ import {
   ArrowRight,
   Trash2,
   FileCheck,
-  HardDrive
   HardDrive,
   RotateCcw,
 } from 'lucide-react';
@@ -44,7 +43,7 @@ interface TransferResult {
 }
 
 export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalStateChange }) => {
-  const [company, setCompany] = useState<'RELIQUIA' | 'RTO'>('RELIQUIA');
+  const [company, setCompany] = useState<string>('RELIQUIA');
   const [config, setConfig] = useState<any>(null);
   
   // Paths
@@ -76,8 +75,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   // Post-Copy Verification & Human Confirmation
   const [showConfirmationPrompt, setShowConfirmationPrompt] = useState<boolean>(false);
-  const [isDeletingSource, setIsDeletingSource] = useState<boolean>(false);
-  const [deleteCompleted, setDeleteCompleted] = useState<{ count: number; keptOriginals: boolean } | null>(null);
   const [isProcessingDecision, setIsProcessingDecision] = useState<'success' | 'undo' | null>(null);
   const [decisionCompleted, setDecisionCompleted] = useState<{ type: 'success' | 'undo'; count: number } | null>(null);
 
@@ -89,17 +86,29 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
   useEffect(() => {
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
-      const cur = allCfg[company];
+      const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
+      const targetComp = keys.includes(company) ? company : (keys[0] || 'RELIQUIA');
+      if (targetComp !== company) {
+        setCompany(targetComp);
+      }
+      const cur = allCfg?.[targetComp];
       if (cur) {
         const src = cur.defaultSourceFolder || cur.destSharePath;
         setSourceDir(src);
-        const fallbackPreset = cur.allowedBasePath ? `${cur.allowedBasePath}\\00 - EX CLIENTES` : `${cur.destSharePath.replace(/\\EMPRESAS$/i, '')}\\00 - EX CLIENTES`;
+        const fallbackPreset = cur.allowedBasePath ? `${cur.allowedBasePath}\\00 - EX CLIENTES` : `${cur.destSharePath?.replace(/\\EMPRESAS$/i, '')}\\00 - EX CLIENTES`;
         const preset = cur.presetDestinations?.[0]?.path || fallbackPreset;
         setDestDir(preset);
-        loadSubdirectories(src, company);
-        validateBoundary(preset, company);
+        loadSubdirectories(src, targetComp);
+        validateBoundary(preset, targetComp);
       }
     });
+
+    const unsub = window.electronAPI?.onConfigUpdated?.((updatedCfg) => {
+      setConfig(updatedCfg);
+    });
+    return () => {
+      if (unsub) unsub();
+    };
   }, [company]);
 
   const validateBoundary = async (targetPath: string, comp: string) => {
@@ -186,7 +195,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     setTransferError(null);
     setTransferResults([]);
     setShowConfirmationPrompt(false);
-    setDeleteCompleted(null);
     setDecisionCompleted(null);
     setCurrentTransferIndex(0);
 
@@ -227,9 +235,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     }
   };
 
-  // 2. Interactive Human Decision: Confirm Deletion of Source
-  const handleConfirmDeleteSource = async () => {
-    setIsDeletingSource(true);
   // 2. Interactive Human Decision: "Deu certo" -> Confirm Success & Delete Source
   const handleConfirmSuccess = async () => {
     setIsProcessingDecision('success');
@@ -238,28 +243,18 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
       company,
       foldersToDelete: pathsToDelete,
     });
-    setIsDeletingSource(false);
     setIsProcessingDecision(null);
 
     if (delRes?.success) {
-      setDeleteCompleted({ count: delRes.deleted.length, keptOriginals: false });
       setDecisionCompleted({ type: 'success', count: delRes.deleted.length });
       setShowConfirmationPrompt(false);
       setSelectedFolderNames(new Set());
-      // Reload source folders after delete
       loadSubdirectories(sourceDir);
     } else {
-      setTransferError(delRes?.errors?.join(' | ') || 'Erro ao excluir pastas de origem.');
       setTransferError(delRes?.errors?.join(' | ') || 'Erro ao excluir pastas da origem.');
     }
   };
 
-  // 2. Interactive Human Decision: Keep Original Folders
-  const handleKeepOriginals = () => {
-    setDeleteCompleted({ count: transferResults.length, keptOriginals: true });
-    setShowConfirmationPrompt(false);
-    setSelectedFolderNames(new Set());
-    loadSubdirectories(sourceDir);
   // 2. Interactive Human Decision: "Não deu certo" -> Undo & Rollback Copied Destination Folders
   const handleUndoTransfer = async () => {
     setIsProcessingDecision('undo');
@@ -290,29 +285,28 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-sm flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Empresa:</span>
-          <div className="flex rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700">
-            <button
-              onClick={() => setCompany('RELIQUIA')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                company === 'RELIQUIA'
-                  ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>RELIQUIA</span>
-            </button>
-            <button
-              onClick={() => setCompany('RTO')}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                company === 'RTO'
-                  ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>RTO</span>
-            </button>
+          <div className="flex flex-wrap rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700 gap-1">
+            {config &&
+              Object.keys(config)
+                .filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword')
+                .map((key) => {
+                  const isSelected = company === key;
+                  const compName = config[key]?.companyName || key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setCompany(key)}
+                      className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>{compName}</span>
+                    </button>
+                  );
+                })}
           </div>
         </div>
       </div>
@@ -579,7 +573,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
       </div>
 
       {/* Card 2: Status e Confirmação da Transferência */}
-      {(isTransferring || showConfirmationPrompt || deleteCompleted || transferError) && (
       {(isTransferring || showConfirmationPrompt || decisionCompleted || transferError) && (
         <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-4">
           <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
@@ -606,8 +599,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           )}
 
           {/* Final Completed Summary */}
-          {deleteCompleted && (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
           {decisionCompleted && (
             <div
               className={`p-4 rounded-xl border flex items-center justify-between text-xs animate-in fade-in duration-200 ${
@@ -617,16 +608,12 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 {decisionCompleted.type === 'success' ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 ) : (
                   <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 )}
                 <span>
-                  {deleteCompleted.keptOriginals
-                    ? `Transferência finalizada: ${deleteCompleted.count} pastas mantidas em ambos os locais.`
-                    : `Transferência concluída com sucesso: ${deleteCompleted.count} pastas migradas para o destino e removidas da origem.`}
                   {decisionCompleted.type === 'success'
                     ? `Transferência validada com sucesso! ${decisionCompleted.count} ${decisionCompleted.count === 1 ? 'pasta transferida' : 'pastas transferidas'} e removidas da origem para liberar espaço.`
                     : `Transferência desfeita com sucesso! Os arquivos foram removidos do destino e a pasta original foi mantida 100% intacta na origem.`}
@@ -634,11 +621,9 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               </div>
               <button
                 onClick={() => {
-                  setDeleteCompleted(null);
                   setDecisionCompleted(null);
                   setSelectedFolderNames(new Set());
                 }}
-                className="text-teams-600 dark:text-teams-400 hover:underline font-medium"
                 className="font-semibold underline hover:opacity-80 transition-opacity ml-4 cursor-pointer"
               >
                 Nova Transferência
@@ -760,19 +745,12 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 </div>
 
                 {/* Decision Callout */}
-                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
-                      Confirmação de Exclusão da Origem
                 <div className="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 flex items-start gap-3">
                   <FileCheck className="w-5 h-5 text-teams-600 dark:text-teams-400 shrink-0 mt-0.5" />
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                       Validação do Operador
                     </h4>
-                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                      Deseja <strong>excluir as pastas da Origem</strong> agora que a transferência foi concluída, ou prefere <strong>mantê-las</strong> como cópia de segurança?
                     <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                       A cópia foi concluída. Por favor, valide se a pasta já está visível no destino correto:
                     </p>
@@ -794,15 +772,11 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               <div className="p-6 pt-0 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-neutral-900/50">
                 <button
                   type="button"
-                  onClick={handleConfirmDeleteSource}
-                  disabled={isDeletingSource}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 order-2 sm:order-1"
                   onClick={handleConfirmSuccess}
                   disabled={isProcessingDecision !== null}
                   className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 order-1 cursor-pointer disabled:opacity-50"
                   title="Confirma que os arquivos estão corretos no destino e autoriza a exclusão da pasta de origem"
                 >
-                  {isDeletingSource ? (
                   {isProcessingDecision === 'success' ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -810,8 +784,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                     </>
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4" />
-                      <span>Sim, excluir da Origem</span>
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Deu certo (Excluir da Origem)</span>
                     </>
@@ -820,16 +792,11 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
                 <button
                   type="button"
-                  onClick={handleKeepOriginals}
-                  disabled={isDeletingSource}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-neutral-700 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
                   onClick={handleUndoTransfer}
                   disabled={isProcessingDecision !== null}
                   className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-slate-300 dark:border-neutral-700 hover:border-rose-300 dark:hover:border-rose-900 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-2 cursor-pointer disabled:opacity-50"
                   title="Desfaz a transferência imediatamente, removendo a cópia do destino e preservando a origem"
                 >
-                  <HardDrive className="w-4 h-4 text-slate-500" />
-                  <span>Não, manter na Origem</span>
                   {isProcessingDecision === 'undo' ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-rose-500" />

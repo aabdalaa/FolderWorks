@@ -47,42 +47,73 @@ const defaultCompanyConfigs: Record<string, any> = {
 const bundledConfigPath = path.join(process.resourcesPath, 'default_config.json');
 
 function sanitizeConfig(cfg: any): any {
-  if (!cfg || typeof cfg !== 'object') return cfg;
-  for (const comp of ['RELIQUIA', 'RTO']) {
-    const def = defaultCompanyConfigs[comp];
-    if (cfg[comp]) {
-      cfg[comp] = { ...def, ...cfg[comp] };
-      // Always enforce official preset destinations outside EMPRESAS
-      cfg[comp].presetDestinations = def.presetDestinations;
-      cfg[comp].allowedBasePath = def.allowedBasePath;
-      cfg[comp].defaultSourceFolder = def.defaultSourceFolder;
-      if (!cfg[comp].destSharePath) cfg[comp].destSharePath = def.destSharePath;
-    } else {
-      cfg[comp] = { ...def };
+  if (!cfg || typeof cfg !== 'object') return { ...defaultCompanyConfigs };
+  const sanitized: Record<string, any> = {};
+
+  if (cfg.tiLogsPassword) {
+    sanitized.tiLogsPassword = String(cfg.tiLogsPassword).trim();
+  }
+
+  const companyKeys = Object.keys(cfg).filter(
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword'
+  );
+
+  if (companyKeys.length === 0) {
+    return { ...defaultCompanyConfigs, ...(cfg.tiLogsPassword ? { tiLogsPassword: cfg.tiLogsPassword } : {}) };
+  }
+
+  for (const comp of companyKeys) {
+    const raw = cfg[comp];
+    if (raw && typeof raw === 'object') {
+      const def = defaultCompanyConfigs[comp] || {};
+      const compName = raw.companyName || raw.name || comp;
+      const dest = raw.destSharePath || raw.destinationParentPath || def.destSharePath || '';
+      sanitized[comp] = {
+        name: compName,
+        companyName: compName,
+        domainUser: raw.domainUser || def.domainUser || `${compName}\\pasta.paralegal`,
+        adPass: raw.adPass || def.adPass || 'Mestre@300',
+        adServerIp: raw.adServerIp || def.adServerIp || '',
+        sourcePath: raw.sourcePath || def.sourcePath || '',
+        destSharePath: dest,
+        destinationParentPath: dest,
+        allowedBasePath: raw.allowedBasePath || def.allowedBasePath || dest,
+        defaultSourceFolder: raw.defaultSourceFolder || def.defaultSourceFolder || dest,
+        presetDestinations: Array.isArray(raw.presetDestinations)
+          ? raw.presetDestinations
+          : (def.presetDestinations || []),
+      };
     }
   }
-  return cfg;
+
+  return sanitized;
 }
 
 function loadConfig(): any {
-  let result = { ...defaultCompanyConfigs };
-  if (fs.existsSync(bundledConfigPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
-      result = sanitizeConfig({ ...result, ...parsed, isLockedByMSI: true });
-      if (parsed.tiLogsPassword) (result as any).tiLogsPassword = parsed.tiLogsPassword;
-      return result;
-    } catch (e) {}
-  }
+  // 1. Prioridade absoluta: Configurações personalizadas e salvas pelo TI em userData
   if (fs.existsSync(configPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      result = sanitizeConfig({ ...result, ...parsed });
-      if (parsed.tiLogsPassword) (result as any).tiLogsPassword = parsed.tiLogsPassword;
-      return result;
+      const sanitized = sanitizeConfig(parsed);
+      if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+      return sanitized;
+    } catch (e) {
+      appendLog(`[CONFIG] Falha ao ler config.json do userData: ${e}`);
+    }
+  }
+
+  // 2. Configurações corporativas pré-embutidas no instalador MSI
+  if (fs.existsSync(bundledConfigPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
+      const sanitized = sanitizeConfig(parsed);
+      if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+      return sanitized;
     } catch (e) {}
   }
-  return sanitizeConfig(result);
+
+  // 3. Fallback de fábrica do código-fonte
+  return sanitizeConfig({ ...defaultCompanyConfigs });
 }
 
 function getTIPassword(): string {
@@ -111,11 +142,16 @@ function getTIPassword(): string {
 
 function getCompanyConfig(company: string) {
   const all = loadConfig();
-  return all[company] || defaultCompanyConfigs[company] || defaultCompanyConfigs['RELIQUIA'];
+  const companyKeys = Object.keys(all).filter(k => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+  return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['RELIQUIA']);
 }
 
 function saveConfig(cfg: any) {
-  fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2), 'utf-8');
+  const sanitized = sanitizeConfig(cfg);
+  fs.writeFileSync(configPath, JSON.stringify(sanitized, null, 2), 'utf-8');
+  if (mainWindow) {
+    mainWindow.webContents.send('config-updated', sanitized);
+  }
 }
 
 function appendLog(msg: string) {
@@ -228,8 +264,21 @@ app.on('window-all-closed', () => {
 ipcMain.handle('get-config', () => loadConfig());
 ipcMain.handle('save-config', (_, cfg) => {
   saveConfig(cfg);
-  appendLog('[CONFIG] Configurações de rede atualizadas com sucesso.');
+  appendLog('[CONFIG] Configurações de rede atualizadas com sucesso pelo TI.');
   return { success: true };
+});
+ipcMain.handle('reset-config', () => {
+  if (fs.existsSync(configPath)) {
+    try {
+      fs.unlinkSync(configPath);
+    } catch (e) {}
+  }
+  const resetCfg = loadConfig();
+  if (mainWindow) {
+    mainWindow.webContents.send('config-updated', resetCfg);
+  }
+  appendLog('[CONFIG] Configurações redefinidas para os padrões corporativos de fábrica pelo TI.');
+  return { success: true, config: resetCfg };
 });
 
 ipcMain.handle('get-logs', () => {
@@ -297,9 +346,16 @@ ipcMain.handle('clear-history', () => {
 });
 
 // Test AD / SMB Connection
-ipcMain.handle('test-connection', async (_, company: 'RELIQUIA' | 'RTO') => {
+ipcMain.handle('test-connection', async (_, company: string) => {
   const config = getCompanyConfig(company);
   const ip = config.adServerIp;
+  if (!ip) {
+    const testPath = config.destSharePath || config.destinationParentPath || config.sourcePath;
+    if (testPath && fs.existsSync(testPath)) {
+      return { success: true, message: `Compartilhamento de rede da empresa ${company} acessível e validado com sucesso.` };
+    }
+    return { success: false, message: `Servidor ou compartilhamento de rede não configurado para ${company}.` };
+  }
   return new Promise((resolve) => {
     exec(`powershell -NoProfile -Command "Test-NetConnection -ComputerName '${ip}' -Port 445 -InformationLevel Quiet"`, { timeout: 5000 }, (err, stdout) => {
       const ok = stdout && stdout.trim().toLowerCase() === 'true';
@@ -532,7 +588,7 @@ ipcMain.handle('inspect-folder', (_, dirPath: string) => {
 // -------------------------------------------------------------
 // Safe Folder Transfer (Robocopy / NTFS DACL Preserved)
 // -------------------------------------------------------------
-ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParentPath }: { company: 'RELIQUIA' | 'RTO'; sourcePath: string; destParentPath: string }) => {
+ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParentPath }: { company: string; sourcePath: string; destParentPath: string }) => {
   const config = getCompanyConfig(company);
   const allowedBase = config.allowedBasePath || config.destSharePath;
 
@@ -779,52 +835,41 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   const trimmedName = folderName.trim();
   if (!trimmedName) return { success: false, error: 'O nome da pasta do cliente não pode estar vazio.' };
 
-  const configs: Record<string, any> = {
-    RELIQUIA: {
-      domainUser: String.raw`RELIQUIA\pasta.paralegal`,
-      adPass: 'Mestre@300',
-      adServerIp: '192.168.100.30',
-      sourcePath: String.raw`\\192.168.100.30\gpo\criarpastas_paralegal\MODELO`,
-      destSharePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
-    },
-    RTO: {
-      domainUser: String.raw`RTO\pasta.paralegal`,
-      adPass: 'Mestre@300',
-      adServerIp: '192.168.50.102',
-      sourcePath: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`,
-      destSharePath: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
-    },
-  };
-
-  const config = configs[company] || loadConfig();
-  const finalPath = path.join(config.destSharePath, trimmedName);
+  const config = getCompanyConfig(company);
+  const destShare = config.destSharePath || config.destinationParentPath;
+  if (!destShare) {
+    return { success: false, error: `Caminho de destino não configurado para a empresa '${company}'.` };
+  }
+  const finalPath = path.join(destShare, trimmedName);
 
   appendLog('---------------------------------------------------------');
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Cliente: ${trimmedName}`);
   appendLog(`[ORIGEM GPO MODELO] ${config.sourcePath}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
-  const pureUser = 'pasta.paralegal';
-  const adUser = config.domainUser;
-  const adPass = config.adPass;
+  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
+  const pureUser = adUser.includes('\\') ? adUser.split('\\')[1] : (adUser || 'pasta.paralegal');
+  const adPass = config.adPass || 'Mestre@300';
   const adServerIp = config.adServerIp;
 
   // 1. LDAP DIRECTORY ENTRY AD CHECK (Strict Isolated Domain Check)
-  appendLog(`[VALIDAÇÃO AD ${company}] Verificando existência de '${pureUser}' no AD (${adServerIp})...`);
-  let userExists = false;
-  try {
-    const psCheckCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "$entry = New-Object System.DirectoryServices.DirectoryEntry('LDAP://${adServerIp}'); $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry); $searcher.Filter = '(sAMAccountName=${pureUser})'; $res = $searcher.FindOne(); if ($res -ne $null) { exit 0 } else { exit 1 }"`;
-    execSync(psCheckCmd, { stdio: 'ignore' });
-    userExists = true;
-    appendLog(`[VALIDAÇÃO AD ${company}] Conta '${pureUser}' confirmada no Active Directory de ${company}.`);
-  } catch (e) {
-    userExists = false;
-  }
+  if (adServerIp) {
+    appendLog(`[VALIDAÇÃO AD ${company}] Verificando existência de '${pureUser}' no AD (${adServerIp})...`);
+    let userExists = false;
+    try {
+      const psCheckCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "$entry = New-Object System.DirectoryServices.DirectoryEntry('LDAP://${adServerIp}'); $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry); $searcher.Filter = '(sAMAccountName=${pureUser})'; $res = $searcher.FindOne(); if ($res -ne $null) { exit 0 } else { exit 1 }"`;
+      execSync(psCheckCmd, { stdio: 'ignore' });
+      userExists = true;
+      appendLog(`[VALIDAÇÃO AD ${company}] Conta '${pureUser}' confirmada no Active Directory de ${company}.`);
+    } catch (e) {
+      userExists = false;
+    }
 
-  if (!userExists) {
-    const errorMsg = `[ERRO CRÍTICO AD] A conta de serviço '${pureUser}' não foi encontrada no Active Directory da ${company} (${adServerIp}).\n\nPor favor, crie a conta '${pureUser}' no Active Directory da ${company} (com a senha 'Mestre@300') antes de criar pastas nesta rede.`;
-    appendLog(`[ABORTADO ${company}] ${errorMsg}`);
-    return { success: false, error: errorMsg };
+    if (!userExists) {
+      const errorMsg = `[ERRO CRÍTICO AD] A conta de serviço '${pureUser}' não foi encontrada no Active Directory da ${company} (${adServerIp}).\n\nPor favor, crie a conta '${pureUser}' no Active Directory da ${company} (com a senha '${adPass}') antes de criar pastas nesta rede.`;
+      appendLog(`[ABORTADO ${company}] ${errorMsg}`);
+      return { success: false, error: errorMsg };
+    }
   }
 
   // 2. SEARCH FOR ExecuteAsUser.exe IN ALL BUNDLE LOCATIONS

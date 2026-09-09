@@ -1,5 +1,33 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.6.0 (09/09/2026) - **Desbloqueio TI com Senha, Gestão Dinâmica de Empresas e Perímetro de Governança**
+- **Painel de Configurações Protegido por Senha de Administrador TI (`SettingsView.tsx`)**:
+  - Acesso à edição de configurações bloqueado por padrão para operadores comuns.
+  - Desbloqueio seguro através do modal `TIAccessModal` utilizando a credencial mestre do TI (`Fallima1979` ou variável `TI_LOGS_PASSWORD`).
+  - Interface moderna no padrão Microsoft Teams / Fluent Design com indicação visual de status bloqueado/ativo.
+- **Gestão Dinâmica de Empresas e Filiais**:
+  - Adição de novas empresas/filiais (`+ Nova Empresa`) e remoção com validação de segurança (mínimo de 1 empresa ativa).
+  - Configuração granular por empresa: caminhos de rede (`sourcePath`, `destSharePath`), pasta padrão de origem (`defaultSourceFolder`), credenciais de Active Directory (`adServerIp`, `domainUser`, `adPass`).
+  - Seletor de diretórios nativo (`selectDirectory`) com botão "Procurar..." integrado aos campos de caminho.
+- **Perímetro de Governança de Arquivos Configurável (`allowedBasePath`)**:
+  - O perímetro que delimita onde os operadores podem criar e mover pastas agora é 100% configurável pela equipe de TI.
+  - Bloqueio rígido de segurança: impede que qualquer operação afete pastas raízes ou sensíveis (como `DEPARTAMENTOS`, `JURIDICO`, etc.).
+- **Gerenciador Dinâmico de Atalhos Rápidos (`presetDestinations`)**:
+  - Permite ao TI configurar a lista dinâmica de botões de atalho de destino ("Para onde vai a pasta?"), com ações de adicionar, editar e excluir atalhos por empresa.
+- **Persistência Inteligente & Restauração de Fábrica (`main.ts`)**:
+  - Prioridade para `%APPDATA%/FolderWorks/config.json`, garantindo persistência real das customizações do TI entre reinicializações.
+  - Evento IPC reativo `config-updated` propagando atualizações em tempo real para o frontend sem necessidade de reiniciar o aplicativo.
+  - Botão "Restaurar Padrões de Fábrica" (`reset-config`) para reverter configurações para o estado original do instalador MSI caso necessário.
+- **Arquitetura Dinâmica em Todo o Aplicativo**:
+  - `FolderCreationView.tsx`: Grid de criação de pastas adapta-se dinamicamente a todas as empresas cadastradas no `config.json`.
+  - `FolderTransferView.tsx`: Seletor dinâmico de empresas com atalhos, perímetros e pastas padrão carregados automaticamente para a empresa ativa.
+  - `Sidebar.tsx` & `App.tsx`: Monitoramento e indicação de status de conexão dinâmica para todos os servidores das empresas cadastradas.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.6.0** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts de geração de MSI (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote MSI v2.6.0**: Compilado com WiX Toolset v3.14 mantendo compatibilidade in-place upgrade e tamanho enxuto (~111 MB).
+
+---
+
 ## Versão 2.5.14 (09/09/2026) - **Correção de Duplicação na Tela Sobre e Botão Minimalista de Informações (i)**
 - **Eliminação da Renderização Duplicada (`App.tsx`)**:
   - Corrigido o bug onde o componente `<AboutView />` era instanciado em duplicidade no corpo principal da aplicação.

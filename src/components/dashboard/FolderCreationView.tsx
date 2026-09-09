@@ -1,15 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, FolderPlus, CheckCircle2, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 
 interface FolderCreationViewProps {
-  onCreateFolder: (company: 'RELIQUIA' | 'RTO', folderName: string) => Promise<{ success: boolean; error?: string }>;
+  onCreateFolder: (company: string, folderName: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreateFolder }) => {
-  const [selectedCompany, setSelectedCompany] = useState<'RELIQUIA' | 'RTO'>('RELIQUIA');
+  const [selectedCompany, setSelectedCompany] = useState<string>('RELIQUIA');
+  const [companies, setCompanies] = useState<Record<string, any>>({});
   const [folderName, setFolderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    window.electronAPI?.getConfig().then((cfg) => {
+      if (cfg) {
+        setCompanies(cfg);
+        const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+        if (keys.length > 0 && !keys.includes(selectedCompany)) {
+          setSelectedCompany(keys[0]);
+        }
+      }
+    });
+
+    const unsub = window.electronAPI?.onConfigUpdated?.((updatedCfg) => {
+      if (updatedCfg) {
+        setCompanies(updatedCfg);
+        const keys = Object.keys(updatedCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+        if (keys.length > 0 && !keys.includes(selectedCompany)) {
+          setSelectedCompany(keys[0]);
+        }
+      }
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [selectedCompany]);
+
+  const companyKeys = Object.keys(companies).filter(
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword'
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,11 +48,12 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
     setIsProcessing(true);
     setLastResult(null);
 
+    const compDisplay = companies[selectedCompany]?.companyName || selectedCompany;
     const res = await onCreateFolder(selectedCompany, folderName);
     setIsProcessing(false);
 
     if (res.success) {
-      setLastResult({ success: true, message: `Pasta '${folderName}' criada com sucesso na rede da ${selectedCompany}!` });
+      setLastResult({ success: true, message: `Pasta '${folderName}' criada com sucesso na rede da ${compDisplay}!` });
       setFolderName('');
     } else {
       setLastResult({ success: false, message: res.error || 'Falha ao criar pasta de rede.' });
@@ -53,52 +84,50 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
               Selecione o Servidor / Empresa
             </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setSelectedCompany('RELIQUIA')}
-                className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
-                  selectedCompany === 'RELIQUIA'
-                    ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-teams-700 dark:text-teams-300 ring-2 ring-teams-600/20 shadow-xs'
-                    : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${selectedCompany === 'RELIQUIA' ? 'bg-teams-600 text-white' : 'bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-slate-400'}`}>
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-sm">RELIQUIA</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Servidor Primário</div>
-                  </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {companyKeys.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-neutral-700 text-center text-xs text-slate-400 col-span-2">
+                  Nenhuma empresa cadastrada no momento. Configure uma empresa na aba Configurações.
                 </div>
-                {selectedCompany === 'RELIQUIA' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-teams-600 dark:bg-teams-400" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedCompany('RTO')}
-                className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
-                  selectedCompany === 'RTO'
-                    ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-teams-700 dark:text-teams-300 ring-2 ring-teams-600/20 shadow-xs'
-                    : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${selectedCompany === 'RTO' ? 'bg-teams-600 text-white' : 'bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-slate-400'}`}>
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-sm">RTO</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Servidor Filial</div>
-                  </div>
-                </div>
-                {selectedCompany === 'RTO' && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-teams-600 dark:bg-teams-400" />
-                )}
-              </button>
+              ) : (
+                companyKeys.map((key) => {
+                  const isSelected = selectedCompany === key;
+                  const comp = companies[key] || {};
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedCompany(key)}
+                      className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-teams-700 dark:text-teams-300 ring-2 ring-teams-600/20 shadow-xs'
+                          : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <div
+                          className={`p-2 rounded-lg shrink-0 ${
+                            isSelected
+                              ? 'bg-teams-600 text-white'
+                              : 'bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div className="text-left truncate">
+                          <div className="font-bold text-sm truncate">{comp.companyName || key}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {comp.adServerIp ? `Servidor (${comp.adServerIp})` : 'Compartilhamento de Rede'}
+                          </div>
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-teams-600 dark:bg-teams-400 shrink-0 ml-2" />
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
 
