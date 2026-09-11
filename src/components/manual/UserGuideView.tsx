@@ -1,5 +1,4 @@
 import React from 'react';
-import { BookOpen, FolderPlus, FolderOutput, CheckCircle2, HelpCircle, Layers } from 'lucide-react';
 import {
   BookOpen,
   FolderPlus,
@@ -18,11 +17,6 @@ import {
 
 export const UserGuideView: React.FC = () => {
   return (
-    <div className="space-y-6 max-w-5xl mx-auto text-xs text-slate-700 dark:text-slate-300">
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
-          <div className="w-10 h-10 rounded-xl bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
-            <BookOpen className="w-5 h-5" />
     <div className="space-y-6 max-w-5xl mx-auto text-xs text-slate-700 dark:text-slate-300 select-none pb-10">
       {/* Header do Manual */}
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-6 shadow-sm flex items-center justify-between">
@@ -31,8 +25,6 @@ export const UserGuideView: React.FC = () => {
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Manual do Usuário</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Instruções simples de operação do Entropy FolderWorks</p>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
               Manual do Usuário & Guia Operacional
             </h3>
@@ -46,18 +38,6 @@ export const UserGuideView: React.FC = () => {
         </div>
       </div>
 
-        {/* Task 1: Como Criar Pastas */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-teams-600 dark:text-teams-400 flex items-center gap-2">
-            <FolderPlus className="w-4 h-4" />
-            1. Como Criar uma Nova Pasta de Cliente
-          </h4>
-          <ol className="list-decimal list-inside space-y-2 pl-2 text-slate-600 dark:text-slate-400 leading-relaxed">
-            <li>Na tela inicial <strong>Criar Pastas</strong>, selecione a empresa desejada (<strong>RELIQUIA</strong> ou <strong>RTO</strong>).</li>
-            <li>No campo de texto, digite o código e nome do cliente seguindo o padrão oficial (Exemplo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">10572 - AERO 0010</span>).</li>
-            <li>Clique no botão <strong>Criar Pastas</strong>.</li>
-            <li>O aplicativo criará automaticamente a pasta principal e todas as 7 subpastas padrão no servidor da empresa selecionada.</li>
-            <li>Uma mensagem de confirmação em verde indicará que a operação foi concluída.</li>
       {/* Conteúdo Principal */}
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-6 sm:p-8 shadow-sm space-y-8">
         {/* Seção 1: Como Criar Pastas de Clientes */}
@@ -96,69 +76,48 @@ export const UserGuideView: React.FC = () => {
             </li>
           </ol>
 
-          {/* Subpastas Padrão Criadas pelo Sistema */}
-          <div className="mt-3 p-4 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 space-y-3">
           {/* Subpastas Padrão Geradas Automaticamente */}
           <div className="mt-4 p-5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
             <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
               <Layers className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <span>Subpastas Padrão Geradas Automaticamente (7 Pastas)</span>
               <span>Subpastas Padrão Geradas Automaticamente (7 Departamentos)</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-              Ao criar um cliente, a estrutura abaixo é replicada integralmente no servidor com as permissões restritas de cada departamento:
               Toda nova pasta criada recebe automaticamente a seguinte estrutura organizacional interna para arquivamento ordenado dos documentos:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">CONTABILIDADE</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Livros diários e balancetes</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Livros diários, balancetes e demonstrações</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">DP</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Folha de pagamento e guias</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Folha de pagamento, contratações e guias</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">EXPEDIÇÃO</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Documentos e transporte</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Documentos e comprovantes de transporte</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">FISCAL</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Notas fiscais e impostos</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Notas fiscais, apuração e impostos</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">PARALEGAL</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Contratos e certidões</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Contratos sociais, certidões e registros</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">RH</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Treinamentos e medicina</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Gestão de pessoas, exames e treinamentos</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-between text-xs sm:col-span-2">
               <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs sm:col-span-2">
                 <span className="font-mono font-bold text-teams-600 dark:text-teams-400">SPED</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Arquivos de obrigações acessórias eletrônicas</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">Arquivos digitais e escriturações acessórias eletrônicas</span>
               </div>
             </div>
           </div>
-        </div>
         </section>
 
-        <hr className="border-slate-100 dark:border-neutral-700" />
         {/* Seção 2: Como Mover ou Transferir Pastas */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
@@ -170,19 +129,6 @@ export const UserGuideView: React.FC = () => {
             </h4>
           </div>
 
-        {/* Task 2: Como Transferir Pastas */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-teams-600 dark:text-teams-400 flex items-center gap-2">
-            <FolderOutput className="w-4 h-4" />
-            2. Como Mover ou Transferir Pastas
-          </h4>
-          <ol className="list-decimal list-inside space-y-2 pl-2 text-slate-600 dark:text-slate-400 leading-relaxed">
-            <li>Acesse a aba <strong>Mover / Transferir Pastas</strong> no menu lateral.</li>
-            <li>Selecione a empresa correspondente.</li>
-            <li>Escolha a pasta de destino (você pode utilizar os botões de atalho rápido como <span className="font-mono text-xs font-semibold">00 - EX CLIENTES</span>).</li>
-            <li>Na lista de pastas, localize o cliente desejado pela barra de pesquisa ou clique em <strong>SELECIONAR TODAS</strong>.</li>
-            <li>Clique em <strong>Iniciar Transferência</strong>.</li>
-            <li>Ao final da cópia, confirme se deseja remover as pastas da origem ou mantê-las como cópia de segurança.</li>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
             A ferramenta de transferência permite remanejar pastas inteiras (por exemplo, ao encerrar contratos ou reorganizar clientes) com alta velocidade e verificação contínua de integridade.
           </p>
@@ -210,10 +156,8 @@ export const UserGuideView: React.FC = () => {
               Ao término da cópia, o sistema questionará se deseja manter os arquivos na pasta de origem ou removê-los com segurança para liberar espaço.
             </li>
           </ol>
-        </div>
         </section>
 
-        <hr className="border-slate-100 dark:border-neutral-700" />
         {/* Seção 3: Registro de Atividades e Logs (Suporte & TI) */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
@@ -225,12 +169,6 @@ export const UserGuideView: React.FC = () => {
             </h4>
           </div>
 
-        {/* FAQ & Dicas */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Dúvidas Frequentes & Recomendações
-          </h4>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
             O aplicativo dispõe de um módulo de auditoria e telemetria profunda para diagnóstico de rede, transmissões de arquivos e validação de permissões no servidor.
           </p>
@@ -319,9 +257,6 @@ export const UserGuideView: React.FC = () => {
           </div>
 
           <div className="space-y-3 font-sans">
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700">
-              <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">A pasta já existe no destino</div>
-              <div className="text-slate-500 dark:text-slate-400">Se o cliente já tiver pasta criada com o mesmo nome no destino, o aplicativo avisará para evitar substituições indesejadas.</div>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
               <div className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
                 <span>O que acontece se a pasta já existir no destino?</span>
@@ -331,9 +266,6 @@ export const UserGuideView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700">
-              <div className="font-bold text-slate-800 dark:text-slate-200 mb-1">Não fechar o aplicativo durante a transferência</div>
-              <div className="text-slate-500 dark:text-slate-400">Durante uma cópia de pastas, aguarde a barra de progresso finalizar antes de fechar a janela, garantindo que todos os arquivos sejam transmitidos por completo.</div>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
               <div className="font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -354,7 +286,6 @@ export const UserGuideView: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
         </section>
       </div>
     </div>

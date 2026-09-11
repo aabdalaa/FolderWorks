@@ -34,6 +34,22 @@ async function buildMSI() {
 
   const masterConfig = {
     isLockedByMSI: true,
+    RTO: {
+      name: env.RTO_NAME || 'RTO',
+      companyName: 'RTO',
+      sourcePath: env.RTO_SOURCE_PATH || '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\MODELO',
+      destinationParentPath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
+      destSharePath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
+      allowedBasePath: '\\\\192.168.50.102\\rto\\CLIENTES',
+      defaultSourceFolder: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
+      presetDestinations: [
+        { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES' },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
+      ],
+      adServerIp: env.RTO_AD_IP || '192.168.50.102',
+      domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
+      adPass: env.RTO_AD_PASS || 'Mestre@300'
+    },
     RELIQUIA: {
       name: env.RELIQUIA_NAME || 'RELIQUIA',
       companyName: 'RELIQUIA',
@@ -131,6 +147,7 @@ async function buildMSI() {
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
     version: '2.6.2',
+    version: '2.7.0',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

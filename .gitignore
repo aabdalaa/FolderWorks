@@ -4,6 +4,7 @@ package-lock.json
 
 # Builds e arquivos binários gerados
 dist/
+dist-electron/
 build/*.jsc
 src/*.jsc
 

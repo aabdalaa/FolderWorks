@@ -1,5 +1,29 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.0 (11/09/2026) - **Módulo de Renomeação de Pastas, Validação Real AD e Proteção Crítica de Credenciais**
+- **Nova Funcionalidade: Renomear Pastas Corporativas (`FolderRenameView`)**:
+  - Adicionado novo módulo dedicado acessível pela barra lateral ("Renomear Pasta" com ícone `FolderEdit`).
+  - Fluxo intuitivo e direto: o operador escolhe uma pasta através do seletor nativo, visualiza o nome atual e informa o novo nome desejado.
+  - Sanitização e validação nativa de caracteres proibidos pelo Windows (`\ / : * ? " < > |`) e bloqueio de nomes vazios ou idênticos ao atual.
+  - Handler IPC `rename-folder` seguro com registro de auditoria completo (`FOLDER_RENAMED`) contendo caminho de origem, novo caminho e operador.
+- **Validação Rigorosa de Conexão no Active Directory (Falso Positivo Eliminado)**:
+  - O teste de conectividade agora realiza validação trifásica completa em PowerShell:
+    1. Teste de conectividade de rede na porta TCP 445 (SMB);
+    2. Autenticação real via LDAP com `System.DirectoryServices.DirectoryEntry` utilizando o usuário e senha configurados;
+    3. Pesquisa ativa no catálogo global com `DirectorySearcher` para confirmar existência da conta.
+  - Usuários inexistentes (ex: `RTO\aaaa`) ou credenciais incorretas são imediatamente rejeitados com diagnósticos detalhados.
+- **Correção de Falha Crítica de Segurança em Configurações**:
+  - Em `SettingsView.tsx`, o botão de visualização de senha `(👁)` foi completamente ocultado para usuários não autorizados.
+  - O campo de senha não injeta a credencial real no DOM quando bloqueado, exibindo apenas uma máscara estática (`••••••••••••`).
+  - Apenas após autenticação mestre do TI com senha de administrador a credencial real torna-se acessível e auditável.
+- **Empresa e Usuário Padrão Atualizados para RTO**:
+  - O aplicativo inicializa com a empresa **RTO** e o usuário **`RTO\pasta.paralegal`** selecionados por padrão em todos os módulos (Criação, Transferência, Renomeação e Configurações).
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.7.0** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.0**: Compilado com WiX Toolset v3.14 mantendo UpgradeCode in-place idêntico.
+
+---
+
 ## Versão 2.6.2 (11/09/2026) - **Atualização de Variáveis Corporativas Padrão da RELIQUIA e RTO**
 - **Atualização de Infraestrutura de Rede da Empresa RELIQUIA**:
   - `sourcePath` (Modelo de Pastas / Origem da Estrutura): Atualizado de `\\192.168.100.30\gpo\criarpastas_paralegal\MODELO` para `\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`.

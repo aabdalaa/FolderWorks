@@ -13,20 +13,6 @@ const logsPath = path.join(userDataPath, 'app.log');
 
 // Default Corporate Config with IT Governance Perimeter
 const defaultCompanyConfigs: Record<string, any> = {
-  RELIQUIA: {
-    companyName: 'RELIQUIA',
-    domainUser: String.raw`RELIQUIA\pasta.paralegal`,
-    adPass: 'Mestre@300',
-    adServerIp: '192.168.1.242',
-    sourcePath: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`,
-    destSharePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
-    defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
-    presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES` },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS` }
-    ]
-  },
   RTO: {
     companyName: 'RTO',
     domainUser: String.raw`RTO\pasta.paralegal`,
@@ -39,6 +25,20 @@ const defaultCompanyConfigs: Record<string, any> = {
     presetDestinations: [
       { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES` },
       { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS` }
+    ]
+  },
+  RELIQUIA: {
+    companyName: 'RELIQUIA',
+    domainUser: String.raw`RELIQUIA\pasta.paralegal`,
+    adPass: 'Mestre@300',
+    adServerIp: '192.168.1.242',
+    sourcePath: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`,
+    destSharePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
+    allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
+    defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
+    presetDestinations: [
+      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES` },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS` }
     ]
   }
 };
@@ -144,6 +144,7 @@ function getCompanyConfig(company: string) {
   const all = loadConfig();
   const companyKeys = Object.keys(all).filter(k => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
   return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['RELIQUIA']);
+  return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['RTO']);
 }
 
 function saveConfig(cfg: any) {
@@ -345,10 +346,14 @@ ipcMain.handle('clear-history', () => {
   return [];
 });
 
-// Test AD / SMB Connection
-ipcMain.handle('test-connection', async (_, company: string) => {
-  const config = getCompanyConfig(company);
-  const ip = config.adServerIp;
+// Test AD / SMB Connection & Service Account Authentication
+ipcMain.handle('test-connection', async (_, company: string, overrideConfig?: any) => {
+  const config = overrideConfig || getCompanyConfig(company);
+  const ip = (config.adServerIp || '').trim();
+  const rawUser = (config.domainUser || '').trim();
+  const pass = (config.adPass || '').trim();
+  const pureUser = rawUser.includes('\\') ? rawUser.split('\\')[1] : rawUser;
+
   if (!ip) {
     const testPath = config.destSharePath || config.destinationParentPath || config.sourcePath;
     if (testPath && fs.existsSync(testPath)) {
@@ -356,13 +361,79 @@ ipcMain.handle('test-connection', async (_, company: string) => {
     }
     return { success: false, message: `Servidor ou compartilhamento de rede não configurado para ${company}.` };
   }
+
+  const psScript = `
+    $server = '${ip}';
+    $user = '${rawUser.replace(/'/g, "''")}';
+    $pass = '${pass.replace(/'/g, "''")}';
+    $pureUser = '${pureUser.replace(/'/g, "''")}';
+
+    # 1. Checagem de porta TCP 445
+    $tcp = Test-NetConnection -ComputerName $server -Port 445 -InformationLevel Quiet -WarningAction SilentlyContinue;
+    if (-not $tcp) {
+      Write-Output "ERR_TCP: Servidor AD $server não está acessível na porta 445 (porta fechada ou host offline).";
+      exit 1;
+    }
+
+    # 2. Se houver usuário e senha informados, autentica no AD via LDAP
+    if ($user -and $pass) {
+      try {
+        $entry = New-Object System.DirectoryServices.DirectoryEntry(('LDAP://' + $server), $user, $pass);
+        $native = $entry.NativeObject;
+        if ($null -eq $native) {
+          Write-Output "ERR_AUTH: Falha na autenticação do usuário '$user' no Active Directory ($server). Verifique o usuário ou senha.";
+          exit 2;
+        }
+      } catch {
+        Write-Output "ERR_AUTH: Falha na autenticação do usuário '$user' no Active Directory ($server): $($_.Exception.Message)";
+        exit 3;
+      }
+
+      # 3. Pesquisa do usuário no catálogo do AD
+      try {
+        $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry);
+        $searcher.Filter = "(sAMAccountName=$pureUser)";
+        $res = $searcher.FindOne();
+        if ($null -eq $res) {
+          Write-Output "ERR_NOT_FOUND: O usuário '$pureUser' não foi localizado no catálogo do Active Directory ($server).";
+          exit 4;
+        }
+      } catch {
+        Write-Output "ERR_SEARCH: Falha ao consultar catálogo do Active Directory: $($_.Exception.Message)";
+        exit 5;
+      }
+    }
+
+    Write-Output "SUCCESS";
+    exit 0;
+  `;
+
   return new Promise((resolve) => {
-    exec(`powershell -NoProfile -Command "Test-NetConnection -ComputerName '${ip}' -Port 445 -InformationLevel Quiet"`, { timeout: 5000 }, (err, stdout) => {
-      const ok = stdout && stdout.trim().toLowerCase() === 'true';
-      if (ok) {
-        resolve({ success: true, message: `Conexão SMB/AD com ${company} (${ip}:445) ativa e respondendo.` });
+    exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/\r?\n/g, ' ')}"`, { timeout: 10000 }, (err, stdout, stderr) => {
+      const output = (stdout || '').trim();
+      if (output.startsWith('SUCCESS')) {
+        const userInfo = rawUser ? ` e usuário '${rawUser}' autenticado no domínio` : '';
+        resolve({
+          success: true,
+          message: `Conexão validada com sucesso: Servidor AD (${ip}:445) respondendo${userInfo}.`
+        });
       } else {
-        resolve({ success: false, message: `Servidor AD ${company} (${ip}) indisponível ou porta 445 inacessível.` });
+        let msg = output;
+        if (output.startsWith('ERR_TCP:')) {
+          msg = output.replace(/^ERR_TCP:\s*/, '');
+        } else if (output.startsWith('ERR_AUTH:')) {
+          msg = output.replace(/^ERR_AUTH:\s*/, '');
+        } else if (output.startsWith('ERR_NOT_FOUND:')) {
+          msg = output.replace(/^ERR_NOT_FOUND:\s*/, '');
+        } else if (output.startsWith('ERR_SEARCH:')) {
+          msg = output.replace(/^ERR_SEARCH:\s*/, '');
+        } else if (!msg) {
+          msg = stderr ? stderr.trim() : `Servidor AD ${company} (${ip}) indisponível ou inacessível.`;
+        }
+        resolve({
+          success: false,
+          message: msg
+        });
       }
     });
   });
@@ -803,6 +874,79 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
   }
 
   return { success: errors.length === 0, undone, errors };
+});
+
+// -------------------------------------------------------------
+// Folder Renaming Functionality
+// -------------------------------------------------------------
+ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { targetPath: string; newName: string; company?: string }) => {
+  try {
+    if (!targetPath || typeof targetPath !== 'string') {
+      return { success: false, error: 'Nenhum caminho de pasta informado.' };
+    }
+    const cleanTarget = path.normalize(targetPath.trim());
+    if (!fs.existsSync(cleanTarget)) {
+      return { success: false, error: `A pasta selecionada não foi encontrada no sistema:\n${cleanTarget}` };
+    }
+
+    const stat = fs.statSync(cleanTarget);
+    if (!stat.isDirectory()) {
+      return { success: false, error: 'O caminho selecionado não é um diretório válido.' };
+    }
+
+    if (!newName || typeof newName !== 'string' || !newName.trim()) {
+      return { success: false, error: 'O novo nome da pasta não pode estar vazio.' };
+    }
+    const cleanNewName = newName.trim();
+
+    // Caracteres proibidos no Windows: \ / : * ? " < > |
+    const invalidCharsRegex = /[\\/:*?"<>|]/;
+    if (invalidCharsRegex.test(cleanNewName)) {
+      return { success: false, error: 'O novo nome contém caracteres não permitidos pelo Windows: \\ / : * ? " < > |' };
+    }
+
+    const parentDir = path.dirname(cleanTarget);
+    const oldName = path.basename(cleanTarget);
+
+    if (oldName.toLowerCase() === cleanNewName.toLowerCase()) {
+      return { success: false, error: 'O novo nome é idêntico ao nome atual da pasta.' };
+    }
+
+    const newFullPath = path.join(parentDir, cleanNewName);
+    if (fs.existsSync(newFullPath)) {
+      return { success: false, error: `Já existe uma pasta com o nome '${cleanNewName}' neste mesmo diretório.` };
+    }
+
+    appendLog('---------------------------------------------------------');
+    appendLog(`[RENOMEAR PASTA] Origem: ${cleanTarget}`);
+    appendLog(`[NOVO NOME] ${cleanNewName}`);
+    appendLog(`[DESTINO FINAL] ${newFullPath}`);
+
+    // Executa a renomeação nativa
+    fs.renameSync(cleanTarget, newFullPath);
+
+    appendLog(`[SUCESSO RENOMEAR] Pasta renomeada com sucesso: '${oldName}' -> '${cleanNewName}'`);
+
+    const compName = company || 'RTO';
+    const compConfig = getCompanyConfig(compName);
+
+    saveHistoryEntry({
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+      timestamp: new Date().toLocaleString('pt-BR'),
+      company: compName,
+      folderName: cleanNewName,
+      finalPath: `RENOMEADO: ${oldName} -> ${cleanNewName} (${newFullPath})`,
+      executedBy: compConfig?.domainUser || 'Operador',
+      status: 'FOLDER_RENAMED',
+      durationSeconds: 1,
+    });
+
+    return { success: true, newPath: newFullPath, oldName, newName: cleanNewName };
+  } catch (err: any) {
+    const errStr = `Falha ao renomear pasta: ${err.message}`;
+    appendLog(`[ERRO RENOMEAR] ${errStr}`);
+    return { success: false, error: errStr };
+  }
 });
 
 ipcMain.handle('build-custom-msi', async (_, msiParams) => {

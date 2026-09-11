@@ -22,7 +22,7 @@ import {
 import { TIAccessModal } from '../logs/TIAccessModal';
 
 interface SettingsViewProps {
-  onTestConnection: (company: string) => Promise<{ success: boolean; message: string }>;
+  onTestConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
   isTIAuthenticated?: boolean;
   onUnlockTI?: () => void;
   onLockTI?: () => void;
@@ -48,7 +48,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Active Company Tab in Settings
-  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('');
+  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('RTO');
 
   // UI Feedback States
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -80,7 +80,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setConfig(cfg);
       const keys = getCompanyKeys(cfg);
       if (keys.length > 0 && !activeCompanyTab) {
-        setActiveCompanyTab(keys[0]);
+        setActiveCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
       }
     });
 
@@ -97,13 +97,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Ensure activeCompanyTab is valid
   useEffect(() => {
     if (companyKeys.length > 0 && (!activeCompanyTab || !companyKeys.includes(activeCompanyTab))) {
-      setActiveCompanyTab(companyKeys[0]);
+      setActiveCompanyTab(companyKeys.includes('RTO') ? 'RTO' : companyKeys[0]);
     }
   }, [companyKeys, activeCompanyTab]);
 
   const handleTest = async (compKey: string) => {
     setTesting((prev) => ({ ...prev, [compKey]: true }));
-    const res = await onTestConnection(compKey);
+    const compConfig = config?.[compKey];
+    const res = await onTestConnection(compKey, compConfig);
     setTestResults((prev) => ({ ...prev, [compKey]: res }));
     setTesting((prev) => ({ ...prev, [compKey]: false }));
   };
@@ -777,9 +778,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </label>
                 <div className="relative">
                   <input
-                    type={showPasswords[activeCompanyTab] ? 'text' : 'password'}
+                    type={isTIUnlocked && showPasswords[activeCompanyTab] ? 'text' : 'password'}
                     readOnly={!isTIUnlocked}
-                    value={activeComp.adPass || ''}
+                    value={isTIUnlocked ? (activeComp.adPass || '') : '••••••••••••'}
                     onChange={(e) => handleFieldChange(activeCompanyTab, 'adPass', e.target.value)}
                     placeholder="••••••••"
                     className={`w-full p-2 pr-8 rounded-lg font-mono text-[11px] ${
@@ -788,19 +789,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
                     }`}
                   />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPasswords((prev) => ({
-                        ...prev,
-                        [activeCompanyTab]: !prev[activeCompanyTab],
-                      }))
-                    }
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    title={showPasswords[activeCompanyTab] ? 'Ocultar senha' : 'Ver senha'}
-                  >
-                    {showPasswords[activeCompanyTab] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+                  {isTIUnlocked && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPasswords((prev) => ({
+                          ...prev,
+                          [activeCompanyTab]: !prev[activeCompanyTab],
+                        }))
+                      }
+                      className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title={showPasswords[activeCompanyTab] ? 'Ocultar senha' : 'Ver senha'}
+                    >
+                      {showPasswords[activeCompanyTab] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

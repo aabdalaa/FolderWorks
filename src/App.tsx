@@ -4,6 +4,7 @@ import { Sidebar, AppTab } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { FolderCreationView } from './components/dashboard/FolderCreationView';
 import { FolderTransferView } from './components/transfer/FolderTransferView';
+import { FolderRenameView } from './components/rename/FolderRenameView';
 import { SettingsView } from './components/settings/SettingsView';
 import { HistoryView } from './components/history/HistoryView';
 import { UserGuideView } from './components/manual/UserGuideView';
@@ -86,8 +87,8 @@ export const App: React.FC = () => {
     return window.electronAPI?.createFolder({ company, folderName });
   };
 
-  const handleTestConnection = async (company: string) => {
-    const res = await window.electronAPI?.testServerConnection(company);
+  const handleTestConnection = async (company: string, overrideConfig?: any) => {
+    const res = await window.electronAPI?.testServerConnection(company, overrideConfig);
     setServerStatuses((prev) => ({ ...prev, [company]: res.success }));
     if (company === 'RELIQUIA') setReliquiaStatus(res.success);
     if (company === 'RTO') setRtoStatus(res.success);
@@ -119,6 +120,11 @@ export const App: React.FC = () => {
         return {
           title: 'Transferência de Pastas',
           subtitle: 'Selecione as pastas e o destino para realizar a transferência',
+        };
+      case 'rename':
+        return {
+          title: 'Renomear Pasta',
+          subtitle: 'Selecione um diretório corporativo e defina o novo nome desejado',
         };
       case 'dashboard':
         return {
@@ -182,6 +188,9 @@ export const App: React.FC = () => {
               <FolderTransferView
                 onModalStateChange={setIsTransferModalOpen}
               />
+            )}
+            {activeTab === 'rename' && (
+              <FolderRenameView />
             )}
             {activeTab === 'dashboard' && (
               <FolderCreationView

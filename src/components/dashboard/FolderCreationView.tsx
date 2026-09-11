@@ -6,7 +6,7 @@ interface FolderCreationViewProps {
 }
 
 export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreateFolder }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string>('RELIQUIA');
+  const [selectedCompany, setSelectedCompany] = useState<string>('RTO');
   const [companies, setCompanies] = useState<Record<string, any>>({});
   const [folderName, setFolderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -18,7 +18,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
         setCompanies(cfg);
         const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
         if (keys.length > 0 && !keys.includes(selectedCompany)) {
-          setSelectedCompany(keys[0]);
+          setSelectedCompany(keys.includes('RTO') ? 'RTO' : keys[0]);
         }
       }
     });
@@ -28,7 +28,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
         setCompanies(updatedCfg);
         const keys = Object.keys(updatedCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
         if (keys.length > 0 && !keys.includes(selectedCompany)) {
-          setSelectedCompany(keys[0]);
+          setSelectedCompany(keys.includes('RTO') ? 'RTO' : keys[0]);
         }
       }
     });

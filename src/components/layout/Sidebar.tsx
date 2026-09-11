@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, FolderOutput } from 'lucide-react';
+import { LayoutDashboard, Settings, History, HelpCircle, Server, ShieldCheck, FolderOutput, FolderEdit } from 'lucide-react';
 
-export type AppTab = 'dashboard' | 'transfer' | 'settings' | 'history' | 'manual' | 'about';
+export type AppTab = 'dashboard' | 'transfer' | 'rename' | 'settings' | 'history' | 'manual' | 'about';
 
 interface SidebarProps {
   activeTab: AppTab;
@@ -21,6 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'dashboard' as const, label: 'Criar Pastas', icon: LayoutDashboard },
     { id: 'transfer' as const, label: 'Mover / Transferir Pastas', icon: FolderOutput },
+    { id: 'rename' as const, label: 'Renomear Pasta', icon: FolderEdit },
     { id: 'settings' as const, label: 'Configurações', icon: Settings },
     { id: 'history' as const, label: 'Histórico & Auditoria', icon: History },
     { id: 'manual' as const, label: 'Manual & Diagnóstico', icon: HelpCircle },

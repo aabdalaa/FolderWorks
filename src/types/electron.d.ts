@@ -9,7 +9,8 @@ export interface ElectronAPI {
   verifyTIPassword: (password: string) => Promise<boolean>;
   getHistory: () => Promise<any[]>;
   clearHistory: () => Promise<any[]>;
-  testServerConnection: (company: string) => Promise<{ success: boolean; message: string }>;
+  testServerConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
+  renameFolder: (req: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; oldName?: string; newName?: string; error?: string }>;
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => Promise<{ success: boolean; msiPath?: string; error?: string }>;
   selectDirectory: (defaultPath?: string) => Promise<string | null>;
   listSubdirectories: (targetDir: string, company?: string) => Promise<{ success: boolean; folders: { name: string; fullPath: string; mtime?: string }[]; error?: string }>;
