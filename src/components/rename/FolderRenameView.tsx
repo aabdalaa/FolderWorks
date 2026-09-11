@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FolderEdit,
   FolderOpen,
@@ -7,7 +7,18 @@ import {
   Loader2,
   FolderCheck,
   Building2,
+  Search,
+  RefreshCw,
+  Folder,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
+
+interface FolderItem {
+  name: string;
+  fullPath: string;
+  mtime?: string;
+}
 
 interface FolderRenameViewProps {
   onRenameFolder?: (payload: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
@@ -16,19 +27,35 @@ interface FolderRenameViewProps {
 export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFolder }) => {
   const [company, setCompany] = useState<string>('RTO');
   const [config, setConfig] = useState<any>(null);
+  const [currentSourceDir, setCurrentSourceDir] = useState<string>('');
+  
+  // Lista de pastas da empresa
+  const [folders, setFolders] = useState<FolderItem[]>([]);
+  const [loadingFolders, setLoadingFolders] = useState<boolean>(false);
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Seleção e renomeação
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [currentFolderName, setCurrentFolderName] = useState<string>('');
   const [newFolderName, setNewFolderName] = useState<string>('');
   const [isRenaming, setIsRenaming] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string; newPath?: string } | null>(null);
 
-  // Carrega configuração de empresas disponíveis
+  // Carrega configuração de empresas e pastas disponíveis
   useEffect(() => {
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
       const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
-      if (keys.length > 0 && !keys.includes(company)) {
-        setCompany(keys.includes('RTO') ? 'RTO' : keys[0]);
+      const targetComp = keys.includes(company) ? company : (keys.includes('RTO') ? 'RTO' : keys[0] || 'RTO');
+      if (targetComp !== company) {
+        setCompany(targetComp);
+      }
+      const cur = allCfg?.[targetComp];
+      if (cur) {
+        const src = cur.defaultSourceFolder || cur.destSharePath || '';
+        setCurrentSourceDir(src);
+        loadSubdirectories(src, targetComp);
       }
     });
 
@@ -38,20 +65,57 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     return () => {
       if (unsub) unsub();
     };
-  }, []);
+  }, [company]);
 
   const companyKeys = config ? Object.keys(config).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : ['RTO', 'RELIQUIA'];
 
-  // Diálogo para escolher a pasta
-  const handleSelectFolder = async () => {
+  // Carrega lista de subpastas do diretório
+  const loadSubdirectories = async (dir: string, comp: string = company) => {
+    if (!dir) return;
+    setLoadingFolders(true);
+    setFolderError(null);
+    try {
+      const res = await window.electronAPI?.listSubdirectories(dir, comp);
+      if (res?.success) {
+        setFolders(res.folders || []);
+      } else {
+        setFolderError(res?.error || 'Erro ao listar pastas do servidor.');
+        setFolders([]);
+      }
+    } catch (e: any) {
+      setFolderError(e.message || 'Erro inesperado.');
+      setFolders([]);
+    } finally {
+      setLoadingFolders(false);
+    }
+  };
+
+  // Pastas filtradas pela pesquisa em tempo real
+  const filteredFolders = useMemo(() => {
+    if (!searchQuery.trim()) return folders;
+    const q = searchQuery.toLowerCase();
+    return folders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [folders, searchQuery]);
+
+  // Seleção de pasta da grade
+  const handleSelectFromList = (f: FolderItem) => {
+    setSelectedPath(f.fullPath);
+    setCurrentFolderName(f.name);
+    setNewFolderName(f.name);
     setStatusMessage(null);
-    const defaultStart = selectedPath || config?.[company]?.destSharePath || config?.[company]?.allowedBasePath || undefined;
+  };
+
+  // Diálogo para escolher outro diretório de trabalho
+  const handleBrowseSource = async () => {
+    setStatusMessage(null);
+    const defaultStart = currentSourceDir || config?.[company]?.destSharePath || undefined;
     const pathChosen = await window.electronAPI?.selectDirectory(defaultStart);
     if (pathChosen) {
-      setSelectedPath(pathChosen);
-      const base = pathChosen.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
-      setCurrentFolderName(base);
-      setNewFolderName(base);
+      setCurrentSourceDir(pathChosen);
+      loadSubdirectories(pathChosen, company);
+      setSelectedPath('');
+      setCurrentFolderName('');
+      setNewFolderName('');
     }
   };
 
@@ -61,7 +125,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     setStatusMessage(null);
 
     if (!selectedPath) {
-      setStatusMessage({ type: 'error', message: 'Selecione uma pasta para renomear.' });
+      setStatusMessage({ type: 'error', message: 'Selecione uma pasta na lista acima para renomear.' });
       return;
     }
 
@@ -117,6 +181,11 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
         setSelectedPath(result.newPath);
         setCurrentFolderName(trimmedNewName);
         setNewFolderName(trimmedNewName);
+
+        // Recarrega a grade de pastas para refletir a nova nomenclatura instantaneamente
+        if (currentSourceDir) {
+          loadSubdirectories(currentSourceDir, company);
+        }
       } else {
         setStatusMessage({
           type: 'error',
@@ -154,7 +223,13 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setCompany(key)}
+                  onClick={() => {
+                    setCompany(key);
+                    setSelectedPath('');
+                    setCurrentFolderName('');
+                    setNewFolderName('');
+                    setStatusMessage(null);
+                  }}
                   className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
@@ -168,79 +243,174 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
             })}
           </div>
         </div>
+
+        {currentSourceDir && (
+          <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-mono truncate max-w-md">
+            <Folder className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+            <span className="truncate" title={currentSourceDir}>{currentSourceDir}</span>
+          </div>
+        )}
       </div>
 
-      {/* Card Principal de Renomeação */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-6">
-        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
-          <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
-            <FolderEdit className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-              Renomear Pasta
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Selecione uma pasta corporativa e informe a nova nomenclatura desejada
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleExecuteRename} className="space-y-5 max-w-3xl">
-          {/* Passo 1: Selecionar Pasta */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              1. Pasta a ser Renomeada
-            </label>
-            <div className="flex items-stretch gap-2">
-              <button
-                type="button"
-                onClick={handleSelectFolder}
-                className="px-4 py-2.5 bg-slate-100 dark:bg-neutral-800 hover:bg-slate-200 dark:hover:bg-neutral-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-neutral-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shrink-0"
-              >
-                <FolderOpen className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-                <span>Selecionar Pasta...</span>
-              </button>
-
-              <div className="flex-1 p-2.5 bg-slate-50 dark:bg-neutral-950/60 border border-slate-200 dark:border-neutral-800 rounded-xl flex items-center overflow-hidden">
-                {selectedPath ? (
-                  <span className="font-mono text-xs text-slate-800 dark:text-slate-200 truncate" title={selectedPath}>
-                    {selectedPath}
-                  </span>
-                ) : (
-                  <span className="text-xs text-slate-400 italic">
-                    Nenhuma pasta selecionada. Clique no botão ao lado.
-                  </span>
-                )}
-              </div>
+      {/* Card 1: Seleção de Pastas da Empresa (Grade Interativa) */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
+              <FolderEdit className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                Selecione a Pasta para Renomear
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Escolha uma pasta corporativa na lista abaixo ou pesquise pelo nome/código do cliente
+              </p>
             </div>
           </div>
 
-          {/* Destaque do Nome Atual */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-64 sm:w-72">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Pesquisar cliente por código ou nome..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teams-500"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => loadSubdirectories(currentSourceDir, company)}
+              disabled={loadingFolders || !currentSourceDir}
+              title="Atualizar lista de pastas"
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingFolders ? 'animate-spin text-teams-600 dark:text-teams-400' : ''}`} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBrowseSource}
+              title="Selecionar outro diretório de trabalho"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-neutral-600 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+              <span className="hidden sm:inline">Outro Diretório...</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tabela de Pastas */}
+        <div className="border border-slate-200 dark:border-neutral-700 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-neutral-900/50">
+          <div className="max-h-72 overflow-y-auto divide-y divide-slate-200/70 dark:divide-neutral-700/60">
+            {loadingFolders ? (
+              <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
+                <span>Carregando pastas do servidor...</span>
+              </div>
+            ) : folderError ? (
+              <div className="p-6 text-center text-xs text-rose-500 dark:text-rose-400">
+                <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-rose-500" />
+                <p className="font-semibold">{folderError}</p>
+                <p className="text-[11px] text-slate-500 mt-1">Verifique o caminho da rede ou permissões de acesso.</p>
+              </div>
+            ) : filteredFolders.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs italic">
+                Nenhuma pasta encontrada{searchQuery ? ` para "${searchQuery}"` : ''}.
+              </div>
+            ) : (
+              filteredFolders.map((f) => {
+                const isSelected = selectedPath === f.fullPath;
+                return (
+                  <div
+                    key={f.name}
+                    onClick={() => handleSelectFromList(f)}
+                    className={`px-4 py-2.5 flex items-center justify-between text-xs cursor-pointer transition-colors select-none ${
+                      isSelected
+                        ? 'bg-teams-50 dark:bg-teams-950/40 text-teams-900 dark:text-teams-200 border-l-4 border-teams-600 font-semibold'
+                        : 'hover:bg-slate-100/70 dark:hover:bg-neutral-800/60 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <div className="text-teams-600 dark:text-teams-400 shrink-0">
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400 dark:text-slate-600" />
+                        )}
+                      </div>
+                      <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="font-mono truncate">{f.name}</span>
+                    </div>
+
+                    {f.mtime && (
+                      <span className="text-[11px] text-slate-400 font-mono shrink-0 ml-4">
+                        {f.mtime}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Rodapé de Estatísticas da Grade */}
+          <div className="px-4 py-2 bg-slate-100 dark:bg-neutral-900 border-t border-slate-200 dark:border-neutral-700 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <span>Total de pastas listadas: {filteredFolders.length} de {folders.length}</span>
+            <span className="font-semibold text-teams-700 dark:text-teams-300">
+              {selectedPath ? `Selecionada: ${currentFolderName}` : 'Nenhuma pasta selecionada'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Card 2: Formulário de Renomeação da Pasta Selecionada */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-5">
+        <div className="border-b border-slate-100 dark:border-neutral-700/80 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Definir Novo Nome da Pasta
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {selectedPath
+                ? 'Altere a nomenclatura desejada e clique em Renomear Pasta para concluir'
+                : 'Selecione uma pasta na lista acima para habilitar a renomeação'}
+            </p>
+          </div>
           {currentFolderName && (
-            <div className="p-3 bg-slate-50 dark:bg-neutral-950/40 border border-slate-200/80 dark:border-neutral-800 rounded-xl flex items-center justify-between text-xs">
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Nome Atual da Pasta:</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700">
-                {currentFolderName}
+            <span className="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-teams-50 dark:bg-teams-950 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-teams-800 truncate max-w-xs">
+              Pasta: {currentFolderName}
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleExecuteRename} className="space-y-4 max-w-3xl">
+          {/* Caminho Selecionado */}
+          {selectedPath && (
+            <div className="p-3 bg-slate-50 dark:bg-neutral-900/60 border border-slate-200 dark:border-neutral-700 rounded-xl flex items-center gap-2 overflow-hidden">
+              <span className="text-xs font-semibold text-slate-500 shrink-0">Caminho Atual:</span>
+              <span className="font-mono text-xs text-slate-800 dark:text-slate-200 truncate" title={selectedPath}>
+                {selectedPath}
               </span>
             </div>
           )}
 
-          {/* Passo 2: Digitar o Novo Nome */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              2. Novo Nome da Pasta
+          {/* Campo de Entrada do Novo Nome */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Novo Nome da Pasta
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                disabled={!selectedPath || isRenaming}
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder={selectedPath ? 'Digite o novo nome da pasta...' : 'Selecione uma pasta primeiro'}
-                className="w-full p-3 bg-white dark:bg-neutral-950 border border-slate-300 dark:border-neutral-700 rounded-xl font-medium text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:border-teams-600 focus:ring-1 focus:ring-teams-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
+            <input
+              type="text"
+              disabled={!selectedPath || isRenaming}
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder={selectedPath ? 'Digite o novo nome da pasta...' : 'Selecione uma pasta na lista acima primeiro'}
+              className="w-full p-3 bg-slate-50 dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 rounded-xl font-medium text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teams-600 focus:ring-1 focus:ring-teams-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            />
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               Caracteres não permitidos: <code className="font-mono text-[10px] bg-slate-100 dark:bg-neutral-800 px-1 py-0.5 rounded">\ / : * ? " &lt; &gt; |</code>
             </p>
@@ -278,7 +448,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
                 type="button"
                 onClick={handleReset}
                 disabled={isRenaming}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer disabled:opacity-50"
               >
                 Limpar
               </button>

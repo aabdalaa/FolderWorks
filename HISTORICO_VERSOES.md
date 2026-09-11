@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.4 (11/09/2026) - **Grade Interativa de Listagem e Pesquisa de Pastas em "Renomear Pasta"**
+- **Listagem e Pesquisa de Pastas Integrada à Tela de Renomear**:
+  - Incorporada a mesma experiência da tela de *Transferência*: carregamento automático das pastas do servidor de arquivos da empresa selecionada (RTO, RELIQUIA, etc.).
+  - Campo de busca rápida em tempo real para pesquisar cliente por código ou nome (`Pesquisar cliente por código ou nome...`).
+  - Grade visual com ícones representativos (`FolderOpen`), nomes de pastas, datas de modificação e indicador de seleção ativa.
+  - Seleção com um clique: ao clicar em qualquer pasta da lista, o caminho completo é configurado, o nome atual é exibido e o campo de novo nome é preenchido instantaneamente para permitir edição rápida e sem digitação manual de caminhos.
+  - Recarregamento automático: logo após a conclusão da renomeação, a lista de pastas do servidor é atualizada instantaneamente para refletir a nova nomenclatura em tempo real.
+  - Botão alternativo "Outro Diretório..." mantido para casos especiais em que o operador precise renomear um diretório fora da estrutura padrão.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.4** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.4**: Compilado com WiX Toolset v3.14.
+
+---
+
 ## Versão 2.7.3 (11/09/2026) - **Harmonização do Seletor de Empresas em Renomear Pastas e Generalização de Descrições (Zero Vazamento de Dados)**
 - **Harmonização Visual da Interface de Renomear Pastas**:
   - Alinhado o seletor de empresas da aba *Renomear Pasta* com a mesma disposição e padrão visual da tela de *Transferência de Pastas*: barra superior destacada com o rótulo `Empresa:` e botões segmentados com ícone predial `Building2`.
