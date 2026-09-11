@@ -1,5 +1,18 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.2 (11/09/2026) - **Correção da Validação de Conexão AD e Status dos Servidores via -EncodedCommand**
+- **Correção Crítica no Mecanismo de Teste de Conexão e Status dos Servidores**:
+  - Eliminado erro onde scripts PowerShell com quebras de linha e comentários `#` entravam em colapso ao serem interpolados em linha única no `cmd.exe`, gerando saída vazia e indicando falsamente que servidores ativos estavam offline.
+  - Implementada execução blindada via `execFile('powershell.exe', ...)` utilizando `-EncodedCommand` com codificação Base64 UTF-16LE, imune a problemas de escape, aspas ou caracteres especiais.
+  - Adicionado `$ProgressPreference = 'SilentlyContinue'` para suprimir transmissões indesejadas de progresso CLIXML no fluxo de erro do PowerShell.
+  - Integrada decodificação defensiva `decodeProcessOutput` para preservar acentos do português em mensagens de erro e alertas de domínio.
+  - O "Status dos Servidores" e o botão "Testar Conexão" agora refletem com 100% de fidelidade o estado real da rede: **Verde** para servidores e credenciais ativas (RELIQUIA e RTO com `pasta.paralegal`) e **Vermelho** com mensagem detalhada do AD caso as credenciais estejam incorretas (ex: `RTO\aaaa`).
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.7.2** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.2**: Compilado com WiX Toolset v3.14.
+
+---
+
 ## Versão 2.7.1 (11/09/2026) - **Encerramento Automático de Instâncias no MSI e Trava de Instância Única**
 - **Encerramento Forçado e Silencioso no Instalador MSI (Solução do Diálogo "Files in Use")**:
   - Injetada ação customizada `CAQuietExec` (`taskkill.exe /F /IM FolderWorks.exe /T`) agendada em `InstallUISequence` (antes de `CostInitialize`) e em `InstallExecuteSequence` (antes de `InstallValidate`).

@@ -378,72 +378,65 @@ ipcMain.handle('test-connection', async (_, company: string, overrideConfig?: an
   }
 
   const psScript = `
-    $server = '${ip}';
-    $user = '${rawUser.replace(/'/g, "''")}';
-    $pass = '${pass.replace(/'/g, "''")}';
-    $pureUser = '${pureUser.replace(/'/g, "''")}';
+$ProgressPreference = 'SilentlyContinue';
+$server = '${ip}';
+$user = '${rawUser.replace(/'/g, "''")}';
+$pass = '${pass.replace(/'/g, "''")}';
+$pureUser = '${pureUser.replace(/'/g, "''")}';
 
-    # 1. Checagem de porta TCP 445
-    $tcp = Test-NetConnection -ComputerName $server -Port 445 -InformationLevel Quiet -WarningAction SilentlyContinue;
-    if (-not $tcp) {
-      Write-Output "ERR_TCP: Servidor AD $server não está acessível na porta 445 (porta fechada ou host offline).";
-      exit 1;
+# 1. Checagem de porta TCP 445
+$tcp = Test-NetConnection -ComputerName $server -Port 445 -InformationLevel Quiet -WarningAction SilentlyContinue
+if (-not $tcp) {
+  Write-Output "ERR_TCP: Servidor AD $server não está acessível na porta 445 (porta fechada ou host offline)."
+  exit 1
+}
+
+# 2. Se houver usuário e senha informados, autentica no AD via LDAP
+if ($user -and $pass) {
+  try {
+    $entry = New-Object System.DirectoryServices.DirectoryEntry(('LDAP://' + $server), $user, $pass)
+    $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry)
+    $searcher.Filter = "(sAMAccountName=$pureUser)"
+    $res = $searcher.FindOne()
+    if ($null -eq $res) {
+      Write-Output "ERR_NOT_FOUND: O usuário '$pureUser' não foi localizado no catálogo do Active Directory ($server)."
+      exit 4
     }
+  } catch {
+    $errMsg = $_.Exception.Message.Trim()
+    Write-Output "ERR_AUTH: Falha na autenticação do usuário '$user' no Active Directory ($server): $errMsg"
+    exit 2
+  }
+}
 
-    # 2. Se houver usuário e senha informados, autentica no AD via LDAP
-    if ($user -and $pass) {
-      try {
-        $entry = New-Object System.DirectoryServices.DirectoryEntry(('LDAP://' + $server), $user, $pass);
-        $native = $entry.NativeObject;
-        if ($null -eq $native) {
-          Write-Output "ERR_AUTH: Falha na autenticação do usuário '$user' no Active Directory ($server). Verifique o usuário ou senha.";
-          exit 2;
-        }
-      } catch {
-        Write-Output "ERR_AUTH: Falha na autenticação do usuário '$user' no Active Directory ($server): $($_.Exception.Message)";
-        exit 3;
-      }
+Write-Output "SUCCESS"
+exit 0
+`;
 
-      # 3. Pesquisa do usuário no catálogo do AD
-      try {
-        $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry);
-        $searcher.Filter = "(sAMAccountName=$pureUser)";
-        $res = $searcher.FindOne();
-        if ($null -eq $res) {
-          Write-Output "ERR_NOT_FOUND: O usuário '$pureUser' não foi localizado no catálogo do Active Directory ($server).";
-          exit 4;
-        }
-      } catch {
-        Write-Output "ERR_SEARCH: Falha ao consultar catálogo do Active Directory: $($_.Exception.Message)";
-        exit 5;
-      }
-    }
-
-    Write-Output "SUCCESS";
-    exit 0;
-  `;
+  const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
 
   return new Promise((resolve) => {
-    exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/\r?\n/g, ' ')}"`, { timeout: 10000 }, (err, stdout, stderr) => {
-      const output = (stdout || '').trim();
-      if (output.startsWith('SUCCESS')) {
+    execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encoded], { timeout: 15000, encoding: 'buffer' }, (err, stdout, stderr) => {
+      const stdoutStr = decodeProcessOutput(stdout).trim();
+      const stderrStr = decodeProcessOutput(stderr).trim();
+      if (stdoutStr.startsWith('SUCCESS')) {
         const userInfo = rawUser ? ` e usuário '${rawUser}' autenticado no domínio` : '';
         resolve({
           success: true,
           message: `Conexão validada com sucesso: Servidor AD (${ip}:445) respondendo${userInfo}.`
         });
       } else {
-        let msg = output;
-        if (output.startsWith('ERR_TCP:')) {
-          msg = output.replace(/^ERR_TCP:\s*/, '');
-        } else if (output.startsWith('ERR_AUTH:')) {
-          msg = output.replace(/^ERR_AUTH:\s*/, '');
-        } else if (output.startsWith('ERR_NOT_FOUND:')) {
-          msg = output.replace(/^ERR_NOT_FOUND:\s*/, '');
-        } else if (output.startsWith('ERR_SEARCH:')) {
-          msg = output.replace(/^ERR_SEARCH:\s*/, '');
+        let msg = stdoutStr;
+        if (stdoutStr.startsWith('ERR_TCP:')) {
+          msg = stdoutStr.replace(/^ERR_TCP:\s*/, '');
+        } else if (stdoutStr.startsWith('ERR_AUTH:')) {
+          msg = stdoutStr.replace(/^ERR_AUTH:\s*/, '');
+        } else if (stdoutStr.startsWith('ERR_NOT_FOUND:')) {
+          msg = stdoutStr.replace(/^ERR_NOT_FOUND:\s*/, '');
+        } else if (stdoutStr.startsWith('ERR_SEARCH:')) {
+          msg = stdoutStr.replace(/^ERR_SEARCH:\s*/, '');
         } else if (!msg) {
-          msg = stderr ? stderr.trim() : `Servidor AD ${company} (${ip}) indisponível ou inacessível.`;
+          msg = stderrStr || `Servidor AD ${company} (${ip}) indisponível ou inacessível.`;
         }
         resolve({
           success: false,
