@@ -1,5 +1,22 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.6 (11/09/2026) - **Padronização Global, Sanitização de Vocabulário e Atualização Completa do Manual**
+- **Padronização Global e Sanitização de Vocabulário na Interface**:
+  - Remoção de referências a "cliente" e nomes de setores internos nos textos voltados ao usuário: a ferramenta atua puramente como um gerenciador e criador corporativo de diretórios.
+  - Aba lateral e tela inicial renomeadas para **Criar Nova Pasta**.
+  - Seletor de empresas ajustado para **Selecione a Empresa**, com subtítulo limpo **Estrutura Corporativa** (remoção de endereços IP da interface).
+  - Campos de busca textual unificados com o placeholder `Pesquisar pasta...`.
+  - Coluna do histórico renomeada para `Pasta Criada`.
+- **Manual do Usuário Expandido com Renomeação e Histórico de Versões**:
+  - Inclusão da seção operacional detalhada para o módulo **Como Renomear uma Pasta**.
+  - Revisão de todos os textos operacionais para uma linguagem corporativa limpa, instrutiva e acessível.
+  - Inclusão de linha do tempo com histórico de versões técnicas do aplicativo diretamente no manual interno (`UserGuideView.tsx`) e na documentação (`06-MANUAL_DO_USUARIO.md`).
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.6** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+  - Geração de pacote MSI mantida em espera conforme solicitação do usuário.
+
+---
+
 ## Versão 2.7.5 (11/09/2026) - **Governança AD/NTFS de Pastas Administrativas, Ocultação no Explorer e Ajuste na Barra Lateral**
 - **Renomeação dos Botões da Barra Lateral (`Sidebar.tsx`)**:
   - `Mover / Transferir Pastas` → `Mover Pastas`

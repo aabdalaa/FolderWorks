@@ -3,21 +3,21 @@ import { Wrench, PackageCheck, AlertCircle, Sparkles, Building2, Server, Shield,
 
 export const MSIBuilderView: React.FC = () => {
   const [config, setConfig] = useState<any>({
-    RELIQUIA: {
-      name: 'RELIQUIA',
-      sourcePath: '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\MODELO',
-      destinationParentPath: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
-      adServerIp: '192.168.1.242',
-      domainUser: 'RELIQUIA\\pasta.paralegal',
-      adPass: 'Mestre@300'
+    EMPRESA_1: {
+      name: 'Empresa 1',
+      sourcePath: '',
+      destinationParentPath: '',
+      adServerIp: '',
+      domainUser: '',
+      adPass: ''
     },
-    RTO: {
-      name: 'RTO',
-      sourcePath: '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\MODELO',
-      destinationParentPath: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      adServerIp: '192.168.50.102',
-      domainUser: 'RTO\\pasta.paralegal',
-      adPass: 'Mestre@300'
+    EMPRESA_2: {
+      name: 'Empresa 2',
+      sourcePath: '',
+      destinationParentPath: '',
+      adServerIp: '',
+      domainUser: '',
+      adPass: ''
     }
   });
 
@@ -197,6 +197,7 @@ export const MSIBuilderView: React.FC = () => {
                 <label className="block font-medium text-slate-400 mb-1 flex items-center gap-1.5">
                   <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Caminho de Destino dos Clientes (Destino UNC)</span>
+                  <span>Caminho de Destino (Destino UNC)</span>
                 </label>
                 <input
                   type="text"

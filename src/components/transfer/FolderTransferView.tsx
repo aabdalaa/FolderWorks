@@ -448,7 +448,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                 <input
                   type="text"
-                  placeholder="Pesquisar cliente por código ou nome..."
+                  placeholder="Pesquisar pasta..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teams-500"
@@ -482,6 +482,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
                   <span>Carregando pastas do servidor...</span>
+                  <span>Carregando pastas...</span>
                 </div>
               ) : folderError ? (
                 <div className="p-6 text-center text-xs text-rose-500 dark:text-rose-400">

@@ -80,6 +80,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
         setFolders(res.folders || []);
       } else {
         setFolderError(res?.error || 'Erro ao listar pastas do servidor.');
+        setFolderError(res?.error || 'Erro ao listar pastas.');
         setFolders([]);
       }
     } catch (e: any) {
@@ -248,6 +249,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
           <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-mono truncate max-w-md">
             <Folder className="w-3.5 h-3.5 shrink-0 text-slate-400" />
             <span className="truncate" title={currentSourceDir}>{currentSourceDir}</span>
+            <span className="truncate">Diretório: {currentSourceDir.split(/[\\/]/).filter(Boolean).pop() || 'Raiz'}</span>
           </div>
         )}
       </div>
@@ -265,6 +267,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Escolha uma pasta corporativa na lista abaixo ou pesquise pelo nome/código do cliente
+                Escolha uma pasta na lista abaixo ou pesquise pelo nome
               </p>
             </div>
           </div>
@@ -274,7 +277,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <input
                 type="text"
-                placeholder="Pesquisar cliente por código ou nome..."
+                placeholder="Pesquisar pasta..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-teams-500"
@@ -310,6 +313,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
               <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
                 <span>Carregando pastas do servidor...</span>
+                <span>Carregando pastas...</span>
               </div>
             ) : folderError ? (
               <div className="p-6 text-center text-xs text-rose-500 dark:text-rose-400">

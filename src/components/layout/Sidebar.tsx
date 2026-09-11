@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard' as const, label: 'Criar Pastas', icon: LayoutDashboard },
+    { id: 'dashboard' as const, label: 'Criar Nova Pasta', icon: LayoutDashboard },
     { id: 'transfer' as const, label: 'Mover Pastas', icon: FolderOutput },
     { id: 'rename' as const, label: 'Renomear Pasta', icon: FolderEdit },
     { id: 'settings' as const, label: 'Configurações', icon: Settings },
@@ -69,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span>Status dos Servidores</span>
+          <span>Conexão das Empresas</span>
         </div>
 
         <div className="space-y-1.5 text-[11px]">

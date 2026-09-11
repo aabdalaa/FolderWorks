@@ -128,8 +128,8 @@ export const App: React.FC = () => {
         };
       case 'dashboard':
         return {
-          title: 'Criação de Pastas',
-          subtitle: 'Selecione a empresa e digite o código ou nome do cliente',
+          title: 'Criar Nova Pasta',
+          subtitle: 'Selecione a empresa e digite o nome da nova pasta',
         };
       case 'settings':
         return {

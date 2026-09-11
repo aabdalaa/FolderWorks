@@ -48,6 +48,7 @@ export const HistoryView: React.FC = () => {
                   <th className="p-3">Data / Hora</th>
                   <th className="p-3">Empresa</th>
                   <th className="p-3">Cliente</th>
+                  <th className="p-3">Pasta Criada</th>
                   <th className="p-3">Responsável</th>
                   <th className="p-3">Duração</th>
                   <th className="p-3">Status</th>
