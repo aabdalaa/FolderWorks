@@ -165,6 +165,11 @@ namespace ExecuteAsUser {
 
                 foreach (string d in subdirs) {
                     try {
+                        DirectoryInfo di = new DirectoryInfo(d);
+                        if ((di.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) {
+                            continue;
+                        }
+
                         Directory.GetFileSystemEntries(d);
 
                         string name = Path.GetFileName(d);

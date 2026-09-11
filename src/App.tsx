@@ -118,7 +118,7 @@ export const App: React.FC = () => {
     switch (activeTab) {
       case 'transfer':
         return {
-          title: 'Transferência de Pastas',
+          title: 'Mover Pastas',
           subtitle: 'Selecione as pastas e o destino para realizar a transferência',
         };
       case 'rename':

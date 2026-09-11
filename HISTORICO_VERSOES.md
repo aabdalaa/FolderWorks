@@ -1,5 +1,25 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.5 (11/09/2026) - **Governança AD/NTFS de Pastas Administrativas, Ocultação no Explorer e Ajuste na Barra Lateral**
+- **Renomeação dos Botões da Barra Lateral (`Sidebar.tsx`)**:
+  - `Mover / Transferir Pastas` → `Mover Pastas`
+  - `Histórico & Auditoria` → `Histórico`
+  - `Manual & Diagnóstico` → `Manual de Uso`
+  - Interface mais limpa, direta e humanizada de acordo com as diretrizes de UX/UI da ENTROPY.
+- **Governança Active Directory / NTFS de Pastas Administrativas**:
+  - Aplicada regra NTFS de negação estrita (`Deny | FullControl`) para a conta de serviço `pasta.paralegal` em todas as pastas administrativas (`_000-CHECK-LIST MENSAL`, `_ATA de REUNIOES`, `_CONTROLES DAS EMPRESAS`, `_LEIA-ME`, `_MODELOS DE DOCUMENTOS`) no servidor RTO, igualando a política de segurança já vigente no servidor RELIQUIA.
+  - Zero uso de expressões regulares ou filtros por código de cliente: a restrição opera 100% via permissões nativas de segurança do AD e DACL NTFS sob o token do usuário.
+- **Ocultação de Pastas no Windows Explorer (`Hidden`)**:
+  - Aplicado o atributo de sistema `Hidden` (`attrib +h`) em todas as pastas administrativas dos servidores de arquivos (RTO e RELIQUIA). Com isso, o Windows Explorer e as caixas de diálogo nativas de seleção de pastas omitem automaticamente essas pastas para todos os usuários comuns.
+- **Aprimoramento do Motor C# Nativo (`ExecuteAsUser.cs`)**:
+  - Adicionada verificação explícita do atributo `FileAttributes.Hidden` na função `ListDirectories`.
+  - Reforçado o bloqueio por exceção de segurança (`UnauthorizedAccessException`), garantindo que pastas sem autorização nunca cheguem à interface.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.5** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.5**: Compilado com WiX Toolset v3.14.
+
+---
+
 ## Versão 2.7.4 (11/09/2026) - **Grade Interativa de Listagem e Pesquisa de Pastas em "Renomear Pasta"**
 - **Listagem e Pesquisa de Pastas Integrada à Tela de Renomear**:
   - Incorporada a mesma experiência da tela de *Transferência*: carregamento automático das pastas do servidor de arquivos da empresa selecionada (RTO, RELIQUIA, etc.).
