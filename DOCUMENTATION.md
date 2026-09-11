@@ -25,7 +25,7 @@ O **Entropy FolderWorks** foi projetado para resolver a complexidade de criaçã
 flowchart TD
     A["👤 Operador (Electron GUI)"] -->|Digita Nome da Empresa| B["⚡ IPC Main Handler (main_src.js)"]
     B -->|Autenticação AD| C["🔐 Net Use (pasta.paralegal)"]
-    C -->|Rede RELIQUIA (192.168.100.30)| D["📁 Modelo GPO RELIQUIA"]
+    C -->|Rede RELIQUIA (192.168.1.242)| D["📁 Modelo GPO RELIQUIA"]
     C -->|Rede RTO (192.168.50.102)| E["📁 Modelo GPO RTO"]
     D -->|Robocopy /MT:64 /COPY:DATS| F["🏢 Destino Cliente RELIQUIA (192.168.1.242)"]
     E -->|Robocopy /MT:64 /COPY:DATS| G["🏢 Destino Cliente RTO (192.168.50.102)"]
@@ -59,7 +59,7 @@ O aplicativo utiliza uma conta dedicada do Active Directory para autenticar as c
 
 | Empresa | Servidor da GPO (Modelo) | Servidor de Destino (Clientes) | Caminho Completo do Modelo | Caminho Completo de Destino |
 | :--- | :--- | :--- | :--- | :--- |
-| **RELIQUIA** | `192.168.100.30` | `192.168.1.242` | `\\192.168.100.30\gpo\criarpastas_paralegal\MODELO` | `\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS\` |
+| **RELIQUIA** | `192.168.1.242` | `192.168.1.242` | `\\192.168.1.242\gpo\criarpastas_paralegal\MODELO` | `\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS\` |
 | **RTO** | `192.168.50.102` | `192.168.50.102` | `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO` | `\\192.168.50.102\rto\CLIENTES\EMPRESAS\` |
 
 ---
@@ -109,7 +109,7 @@ A pasta `MODELO` contém as seguintes subpastas organizacionais:
 > Cada subpasta de departamento deve ter a **herança de herança pai desabilitada** e convertida em permissões explícitas para garantir o isolamento entre departamentos.
 
 1. **Acesse a Pasta Modelo no Servidor da GPO**:
-   - Para RELIQUIA: `\\192.168.100.30\gpo\criarpastas_paralegal\MODELO`
+   - Para RELIQUIA: `\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`
    - Para RTO: `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`
 2. **Quebrar a Herança no Departamento desejado**:
    - Clique com o botão direito na pasta do departamento (ex: `CONTABILIDADE`) -> **Propriedades**.
@@ -185,7 +185,7 @@ Todas as operações de criação de pastas, autenticações de rede e códigos 
 
 | Sintoma / Erro no Log | Causa Provável | Solução Recomendada |
 | :--- | :--- | :--- |
-| `[ERRO CRÍTICO] Caminho do modelo GPO não encontrado na rede` | O servidor GPO (192.168.100.30 ou 192.168.50.102) está offline ou o caminho no `.env` está incorreto (ex: sufixo ` 2026`). | Verifique se a pasta se chama exatamente `MODELO` e teste a conectividade Ping/SMB (porta 445) com o servidor. |
+| `[ERRO CRÍTICO] Caminho do modelo GPO não encontrado na rede` | O servidor GPO (192.168.1.242 ou 192.168.50.102) está offline ou o caminho no `.env` está incorreto (ex: sufixo ` 2026`). | Verifique se a pasta se chama exatamente `MODELO` e teste a conectividade Ping/SMB (porta 445) com o servidor. |
 | `Robocopy finalizou com código de saída 16` | A conta `pasta.paralegal` não obteve acesso à pasta de destino ou o caminho de destino de clientes não existe. | Verifique se a senha da conta `pasta.paralegal` expirou no AD ou se o servidor de destino de arquivos está acessível. |
 | `O aplicativo instalado não reflete as alterações do MSI` | A versão do produto no `build_msi.js` não foi incrementada em relação à versão instalada. | Incremente a versão (ex: `1.0.0` -> `1.0.1`) e recompile o MSI para forçar o Major Upgrade do Windows Installer. |
 

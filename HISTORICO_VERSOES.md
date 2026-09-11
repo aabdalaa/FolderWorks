@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.6.2 (11/09/2026) - **Atualização de Variáveis Corporativas Padrão da RELIQUIA e RTO**
+- **Atualização de Infraestrutura de Rede da Empresa RELIQUIA**:
+  - `sourcePath` (Modelo de Pastas / Origem da Estrutura): Atualizado de `\\192.168.100.30\gpo\criarpastas_paralegal\MODELO` para `\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`.
+  - `adServerIp` (Servidor AD / IP ou Host): Atualizado de `192.168.100.30` para `192.168.1.242`.
+- **Atualização de Credencial de Domínio da Empresa RTO**:
+  - `domainUser` (Usuário de Serviço): Atualizado de `pasta.paralegal` para `RTO\pasta.paralegal` nas configurações padrão e gerador de instaladores.
+- **Sincronização em Toda a Infraestrutura de Build e Configuração**:
+  - Atualizados `.env`, `main.ts`, `build_msi.js`, `build_custom_msi.js` e `MSIBuilderView.tsx` para assegurar que restaurações de fábrica e novas compilações utilizem os novos parâmetros.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada para **v2.6.2** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX.
+- **Novo Pacote Oficial MSI v2.6.2**: Compilado com WiX Toolset v3.14 com UpgradeCode in-place mantido.
+
+---
+
 ## Versão 2.6.1 (09/09/2026) - **Correção de Layout das Abas, Simplificação da Interface e Eliminação de Vazamento de Dados**
 - **Correção dos Botões e Abas de Empresas no Topo**:
   - Eliminada a renderização duplicada de botões estáticos no seletor de empresas em `SettingsView.tsx`, `FolderTransferView.tsx` e `FolderCreationView.tsx`.

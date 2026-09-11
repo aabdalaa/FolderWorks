@@ -37,7 +37,7 @@ async function buildMSI() {
     RELIQUIA: {
       name: env.RELIQUIA_NAME || 'RELIQUIA',
       companyName: 'RELIQUIA',
-      sourcePath: env.RELIQUIA_SOURCE_PATH || '\\\\192.168.100.30\\gpo\\criarpastas_paralegal\\MODELO',
+      sourcePath: env.RELIQUIA_SOURCE_PATH || '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\MODELO',
       destinationParentPath: env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
       destSharePath: env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
       allowedBasePath: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES',
@@ -46,7 +46,7 @@ async function buildMSI() {
         { name: '00 - EX CLIENTES', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\00 - EX CLIENTES' },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
       ],
-      adServerIp: env.RELIQUIA_AD_IP || '192.168.100.30',
+      adServerIp: env.RELIQUIA_AD_IP || '192.168.1.242',
       domainUser: env.RELIQUIA_AD_USER || 'RELIQUIA\\pasta.paralegal',
       adPass: env.RELIQUIA_AD_PASS || 'Mestre@300'
     },
@@ -63,7 +63,7 @@ async function buildMSI() {
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
       ],
       adServerIp: env.RTO_AD_IP || '192.168.50.102',
-      domainUser: env.RTO_AD_USER || 'pasta.paralegal',
+      domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
       adPass: env.RTO_AD_PASS || 'Mestre@300'
     },
     tiLogsPassword: env.TI_LOGS_PASSWORD || 'Fallima1979'
@@ -130,7 +130,7 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.6.1',
+    version: '2.6.2',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

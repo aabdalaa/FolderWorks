@@ -186,7 +186,7 @@ function getCompanyConfig(companyKey) {
       sddlMap: permissionsData.RTO_SDDL_MAP
     };
   } else { // RELIQUIA
-    const rawSrc = (process.env.RELIQUIA_SOURCE_PATH || '\\\\192.168.100.30\\gpo\\criarpastas_paralegal\\MODELO').replace(/ 2026/gi, '');
+    const rawSrc = (process.env.RELIQUIA_SOURCE_PATH || '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\MODELO').replace(/ 2026/gi, '');
     const rawDest = process.env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS';
     return {
       name: 'RELIQUIA',
@@ -221,7 +221,7 @@ ipcMain.handle('create-folder', async (event, { companyKey, clientName }) => {
     const pureUser = rawAdUser.includes('\\') ? rawAdUser.split('\\')[1] : rawAdUser;
     const adUser = config.name === 'RELIQUIA' && !rawAdUser.includes('\\') ? `RELIQUIA\\${rawAdUser}` : rawAdUser;
     const adPass = process.env.AD_PASS || 'Mestre@300';
-    const adServerIp = config.name === 'RTO' ? '192.168.50.102' : '192.168.100.30';
+    const adServerIp = config.name === 'RTO' ? '192.168.50.102' : '192.168.1.242';
 
     // 2. VALIDAÇÃO OBRIGATÓRIA DA EXISTÊNCIA DA CONTA DE SERVIÇO NO AD ESPECÍFICO DA EMPRESA (LDAP DIRECTORYENTRY)
     appendLog(`[VALIDAÇÃO AD ${config.name}] Verificando se a conta de serviço '${pureUser}' existe no Active Directory de ${config.name} (${adServerIp})...`);

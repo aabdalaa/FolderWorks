@@ -5,9 +5,9 @@ export const MSIBuilderView: React.FC = () => {
   const [config, setConfig] = useState<any>({
     RELIQUIA: {
       name: 'RELIQUIA',
-      sourcePath: '\\\\192.168.100.30\\gpo\\criarpastas_paralegal\\MODELO',
+      sourcePath: '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\MODELO',
       destinationParentPath: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
-      adServerIp: '192.168.100.30',
+      adServerIp: '192.168.1.242',
       domainUser: 'RELIQUIA\\pasta.paralegal',
       adPass: 'Mestre@300'
     },
@@ -16,7 +16,7 @@ export const MSIBuilderView: React.FC = () => {
       sourcePath: '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\MODELO',
       destinationParentPath: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
       adServerIp: '192.168.50.102',
-      domainUser: 'pasta.paralegal',
+      domainUser: 'RTO\\pasta.paralegal',
       adPass: 'Mestre@300'
     }
   });
