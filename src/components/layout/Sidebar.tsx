@@ -19,7 +19,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   serverStatuses,
 }) => {
   const navItems = [
-    { id: 'dashboard' as const, label: 'Criar Pastas', icon: LayoutDashboard },
     { id: 'dashboard' as const, label: 'Criar Nova Pasta', icon: LayoutDashboard },
     { id: 'transfer' as const, label: 'Mover Pastas', icon: FolderOutput },
     { id: 'rename' as const, label: 'Renomear Pasta', icon: FolderEdit },
@@ -69,7 +68,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="bg-white dark:bg-neutral-800/80 rounded-xl p-3 border border-slate-200 dark:border-neutral-700/80 space-y-2.5 shadow-sm">
         <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>Status dos Servidores</span>
           <span>Conexão das Empresas</span>
         </div>
 

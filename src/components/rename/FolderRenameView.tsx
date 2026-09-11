@@ -248,7 +248,6 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
         {currentSourceDir && (
           <div className="hidden md:flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-mono truncate max-w-md">
             <Folder className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-            <span className="truncate" title={currentSourceDir}>{currentSourceDir}</span>
             <span className="truncate">Diretório: {currentSourceDir.split(/[\\/]/).filter(Boolean).pop() || 'Raiz'}</span>
           </div>
         )}
@@ -266,7 +265,6 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
                 Selecione a Pasta para Renomear
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Escolha uma pasta corporativa na lista abaixo ou pesquise pelo nome/código do cliente
                 Escolha uma pasta na lista abaixo ou pesquise pelo nome
               </p>
             </div>
@@ -312,7 +310,6 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
             {loadingFolders ? (
               <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
-                <span>Carregando pastas do servidor...</span>
                 <span>Carregando pastas...</span>
               </div>
             ) : folderError ? (

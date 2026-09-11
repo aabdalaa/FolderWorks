@@ -9,13 +9,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   Layers,
-  Search,
   Lock,
   FileText,
-  Sparkles,
   Edit3,
-  Clock,
-  GitBranch
+  Clock
 } from 'lucide-react';
 
 export const UserGuideView: React.FC = () => {
@@ -43,7 +40,6 @@ export const UserGuideView: React.FC = () => {
 
       {/* Conteúdo Principal */}
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-6 sm:p-8 shadow-sm space-y-8">
-        {/* Seção 1: Como Criar Pastas de Clientes */}
         {/* Seção 1: Como Criar uma Nova Pasta */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
@@ -51,38 +47,31 @@ export const UserGuideView: React.FC = () => {
               <FolderPlus className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              1. Como Criar uma Nova Pasta de Cliente
               1. Como Criar uma Nova Pasta
             </h4>
           </div>
 
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            O módulo de criação padroniza a abertura de diretórios no servidor de arquivos corporativo, assegurando que a estrutura necessária seja criada instantaneamente com as permissões corretas de cada departamento.
             O módulo de criação padroniza a abertura de diretórios no ambiente corporativo, assegurando que a estrutura necessária seja replicada instantaneamente com as permissões apropriadas.
           </p>
 
           <ol className="list-decimal list-inside space-y-2.5 pl-2 text-slate-600 dark:text-slate-400 leading-relaxed">
             <li>
-              Acesse a aba <strong>Criação de Pastas</strong> no menu lateral do aplicativo.
               Acesse a aba <strong>Criar Nova Pasta</strong> no menu lateral do aplicativo.
             </li>
             <li>
-              Selecione o <strong>servidor ou unidade de trabalho</strong> correspondente à operação.
               Selecione a <strong>empresa</strong> correspondente à operação.
             </li>
             <li>
-              No campo <em>Nome ou Código da Nova Pasta</em>, digite a identificação do cliente de acordo com o padrão cadastral do escritório (Exemplo ilustrativo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">0001 - CLIENTE EXEMPLO LTDA</span>).
               No campo <em>Nome da Nova Pasta</em>, digite o nome desejado para a pasta a ser criada (Exemplo ilustrativo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">0001 - CLIENTE EXEMPLO LTDA</span>).
             </li>
             <li>
-              Clique no botão <strong>Criar Pasta de Cliente</strong>.
               Clique no botão <strong>Criar Nova Pasta</strong>.
             </li>
             <li>
               O sistema criará automaticamente a estrutura corporativa padronizada copiando o modelo de pastas criado no Active Directory para o diretório de destino.
             </li>
             <li>
-              Uma notificação de confirmação em verde indicará a conclusão da operação.
               Uma notificação de confirmação em verde indicará a conclusão com sucesso da operação.
             </li>
           </ol>
@@ -94,13 +83,11 @@ export const UserGuideView: React.FC = () => {
               <span>Replicação Automática do Modelo de Pastas</span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-              O sistema copia fielmente o modelo de pastas corporativo padronizado no Active Directory para o diretório de destino selecionado, garantindo a organização institucional, herança e permissões de segurança de rede apropriadas sem necessidade de configuração manual.
               O sistema copia o modelo de pastas criado no Active Directory para o diretório de destino selecionado, garantindo organização, herança e permissões de segurança apropriadas sem necessidade de configuração manual.
             </p>
           </div>
         </section>
 
-        {/* Seção 2: Como Mover ou Transferir Pastas */}
         {/* Seção 2: Como Mover Pastas entre Diretórios */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
@@ -108,35 +95,28 @@ export const UserGuideView: React.FC = () => {
               <FolderOutput className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              2. Como Mover ou Transferir Pastas entre Diretórios
               2. Como Mover Pastas entre Diretórios
             </h4>
           </div>
 
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            A ferramenta de transferência permite remanejar pastas inteiras (por exemplo, ao encerrar contratos ou reorganizar clientes) com alta velocidade e verificação contínua de integridade.
             A ferramenta de transferência permite remanejar pastas inteiras com alta velocidade e verificação contínua de integridade entre os diretórios autorizados.
           </p>
 
           <ol className="list-decimal list-inside space-y-2.5 pl-2 text-slate-600 dark:text-slate-400 leading-relaxed">
             <li>
-              Acesse a aba <strong>Transferência</strong> no menu lateral.
               Acesse a aba <strong>Mover Pastas</strong> no menu lateral.
             </li>
             <li>
-              Selecione o <strong>servidor ou ambiente de arquivos</strong> correspondente.
               Selecione a <strong>empresa</strong> correspondente.
             </li>
             <li>
-              <strong>Para onde vai a pasta?</strong>: Selecione o destino desejado. Você pode utilizar os botões de atalho rápido definidos pela governança do escritório ou selecionar outro diretório autorizado pelo sistema.
               <strong>Para onde vai a pasta?</strong>: Selecione o diretório de destino desejado através dos botões de atalho rápido ou selecione outro diretório autorizado.
             </li>
             <li>
-              <strong>Onde está a pasta?</strong>: Localize a pasta desejada no painel de listagem. Utilize o campo de busca rápida digitando parte do código ou nome do cliente.
               <strong>Onde está a pasta?</strong>: Localize a pasta desejada no painel de listagem. Utilize o campo <em>Pesquisar pasta...</em> digitando parte do nome.
             </li>
             <li>
-              Marque as caixas de seleção das pastas que deseja transferir. Para remanejar todos os itens exibidos, clique em <strong>SELECIONAR TODAS</strong>.
               Marque as caixas de seleção das pastas que deseja transferir. Para selecionar todos os itens exibidos, clique em <strong>SELECIONAR TODAS</strong>.
             </li>
             <li>
@@ -148,7 +128,6 @@ export const UserGuideView: React.FC = () => {
           </ol>
         </section>
 
-        {/* Seção 3: Registro de Atividades e Logs (Suporte & TI) */}
         {/* Seção 3: Como Renomear uma Pasta */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
@@ -228,13 +207,11 @@ export const UserGuideView: React.FC = () => {
               <Terminal className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              3. Como Acessar o Registro de Atividades e Logs (Equipe Técnica & TI)
               5. Registro de Atividades e Telemetria (Equipe Técnica & TI)
             </h4>
           </div>
 
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            O aplicativo dispõe de um módulo de auditoria e telemetria profunda para diagnóstico de rede, transmissões de arquivos e validação de permissões no servidor.
             O aplicativo dispõe de um módulo de auditoria e telemetria para diagnóstico operacional, transferências de arquivos e validação de permissões de diretórios.
           </p>
 
@@ -245,7 +222,6 @@ export const UserGuideView: React.FC = () => {
                 <span>Onde encontrar o botão de logs?</span>
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                Para manter a interface limpa e segura para os operadores do escritório, o botão de acesso aos logs fica discretamente posicionado no <strong>canto inferior direito da tela</strong> (<span className="font-mono text-xs font-bold text-teams-600 dark:text-teams-400">REGISTRO TI</span>).
                 Para manter a interface limpa e focada na produtividade, o botão de acesso aos logs fica posicionado discretamente no <strong>canto inferior direito da tela</strong> (<span className="font-mono text-xs font-bold text-teams-600 dark:text-teams-400">REGISTRO TI</span>).
               </p>
             </div>
@@ -256,7 +232,6 @@ export const UserGuideView: React.FC = () => {
                 <span>Acesso Privado e Protegido por Credencial</span>
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-                Ao clicar no botão, uma tela de segurança solicitará a credencial do TI configurada nas variáveis de ambiente da aplicação. Isso impede acesso não autorizado a dados técnicos e parâmetros de infraestrutura.
                 Ao clicar no botão, uma tela de segurança solicitará a credencial técnica de suporte. Isso impede acesso não autorizado a dados técnicos e diagnósticos de infraestrutura.
               </p>
             </div>
@@ -268,61 +243,22 @@ export const UserGuideView: React.FC = () => {
               <span>Recursos Disponíveis no Painel de Registro de Atividades:</span>
             </div>
             <ul className="list-disc list-inside space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400 pl-1 leading-relaxed">
-              <li><strong>Telemetria em Tempo Real</strong>: Acompanhe as etapas de varredura, chamadas de rede e throughput de cópia de arquivos.</li>
               <li><strong>Telemetria em Tempo Real</strong>: Acompanhe as etapas de varredura, chamadas de sistema e taxa de transferência de arquivos.</li>
               <li><strong>Categorização por Cores</strong>: Mensagens de sucesso são destacadas em verde, avisos em amarelo e eventuais falhas em vermelho.</li>
               <li><strong>Limpeza de Histórico</strong>: Botão para resetar o buffer de exibição da sessão de trabalho.</li>
-              <li><strong>Exportação em Arquivo (.txt)</strong>: Opção para abrir o relatório de eventos no editor padrão do Windows para anexar em chamados ou laudos técnicos de auditoria.</li>
               <li><strong>Exportação em Arquivo (.txt)</strong>: Opção para abrir o relatório de eventos no editor padrão do Windows para anexar em chamados ou auditorias técnicas.</li>
               <li><strong>Bloqueio Imediato</strong>: Botão para fechar e travar a sessão de TI logo após a inspeção.</li>
             </ul>
           </div>
         </section>
 
-        {/* Seção 4: Histórico de Auditoria */}
         {/* Seção 6: Dúvidas Frequentes & Boas Práticas */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
-            <div className="p-1.5 rounded-lg bg-teams-50 dark:bg-teams-950/80 text-teams-600 dark:text-teams-400">
-              <History className="w-4 h-4" />
-            </div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              4. Acompanhamento de Operações Anteriores (Histórico)
-            </h4>
-          </div>
-
-          <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-            Na aba <strong>Histórico</strong> do menu lateral, os operadores podem consultar o registro permanente de todas as pastas criadas e transferidas. Cada registro armazena:
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
-              <div className="text-slate-400 text-[10px] uppercase font-bold">Data & Hora</div>
-              <div className="font-semibold text-xs text-slate-700 dark:text-slate-300 mt-0.5">Momento exato</div>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
-              <div className="text-slate-400 text-[10px] uppercase font-bold">Pasta / Cliente</div>
-              <div className="font-semibold text-xs text-slate-700 dark:text-slate-300 mt-0.5">Nome do diretório</div>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
-              <div className="text-slate-400 text-[10px] uppercase font-bold">Status</div>
-              <div className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">Sucesso / Falha</div>
-            </div>
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800">
-              <div className="text-slate-400 text-[10px] uppercase font-bold">Duração</div>
-              <div className="font-semibold text-xs text-slate-700 dark:text-slate-300 mt-0.5">Tempo em segundos</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Seção 5: Dúvidas Frequentes & Recomendações */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
             <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              5. Dúvidas Frequentes, Governança & Recomendações
               6. Dúvidas Frequentes & Boas Práticas
             </h4>
           </div>
@@ -333,7 +269,6 @@ export const UserGuideView: React.FC = () => {
                 <span>O que acontece se a pasta já existir no destino?</span>
               </div>
               <div className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                O aplicativo realiza uma pré-verificação antes da transmissão. Se já houver um diretório com o mesmo nome na pasta de destino, o sistema emitirá um alerta explícito na tela para evitar qualquer sobreposição ou perda acidental de dados.
                 O aplicativo realiza uma pré-verificação antes da criação ou transferência. Se já houver um diretório com o mesmo nome no destino, o sistema emitirá um alerta explícito para prevenir sobreposições ou perdas acidentais de dados.
               </div>
             </div>
@@ -344,7 +279,6 @@ export const UserGuideView: React.FC = () => {
                 <span>Por que não se deve fechar o aplicativo durante a transferência?</span>
               </div>
               <div className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                Durante a cópia, o aplicativo ativa uma camada de proteção visual que bloqueia o fechamento acidental da janela (incluindo atalhos como Alt+F4). Isso assegura que o fluxo de transmissão de arquivos e a replicação de permissões sejam concluídos integralmente sem corrupção de dados na rede.
                 Durante a cópia, o aplicativo ativa uma camada de proteção visual que bloqueia o fechamento acidental da janela (incluindo atalhos como Alt+F4). Isso assegura que o fluxo de transferência de arquivos seja concluído integralmente sem interrupções.
               </div>
             </div>
@@ -355,7 +289,6 @@ export const UserGuideView: React.FC = () => {
                 <span>Perímetro de Segurança e Governança Corporativa</span>
               </div>
               <div className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-                O aplicativo possui regras estritas de perímetro corporativo. Destinos fora do limite aprovado pelas políticas de TI são automaticamente bloqueados para impedir que pastas de clientes sejam movidas inadvertidamente para diretórios públicos ou áreas não autorizadas da rede.
                 O aplicativo respeita as permissões do sistema operacional e do Active Directory. Destinos fora dos limites autorizados não são acessíveis, assegurando total governança dos arquivos corporativos.
               </div>
             </div>
@@ -378,13 +311,23 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.7.6 */}
+            {/* v2.7.7 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.7.6</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.7.7</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Limpeza Completa de Duplicações Visuais e Refinamento de UI</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Correção de duplicações no menu lateral, cabeçalho de versões, título de criação e seções do manual. Interface 100% limpa, consistente e polida.
+              </p>
+            </div>
+
+            {/* v2.7.6 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.7.6</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Padronização Global, Sanitização e Novo Manual</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Nomenclaturas unificadas e genéricas em todas as telas, remoção de referências específicas de rede na interface, inclusão do guia operacional para renomear pastas e linha do tempo de versões integrada ao manual do usuário.

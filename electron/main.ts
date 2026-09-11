@@ -986,6 +986,7 @@ ipcMain.handle('build-custom-msi', async (_, msiParams) => {
 ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   const trimmedName = folderName.trim();
   if (!trimmedName) return { success: false, error: 'O nome da pasta do cliente não pode estar vazio.' };
+  if (!trimmedName) return { success: false, error: 'O nome da pasta não pode estar vazio.' };
 
   const config = getCompanyConfig(company);
   const destShare = config.destSharePath || config.destinationParentPath;
@@ -996,6 +997,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
 
   appendLog('---------------------------------------------------------');
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Cliente: ${trimmedName}`);
+  appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Pasta: ${trimmedName}`);
   appendLog(`[ORIGEM GPO MODELO] ${config.sourcePath}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 

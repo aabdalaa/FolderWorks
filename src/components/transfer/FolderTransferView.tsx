@@ -481,7 +481,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               {loadingFolders ? (
                 <div className="p-8 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-teams-600 dark:text-teams-400" />
-                  <span>Carregando pastas do servidor...</span>
                   <span>Carregando pastas...</span>
                 </div>
               ) : folderError ? (

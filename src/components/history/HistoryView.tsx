@@ -47,7 +47,6 @@ export const HistoryView: React.FC = () => {
                 <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-950/50">
                   <th className="p-3">Data / Hora</th>
                   <th className="p-3">Empresa</th>
-                  <th className="p-3">Cliente</th>
                   <th className="p-3">Pasta Criada</th>
                   <th className="p-3">Responsável</th>
                   <th className="p-3">Duração</th>

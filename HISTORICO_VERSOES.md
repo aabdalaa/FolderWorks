@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.7 (11/09/2026) - **Limpeza Completa de Duplicações Visuais e Refinamento de UI**
+- **Eliminação Integral de Duplicações Visuais na Interface**:
+  - Removido o item residual `Criar Pastas` na barra lateral, mantendo unicamente `Criar Nova Pasta`.
+  - Corrigido o título sobreposto em `FolderCreationView.tsx`, mantendo estritamente o título `Criar Nova Pasta`.
+  - Eliminada a exibição simultânea de `v2.7.5` e `v2.7.6` nas badges de versão (`TitleBar.tsx`, `Header.tsx`, `AboutView.tsx`), sincronizando todas as referências para `v2.7.7`.
+  - Removidos rótulos, dicas e botões duplicados em `FolderCreationView.tsx`, `FolderRenameView.tsx`, `FolderTransferView.tsx` e `HistoryView.tsx`.
+  - Reescrita limpa e sem redundâncias de todas as seções e passos do manual operacional (`UserGuideView.tsx`).
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.7** em todo o código-fonte, scripts WiX e documentação técnica.
+- **Novo Pacote Oficial MSI v2.7.7**:
+  - Compilado via WiX Toolset v3.14 e disponibilizado na Área de Trabalho e repositórios locais.
+
+---
+
 ## Versão 2.7.6 (11/09/2026) - **Padronização Global, Sanitização de Vocabulário e Atualização Completa do Manual**
 - **Padronização Global e Sanitização de Vocabulário na Interface**:
   - Remoção de referências a "cliente" e nomes de setores internos nos textos voltados ao usuário: a ferramenta atua puramente como um gerenciador e criador corporativo de diretórios.
