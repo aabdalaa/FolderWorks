@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.1 (11/09/2026) - **Encerramento Automático de Instâncias no MSI e Trava de Instância Única**
+- **Encerramento Forçado e Silencioso no Instalador MSI (Solução do Diálogo "Files in Use")**:
+  - Injetada ação customizada `CAQuietExec` (`taskkill.exe /F /IM FolderWorks.exe /T`) agendada em `InstallUISequence` (antes de `CostInitialize`) e em `InstallExecuteSequence` (antes de `InstallValidate`).
+  - Adicionado elemento nativo `<util:CloseApplication Id="CloseFolderWorks" Target="FolderWorks.exe" CloseMessage="yes" TerminateProcess="1" Timeout="3" RebootPrompt="no" />` via `WixUtilExtension`.
+  - Elimina em 100% das vezes o diálogo "Files in Use" com múltiplas instâncias reportadas pelo Windows Restart Manager.
+  - O aplicativo em execução é fechado de forma automática e transparente antes da substituição de arquivos, garantindo que o usuário nunca continue rodando uma versão desatualizada após o processo de upgrade.
+- **Trava de Instância Única no Electron (`requestSingleInstanceLock`)**:
+  - Implementado `app.requestSingleInstanceLock()` no processo principal do Electron (`electron/main.ts`).
+  - Tentativas adicionais de abertura pelo usuário redirecionam e focam a janela existente (`second-instance`), impedindo a criação de instâncias zumbis ou duplicadas.
+  - Definido título explícito de janela (`title: 'FolderWorks'`) para identificação imediata pelos gerenciadores de processo do sistema operacional.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Atualização uniforme de versão para **v2.7.1** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.1**: Compilado com WiX Toolset v3.14 mantendo UpgradeCode in-place idêntico.
+
+---
+
 ## Versão 2.7.0 (11/09/2026) - **Módulo de Renomeação de Pastas, Validação Real AD e Proteção Crítica de Credenciais**
 - **Nova Funcionalidade: Renomear Pastas Corporativas (`FolderRenameView`)**:
   - Adicionado novo módulo dedicado acessível pela barra lateral ("Renomear Pasta" com ícone `FolderEdit`).

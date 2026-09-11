@@ -82,8 +82,7 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.6.2',
-    version: '2.7.0',
+    version: '2.7.1',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {
@@ -92,6 +91,32 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
   });
 
   await msiCreator.create();
+
+  // Injetar encerramento forçado e automático de instâncias em execução
+  const wxsFilePath = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.wxs');
+  if (fs.existsSync(wxsFilePath)) {
+    let wxsContent = fs.readFileSync(wxsFilePath, 'utf-8');
+    const killAppSnippet = `
+    <!-- Encerramento Automático de Instâncias Anteriores do FolderWorks (Evita Files in Use) -->
+    <CustomAction Id="SetKillAppCmd" Property="QtExecCmdLine" Value="&quot;[SystemFolder]taskkill.exe&quot; /F /IM FolderWorks.exe /T" Execute="immediate" />
+    <CustomAction Id="KillRunningApp" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="immediate" Return="ignore" />
+    
+    <util:CloseApplication Id="CloseFolderWorks" Target="FolderWorks.exe" CloseMessage="no" Description="Fechando FolderWorks em execução..." TerminateProcess="1" Timeout="3" RebootPrompt="no" />
+
+    <InstallUISequence>
+      <Custom Action="SetKillAppCmd" Before="KillRunningApp">1</Custom>
+      <Custom Action="KillRunningApp" Before="CostInitialize">1</Custom>
+    </InstallUISequence>
+    <InstallExecuteSequence>
+      <Custom Action="SetKillAppCmd" Before="KillRunningApp">1</Custom>
+      <Custom Action="KillRunningApp" Before="InstallValidate">1</Custom>
+    </InstallExecuteSequence>
+`;
+    wxsContent = wxsContent.replace('</Product>', killAppSnippet + '\n</Product>');
+    fs.writeFileSync(wxsFilePath, wxsContent, 'utf-8');
+    console.log('✓ Injetado encerramento forçado de instâncias ativas (taskkill + util:CloseApplication) no FolderWorks.wxs');
+  }
+
   await msiCreator.compile();
 
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');

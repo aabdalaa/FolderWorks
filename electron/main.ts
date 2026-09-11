@@ -208,6 +208,7 @@ let isTransferInProgress = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    title: 'FolderWorks',
     width: 1280,
     height: 800,
     minWidth: 1024,
@@ -253,7 +254,21 @@ function createWindow() {
   appendLog('=========================================================');
 }
 
-app.whenReady().then(createWindow);
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(createWindow);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
