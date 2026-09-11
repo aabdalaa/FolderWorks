@@ -72,7 +72,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Criar Nova Pasta de Cliente</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                A pasta raiz e as 7 subpastas departamentais serão configuradas automaticamente no servidor de arquivos
+                Copia o modelo de pastas criado no AD para o diretório de destino
               </p>
             </div>
           </div>

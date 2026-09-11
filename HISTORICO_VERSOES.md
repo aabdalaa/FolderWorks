@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.3 (11/09/2026) - **Harmonização do Seletor de Empresas em Renomear Pastas e Generalização de Descrições (Zero Vazamento de Dados)**
+- **Harmonização Visual da Interface de Renomear Pastas**:
+  - Alinhado o seletor de empresas da aba *Renomear Pasta* com a mesma disposição e padrão visual da tela de *Transferência de Pastas*: barra superior destacada com o rótulo `Empresa:` e botões segmentados com ícone predial `Building2`.
+  - Layout unificado com container de largura estendida `max-w-7xl` e estilo corporativo consistente em todo o aplicativo.
+- **Generalização de Descrições e Eliminação de Vazamento de Dados Internos**:
+  - Atualizada a descrição da criação de pastas para *"Copia o modelo de pastas criado no AD para o diretório de destino"*, tornando a comunicação concisa, clara e totalmente agnóstica de ambiente.
+  - Removidas menções a quantidades de subpastas ou nomes de departamentos específicos em `UserGuideView.tsx` e `06-MANUAL_DO_USUARIO.md`, substituindo por seções sobre replicação automatizada de modelos e herança de segurança institucional do Active Directory.
+  - O aplicativo agora opera como uma solução 100% genérica e comercial, pronta para distribuição pública e implantação em qualquer infraestrutura corporativa sem expor estruturas internas.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.3** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
+- **Novo Pacote Oficial MSI v2.7.3**: Compilado com WiX Toolset v3.14.
+
+---
+
 ## Versão 2.7.2 (11/09/2026) - **Correção da Validação de Conexão AD e Status dos Servidores via -EncodedCommand**
 - **Correção Crítica no Mecanismo de Teste de Conexão e Status dos Servidores**:
   - Eliminado erro onde scripts PowerShell com quebras de linha e comentários `#` entravam em colapso ao serem interpolados em linha única no `cmd.exe`, gerando saída vazia e indicando falsamente que servidores ativos estavam offline.

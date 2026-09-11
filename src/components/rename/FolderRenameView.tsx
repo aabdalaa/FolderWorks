@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Loader2,
   FolderCheck,
+  Building2,
 } from 'lucide-react';
 
 interface FolderRenameViewProps {
@@ -140,47 +141,52 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-neutral-900/50 overflow-y-auto p-4 sm:p-6 select-none space-y-4">
-      {/* Header do Módulo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-neutral-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400">
-              <FolderEdit className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                Renomear Pasta
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Selecione um diretório corporativo e defina o novo nome desejado
-              </p>
-            </div>
+    <div className="space-y-6 max-w-7xl mx-auto text-slate-800 dark:text-slate-100 transition-colors select-none">
+      {/* Top Controls: Company Toggle */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-sm flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Empresa:</span>
+          <div className="flex flex-wrap rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700 gap-1">
+            {companyKeys.map((key) => {
+              const isSelected = company === key;
+              const compName = config?.[key]?.companyName || key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCompany(key)}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>{compName}</span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-
-        {/* Seletor de Empresa */}
-        <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-2xs">
-          {companyKeys.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCompany(c)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                company === c
-                  ? 'bg-teams-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-neutral-800'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Card Principal */}
-      <div className="max-w-2xl mx-auto w-full bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden">
-        <form onSubmit={handleExecuteRename} className="p-5 sm:p-6 space-y-5">
+      {/* Card Principal de Renomeação */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-6">
+        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
+          <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
+            <FolderEdit className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+              Renomear Pasta
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Selecione uma pasta corporativa e informe a nova nomenclatura desejada
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleExecuteRename} className="space-y-5 max-w-3xl">
           {/* Passo 1: Selecionar Pasta */}
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

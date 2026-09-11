@@ -69,52 +69,22 @@ export const UserGuideView: React.FC = () => {
               Clique no botão <strong>Criar Pasta de Cliente</strong>.
             </li>
             <li>
-              O sistema criará automaticamente o diretório raiz e as 7 subpastas departamentais padronizadas no servidor de arquivos.
+              O sistema criará automaticamente a estrutura corporativa padronizada copiando o modelo de pastas criado no Active Directory para o diretório de destino.
             </li>
             <li>
               Uma notificação de confirmação em verde indicará a conclusão da operação.
             </li>
           </ol>
 
-          {/* Subpastas Padrão Geradas Automaticamente */}
-          <div className="mt-4 p-5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-3">
+          {/* Replicação da Estrutura Modelo Corporativa */}
+          <div className="mt-4 p-5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-2.5">
             <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
               <Layers className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <span>Subpastas Padrão Geradas Automaticamente (7 Departamentos)</span>
+              <span>Replicação Automática do Modelo de Pastas</span>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
-              Toda nova pasta criada recebe automaticamente a seguinte estrutura organizacional interna para arquivamento ordenado dos documentos:
+            <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+              O sistema copia fielmente o modelo de pastas corporativo padronizado no Active Directory para o diretório de destino selecionado, garantindo a organização institucional, herança e permissões de segurança de rede apropriadas sem necessidade de configuração manual.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">CONTABILIDADE</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Livros diários, balancetes e demonstrações</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">DP</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Folha de pagamento, contratações e guias</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">EXPEDIÇÃO</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Documentos e comprovantes de transporte</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">FISCAL</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Notas fiscais, apuração e impostos</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">PARALEGAL</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Contratos sociais, certidões e registros</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">RH</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Gestão de pessoas, exames e treinamentos</span>
-              </div>
-              <div className="p-3 rounded-lg bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 flex items-center justify-between text-xs shadow-2xs sm:col-span-2">
-                <span className="font-mono font-bold text-teams-600 dark:text-teams-400">SPED</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Arquivos digitais e escriturações acessórias eletrônicas</span>
-              </div>
-            </div>
           </div>
         </section>
 
