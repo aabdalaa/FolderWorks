@@ -1,5 +1,20 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.0 (14/09/2026) - **Privacidade Visual (Blur) e Proteção de Configurações por Senha TI**
+- **Privacidade Visual e Proteção nas Configurações Corporativas**:
+  - Implementado efeito de desfoque visual (`filter: blur(8px)` / `blur-md`), opacidade reduzida e desativação total de interação (`select-none pointer-events-none`) em todos os campos, caminhos UNC, IPs e credenciais da tela de Configurações para usuários comuns.
+  - Adicionado card central de segurança com o status *Acesso Restrito ao TI*, mensagem explicativa e botão de ação direta para desbloquear com a senha do TI.
+  - Liberação imediata e fluida de todos os parâmetros e recursos de edição após a autenticação bem-sucedida da senha do TI.
+  - Proteção estendida ao botão *Testar Conexão*, que agora solicita a autenticação prévia caso o usuário ainda não esteja autenticado.
+  - Botão *Bloquear* no cabeçalho permite restaurar a proteção e o desfoque instantaneamente com um clique.
+- **Virada de Versão no Padrão Semantic Versioning (SemVer)**:
+  - Promoção da versão para **v2.8.0** (incremento MINOR) refletindo a nova camada de segurança e governança visual no aplicativo.
+  - Sincronização uniforme em todo o ecossistema: `package.json`, cabeçalhos visuais, scripts de build WiX, linha do tempo do manual do usuário e documentação técnica.
+- **Novo Pacote Oficial MSI v2.8.0**:
+  - Compilado com WiX Toolset v3.14 e distribuído na Área de Trabalho e repositórios locais com suporte a atualização *in-place*.
+
+---
+
 ## Versão 2.7.9 (14/09/2026) - **Impersonação Corporativa AD (pasta.paralegal) em Exclusão, Rollback e Renomeação**
 - **Execução Nativa sob Credenciais do Active Directory**:
   - Motor `ExecuteAsUser.exe` expandido com os comandos `--delete` e `--rename`, permitindo manipular arquivos e diretórios em compartilhamentos de rede UNC sob o token de segurança corporativo configurado (`pasta.paralegal`).

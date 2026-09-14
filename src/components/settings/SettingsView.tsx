@@ -433,10 +433,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* Tab Actions: Test Connection & Delete Company */}
           <div className="flex items-center gap-2 pb-2">
             <button
-              onClick={() => handleTest(activeCompanyTab)}
+              onClick={() => {
+                if (!isTIUnlocked) {
+                  setIsAuthModalOpen(true);
+                  return;
+                }
+                handleTest(activeCompanyTab);
+              }}
               disabled={testing[activeCompanyTab]}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-600 transition-colors cursor-pointer"
-              title="Testar comunicação com o servidor desta empresa"
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                isTIUnlocked
+                  ? 'bg-white dark:bg-neutral-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-600'
+                  : 'bg-slate-100/60 dark:bg-neutral-800/60 text-slate-400 dark:text-slate-500 border-slate-200/60 dark:border-neutral-700/60'
+              }`}
+              title={isTIUnlocked ? "Testar comunicação com o servidor desta empresa" : "Desbloqueie com a senha do TI para testar"}
             >
               <RefreshCw className={`w-3 h-3 ${testing[activeCompanyTab] ? 'animate-spin text-teams-600' : ''}`} />
               <span>Testar Conexão</span>
@@ -473,8 +483,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
 
-        {/* Form Body */}
-        <div className="p-5 space-y-6">
+        {/* Form Body with Privacy Blur and Security Lock Overlay */}
+        <div className="relative overflow-hidden rounded-b-xl">
+          <div
+            className={`p-5 space-y-6 transition-all duration-300 ${
+              !isTIUnlocked
+                ? 'filter blur-md select-none pointer-events-none opacity-30'
+                : ''
+            }`}
+            aria-hidden={!isTIUnlocked}
+          >
           {/* Identificação */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -808,6 +826,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
           </div>
+          </div>
+
+          {/* Blur Security Lock Overlay */}
+          {!isTIUnlocked && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-slate-900/30 dark:bg-black/50 backdrop-blur-[2px] select-none animate-in fade-in duration-200">
+              <div className="bg-white/95 dark:bg-neutral-900/95 border border-slate-200/80 dark:border-neutral-700/80 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center backdrop-blur-md">
+                <div className="w-12 h-12 rounded-2xl bg-teams-50 dark:bg-teams-950/80 border border-teams-200 dark:border-teams-800/80 flex items-center justify-center text-teams-600 dark:text-teams-400 mx-auto mb-4 shadow-xs">
+                  <Lock className="w-6 h-6" />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-2">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Acesso Restrito ao TI</span>
+                </div>
+
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
+                  Configurações Protegidas
+                </h3>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                  Os caminhos de rede, parâmetros corporativos e credenciais do domínio estão ocultos por segurança. Insira a senha do TI para desbloquear e visualizar.
+                </p>
+
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white rounded-xl text-xs font-bold shadow-md shadow-teams-600/20 transition-all cursor-pointer hover:scale-[1.01]"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  <span>Desbloquear com Senha do TI</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
