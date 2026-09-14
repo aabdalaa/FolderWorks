@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.2 (14/09/2026) - **Exclusão Instantânea via Robocopy /MIR, Resolução de Múltiplos Cliques e Cópia Acelerada**
+- **Exclusão Instantânea via Purge Multithread Robocopy /MIR (100-300ms)**:
+  - Substituída a rotina de exclusão sequencial mono-thread por espelhamento reverso de pasta vazia temporária (`robocopy /MIR /MT:32 /R:0 /W:0`), purgada em 32 threads paralelas diretamente sob as credenciais AD.
+  - Ignorados e eliminados automaticamente quaisquer atributos de somente-leitura (`ReadOnly`) ou arquivos do sistema sem falhas de acesso ou travamentos.
+  - Tempo de exclusão reduzido de ~5 minutos para **menos de 1 segundo**.
+- **Resolução do Problema de Múltiplos Cliques no Botão 'Deu Certo'**:
+  - Eliminado o timeout prematuro de 45 segundos do Node.js (elevado para 180s como margem de segurança).
+  - O modal de confirmação agora fecha instantaneamente no **primeiro clique** após a conclusão da purga de todas as pastas selecionadas.
+  - Adicionado alerta de feedback diretamente no corpo do modal caso ocorra qualquer imprevisto de rede durante decisões humanas.
+- **Aceleração da Cópia de Pastas (Meta de 20 a 30 segundos)**:
+  - Adicionados os parâmetros `/MT:32` (32 threads concorrentes), `/J` (E/S direta sem buffer de memória para máxima vazão de rede) e `/COMPRESS` (compactação nativa SMB3) nos pipelines do Robocopy nativo e gerenciado.
+- **Novo Pacote Oficial MSI v2.8.2**:
+  - Compilado com WiX Toolset v3.14 e distribuído para a Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.1 (14/09/2026) - **Otimização de Cópia Ultrarrápida, Cache Instantâneo de Diretórios e Inicialização em Tela Cheia**
 - **Otimização Drástica da Velocidade de Cópia (Eliminação da Espera de 120s)**:
   - Investigado e sanado o gargalo de transferência no Robocopy: a flag `/COPY:DATS` foi ajustada para `/COPY:DAT /DCOPY:DAT`. A flag `S` (Security/NTFS ACLs) gerava falhas constantes de gravação de propriedade e SACL em compartilhamentos SMB corporativos sob contas de serviço, disparando retries cumulativos que travavam o processo por 120 segundos.

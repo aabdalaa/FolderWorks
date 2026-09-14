@@ -266,6 +266,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   // 2. Interactive Human Decision: "Deu certo" -> Confirm Success & Delete Source
   const handleConfirmSuccess = async () => {
+    setTransferError(null);
     setIsProcessingDecision('success');
     const pathsToDelete = transferResults.map((r) => r.sourcePath);
     const delRes = await window.electronAPI?.deleteSourceFolders({
@@ -295,6 +296,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   // 2. Interactive Human Decision: "Não deu certo" -> Undo & Rollback Copied Destination Folders
   const handleUndoTransfer = async () => {
+    setTransferError(null);
     setIsProcessingDecision('undo');
     const pathsToUndo = transferResults.map((r) => r.finalDestPath);
     const undoRes = await window.electronAPI?.undoTransfer({
@@ -801,6 +803,17 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                     </ul>
                   </div>
                 </div>
+
+                {/* Modal Error Alert if delete/undo failed */}
+                {transferError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold">Aviso na Operação</p>
+                      <p className="text-[11px] leading-relaxed">{transferError}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Modal Actions */}

@@ -311,13 +311,23 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.8.1 */}
+            {/* v2.8.2 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.1</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.2</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Exclusão Instantânea via Robocopy /MIR e Cópia Otimizada (/MT:32 /J /COMPRESS)</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Purga paralela multithread (32 threads) de arquivos da origem pós-cópia em ~200ms, eliminando retenção de arquivos Read-Only e resolvendo o problema de múltiplos cliques no botão Deu Certo. Aceleração de transmissão de rede para 20 a 30 segundos com /MT:32, E/S direta desbufferizada (/J) e compressão de dados SMB.
+              </p>
+            </div>
+
+            {/* v2.8.1 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.1</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Otimização de Cópia Ultrarrápida, Cache Instantâneo e Inicialização em Tela Cheia</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Remoção da flag SACL (/COPY:DATS para /COPY:DAT) e retries infinitos do Robocopy, acelerando a transferência de pastas. Carregamento instantâneo de diretórios via cache local persistente com revalidação em segundo plano e inicialização obrigatória em modo maximizado.

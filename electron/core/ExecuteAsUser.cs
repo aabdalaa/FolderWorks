@@ -246,12 +246,38 @@ namespace ExecuteAsUser {
                     return 0;
                 }
 
-                RemoveAttributesRecursive(targetPath);
+                // 1. Criar diretório temporário local vazio para purge ultrarrápido
+                string tempEmpty = Path.Combine(Path.GetTempPath(), "_fw_empty_purge");
+                try {
+                    if (!Directory.Exists(tempEmpty)) {
+                        Directory.CreateDirectory(tempEmpty);
+                    }
+                } catch {}
 
+                // 2. Disparar Robocopy /MIR com 32 threads sob credenciais AD (purga instantânea de subpastas e arquivos, inclusive Read-Only)
+                STARTUPINFO si = new STARTUPINFO();
+                si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+                string appPath = @"C:\Windows\System32\robocopy.exe";
+                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:32 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
+
+                bool ok = CreateProcessWithLogonW(
+                    userOnly, domain, password,
+                    LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                    CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                    ref si, out pi
+                );
+                if (ok) {
+                    WaitForSingleObject(pi.hProcess, 30000);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                }
+
+                // 3. Remover a pasta raiz vazia remanescente
                 bool deleted = false;
                 try {
                     if (Directory.Exists(targetPath)) {
-                        Directory.Delete(targetPath, true);
+                        Directory.Delete(targetPath);
                     } else if (File.Exists(targetPath)) {
                         File.Delete(targetPath);
                     }
@@ -260,20 +286,20 @@ namespace ExecuteAsUser {
 
                 if (!deleted) {
                     try {
-                        STARTUPINFO si = new STARTUPINFO();
-                        si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
-                        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
-                        string cmdLine = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", targetPath);
-                        bool ok = CreateProcessWithLogonW(
+                        STARTUPINFO si2 = new STARTUPINFO();
+                        si2.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                        PROCESS_INFORMATION pi2 = new PROCESS_INFORMATION();
+                        string cmdRmdir = String.Format("cmd.exe /c rmdir /q \"{0}\"", targetPath);
+                        bool ok2 = CreateProcessWithLogonW(
                             userOnly, domain, password,
-                            LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                            LOGON_NETCREDENTIALS_ONLY, null, cmdRmdir,
                             CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
-                            ref si, out pi
+                            ref si2, out pi2
                         );
-                        if (ok) {
-                            WaitForSingleObject(pi.hProcess, 45000);
-                            CloseHandle(pi.hProcess);
-                            CloseHandle(pi.hThread);
+                        if (ok2) {
+                            WaitForSingleObject(pi2.hProcess, 15000);
+                            CloseHandle(pi2.hProcess);
+                            CloseHandle(pi2.hThread);
                         }
                     } catch {}
                     deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
@@ -443,7 +469,7 @@ namespace ExecuteAsUser {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
 
             string appPath = @"C:\Windows\System32\robocopy.exe";
-            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:8 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:32 /J /COMPRESS /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
 
             bool ok = CreateProcessWithLogonW(
                 userOnly,

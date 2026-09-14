@@ -554,7 +554,7 @@ function executeNativeOperation(args: string[]): Promise<{ success: boolean; dat
   }
 
   return new Promise((resolve) => {
-    execFile(executor, args, { timeout: 45000, encoding: 'buffer' }, (err, stdout, stderr) => {
+    execFile(executor, args, { timeout: 180000, encoding: 'buffer' }, (err, stdout, stderr) => {
       const stdoutStr = decodeProcessOutput(stdout).trim();
       const stderrStr = decodeProcessOutput(stderr).trim();
 
@@ -801,7 +801,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       });
     } else {
       appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:8 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:32 /J /COMPRESS /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {
