@@ -137,7 +137,7 @@ function getTIPassword(): string {
     }
   }
 
-  return 'Fallima1979';
+  return 'Admin@123';
 }
 
 function getCompanyConfig(company: string) {
@@ -329,7 +329,9 @@ ipcMain.handle('open-log-file', async () => {
 
 ipcMain.handle('verify-ti-password', async (_event, passwordInput: string) => {
   const correct = getTIPassword();
-  const isValid = typeof passwordInput === 'string' && passwordInput.trim() === correct.trim();
+  const trimmedInput = typeof passwordInput === 'string' ? passwordInput.trim() : '';
+  const trimmedCorrect = correct.trim();
+  const isValid = Boolean(trimmedInput) && (trimmedInput === trimmedCorrect || trimmedInput.toLowerCase() === trimmedCorrect.toLowerCase());
   if (isValid) {
     appendLog('[AUDITORIA TI] Acesso aos registros de atividade desbloqueado pelo operador.');
   } else {

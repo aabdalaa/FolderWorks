@@ -82,7 +82,7 @@ async function buildMSI() {
       domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
       adPass: env.RTO_AD_PASS || 'Mestre@300'
     },
-    tiLogsPassword: env.TI_LOGS_PASSWORD || 'Fallima1979'
+    tiLogsPassword: env.TI_LOGS_PASSWORD || ''
   };
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
