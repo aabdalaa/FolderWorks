@@ -1,5 +1,22 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.1 (14/09/2026) - **Otimização de Cópia Ultrarrápida, Cache Instantâneo de Diretórios e Inicialização em Tela Cheia**
+- **Otimização Drástica da Velocidade de Cópia (Eliminação da Espera de 120s)**:
+  - Investigado e sanado o gargalo de transferência no Robocopy: a flag `/COPY:DATS` foi ajustada para `/COPY:DAT /DCOPY:DAT`. A flag `S` (Security/NTFS ACLs) gerava falhas constantes de gravação de propriedade e SACL em compartilhamentos SMB corporativos sob contas de serviço, disparando retries cumulativos que travavam o processo por 120 segundos.
+  - Parâmetros de retries do Robocopy ajustados para `/R:0 /W:0 /MT:8`, eliminando qualquer atraso de rede desnecessário na cópia.
+  - Otimizada a rotina `RemoveAttributesRecursive` e o tratamento de sessões SMB em `ExecuteAsUser.cs` para evitar varreduras recursivas lentas pela rede.
+  - A validação interativa humana de sucesso/desfazer permanece rápida e sob o controle do usuário nos botões verde e vermelho.
+- **Abertura Obrigatória em Tela Cheia (Maximizada)**:
+  - Configurado `mainWindow.maximize()` no ciclo de inicialização do Electron, garantindo que o aplicativo sempre abra ocupando toda a tela, preservando a liberdade do usuário para redimensionar ou restaurar quando desejar.
+- **Cache Instantâneo de Pastas (Stale-While-Revalidate)**:
+  - Implementado sistema de cache local persistente (`localStorage`) nas telas de *Mover Pastas* e *Renomear Pastas*, eliminando a tela vazia e o spinner de carregamento demorado em aberturas subsequentes.
+  - As pastas em cache são renderizadas instantaneamente (0ms), enquanto uma sincronização silenciosa em segundo plano atualiza novas pastas do compartilhamento corporativo.
+  - Atualização instantânea do cache e da grade ao confirmar exclusão ou renomeação de pastas.
+- **Novo Pacote Oficial MSI v2.8.1**:
+  - Compilado com WiX Toolset v3.14 e distribuído para a Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.0 (14/09/2026) - **Privacidade Visual (Blur) e Proteção de Configurações por Senha TI**
 - **Privacidade Visual e Proteção nas Configurações Corporativas**:
   - Implementado efeito de desfoque visual (`filter: blur(8px)` / `blur-md`), opacidade reduzida e desativação total de interação (`select-none pointer-events-none`) em todos os campos, caminhos UNC, IPs e credenciais da tela de Configurações para usuários comuns.

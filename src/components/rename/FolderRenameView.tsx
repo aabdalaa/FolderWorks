@@ -69,23 +69,51 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
 
   const companyKeys = config ? Object.keys(config).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : ['RTO', 'RELIQUIA'];
 
+  const getCacheKey = (dir: string, comp: string) => `fw_folders_cache_${comp}_${dir.toLowerCase().trim()}`;
+
   // Carrega lista de subpastas do diretório
   const loadSubdirectories = async (dir: string, comp: string = company) => {
     if (!dir) return;
-    setLoadingFolders(true);
+    const cacheKey = getCacheKey(dir, comp);
+    const cached = localStorage.getItem(cacheKey);
+    let hasCache = false;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFolders(parsed);
+          setLoadingFolders(false);
+          hasCache = true;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
+    if (!hasCache) {
+      setLoadingFolders(true);
+    }
     setFolderError(null);
     try {
       const res = await window.electronAPI?.listSubdirectories(dir, comp);
       if (res?.success) {
         setFolders(res.folders || []);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(res.folders || []));
+        } catch (e) {
+          // ignore storage error
+        }
       } else {
-        setFolderError(res?.error || 'Erro ao listar pastas do servidor.');
-        setFolderError(res?.error || 'Erro ao listar pastas.');
-        setFolders([]);
+        if (!hasCache) {
+          setFolderError(res?.error || 'Erro ao listar pastas.');
+          setFolders([]);
+        }
       }
     } catch (e: any) {
-      setFolderError(e.message || 'Erro inesperado.');
-      setFolders([]);
+      if (!hasCache) {
+        setFolderError(e.message || 'Erro inesperado.');
+        setFolders([]);
+      }
     } finally {
       setLoadingFolders(false);
     }
@@ -183,8 +211,22 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
         setCurrentFolderName(trimmedNewName);
         setNewFolderName(trimmedNewName);
 
-        // Recarrega a grade de pastas para refletir a nova nomenclatura instantaneamente
+        // Atualiza a grade de pastas e cache imediatamente para refletir a nova nomenclatura
         if (currentSourceDir) {
+          const cacheKey = getCacheKey(currentSourceDir, company);
+          const finalNewPath = result.newPath || selectedPath;
+          setFolders((prev) => {
+            const next = prev.map((f) => {
+              if (f.fullPath.toLowerCase() === selectedPath.toLowerCase()) {
+                return { ...f, name: trimmedNewName, fullPath: finalNewPath };
+              }
+              return f;
+            });
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify(next));
+            } catch (e) {}
+            return next;
+          });
           loadSubdirectories(currentSourceDir, company);
         }
       } else {

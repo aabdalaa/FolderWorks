@@ -117,22 +117,51 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     setBoundaryStatus(res);
   };
 
+  const getCacheKey = (dir: string, comp: string) => `fw_folders_cache_${comp}_${dir.toLowerCase().trim()}`;
+
   const loadSubdirectories = async (dir: string, comp: string = company) => {
     if (!dir) return;
-    setLoadingFolders(true);
+    const cacheKey = getCacheKey(dir, comp);
+    const cached = localStorage.getItem(cacheKey);
+    let hasCache = false;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFolders(parsed);
+          setLoadingFolders(false);
+          hasCache = true;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+
+    if (!hasCache) {
+      setLoadingFolders(true);
+    }
     setFolderError(null);
     setSelectedFolderNames(new Set());
     try {
       const res = await window.electronAPI?.listSubdirectories(dir, comp);
       if (res?.success) {
         setFolders(res.folders);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(res.folders));
+        } catch (e) {
+          // ignore storage error
+        }
       } else {
-        setFolderError(res?.error || 'Erro ao listar pastas.');
-        setFolders([]);
+        if (!hasCache) {
+          setFolderError(res?.error || 'Erro ao listar pastas.');
+          setFolders([]);
+        }
       }
     } catch (e: any) {
-      setFolderError(e.message || 'Erro inesperado.');
-      setFolders([]);
+      if (!hasCache) {
+        setFolderError(e.message || 'Erro inesperado.');
+        setFolders([]);
+      }
     } finally {
       setLoadingFolders(false);
     }
@@ -249,6 +278,15 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
       setDecisionCompleted({ type: 'success', count: delRes.deleted.length });
       setShowConfirmationPrompt(false);
       setSelectedFolderNames(new Set());
+      const deletedSet = new Set(delRes.deleted.map((p) => p.toLowerCase()));
+      setFolders((prev) => {
+        const next = prev.filter((f) => !deletedSet.has(f.fullPath.toLowerCase()));
+        try {
+          const cacheKey = getCacheKey(sourceDir, company);
+          localStorage.setItem(cacheKey, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
       loadSubdirectories(sourceDir);
     } else {
       setTransferError(delRes?.errors?.join(' | ') || 'Erro ao excluir pastas da origem.');

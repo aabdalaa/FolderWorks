@@ -223,6 +223,8 @@ function createWindow() {
     },
   });
 
+  mainWindow.maximize();
+
   mainWindow.on('close', (e) => {
     if (isTransferInProgress) {
       e.preventDefault();
@@ -799,7 +801,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       });
     } else {
       appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:32 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:8 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {

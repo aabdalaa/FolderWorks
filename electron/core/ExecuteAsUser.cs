@@ -106,15 +106,17 @@ namespace ExecuteAsUser {
 
         private static void ConnectServer(string server, string user, string password) {
             if (string.IsNullOrEmpty(server)) return;
-            try { WNetCancelConnection2(server + @"\IPC$", 0, true); } catch {}
-            try { WNetCancelConnection2(server, 0, true); } catch {}
 
             NETRESOURCE nr = new NETRESOURCE();
             nr.dwType = RESOURCETYPE_DISK;
             nr.lpRemoteName = server + @"\IPC$";
 
             int res = WNetAddConnection2(ref nr, password, user, 0);
-            if (res != 0 && res != 1219) {
+            if (res == 1219) {
+                try { WNetCancelConnection2(server + @"\IPC$", 0, true); } catch {}
+                try { WNetCancelConnection2(server, 0, true); } catch {}
+                WNetAddConnection2(ref nr, password, user, 0);
+            } else if (res != 0) {
                 nr.lpRemoteName = server;
                 WNetAddConnection2(ref nr, password, user, 0);
             }
@@ -205,20 +207,9 @@ namespace ExecuteAsUser {
                     File.SetAttributes(path, FileAttributes.Normal);
                     return;
                 }
-                if (!Directory.Exists(path)) return;
-
-                DirectoryInfo di = new DirectoryInfo(path);
-                di.Attributes = FileAttributes.Normal;
-
-                foreach (FileInfo f in di.GetFiles("*", SearchOption.AllDirectories)) {
-                    try {
-                        f.Attributes = FileAttributes.Normal;
-                    } catch {}
-                }
-                foreach (DirectoryInfo sub in di.GetDirectories("*", SearchOption.AllDirectories)) {
-                    try {
-                        sub.Attributes = FileAttributes.Normal;
-                    } catch {}
+                if (Directory.Exists(path)) {
+                    DirectoryInfo di = new DirectoryInfo(path);
+                    di.Attributes = FileAttributes.Normal;
                 }
             } catch {}
         }
@@ -452,7 +443,7 @@ namespace ExecuteAsUser {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
 
             string appPath = @"C:\Windows\System32\robocopy.exe";
-            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DATS /DCOPY:DAT /MT:32 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:8 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
 
             bool ok = CreateProcessWithLogonW(
                 userOnly,
