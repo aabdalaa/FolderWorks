@@ -311,14 +311,23 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.7.8 */}
+            {/* v2.7.9 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.7.7</span>
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.7.8</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.7.9</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Impersonação AD (pasta.paralegal) em Exclusão, Desfazer e Renomeação</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Execução nativa de exclusão de pasta de origem pós-cópia, rollback e renomeação de diretórios de rede estritamente sob as credenciais corporativas do Active Directory configuradas nas variáveis de ambiente.
+              </p>
+            </div>
+
+            {/* v2.7.8 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.7.8</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Padronização Global de Larguras e Dimensões de Layout</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Uniformização da largura de todas as telas e caixas principais para o padrão max-w-7xl, alinhando a tela de criação com as de transferência e renomeação. Harmonização de cantos e espaçamentos dos cards.

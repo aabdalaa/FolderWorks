@@ -543,6 +543,41 @@ function getExecutorPath(): string {
   return '';
 }
 
+function executeNativeOperation(args: string[]): Promise<{ success: boolean; data?: any; error?: string }> {
+  const executor = getExecutorPath();
+  if (!executor) {
+    return Promise.resolve({ success: false, error: 'Executável ExecuteAsUser.exe não encontrado.' });
+  }
+
+  return new Promise((resolve) => {
+    execFile(executor, args, { timeout: 45000, encoding: 'buffer' }, (err, stdout, stderr) => {
+      const stdoutStr = decodeProcessOutput(stdout).trim();
+      const stderrStr = decodeProcessOutput(stderr).trim();
+
+      if (stdoutStr) {
+        try {
+          const parsed = JSON.parse(stdoutStr);
+          if (parsed.success) {
+            resolve({ success: true, data: parsed });
+            return;
+          } else {
+            resolve({ success: false, error: parsed.error || 'Operação rejeitada pelo servidor.' });
+            return;
+          }
+        } catch {
+          // not json, continue
+        }
+      }
+
+      if (err) {
+        resolve({ success: false, error: stderrStr || err.message });
+      } else {
+        resolve({ success: true, data: stdoutStr });
+      }
+    });
+  });
+}
+
 function fallbackListSubdirectories(targetDir: string) {
   if (!fs.existsSync(targetDir)) {
     return { success: false, error: `Pasta não encontrada ou inacessível no servidor: ${targetDir}`, folders: [] };
@@ -802,13 +837,26 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
         continue;
       }
 
-      if (!fs.existsSync(srcPath)) {
-        errors.push(`Pasta já não existe: ${srcPath}`);
-        continue;
+      const isNetwork = srcPath.startsWith('\\\\');
+      const executor = getExecutorPath();
+
+      if (isNetwork && executor && config?.domainUser && config?.adPass) {
+        appendLog(`[EXCLUSÃO ORIGEM AD] Excluindo pasta de rede '${srcPath}' sob o usuário '${config.domainUser}'...`);
+        const opRes = await executeNativeOperation(['--delete', config.domainUser, config.adPass, srcPath]);
+        if (!opRes.success) {
+          const err = `Erro ao excluir pasta '${srcPath}' sob o usuário '${config.domainUser}': ${opRes.error}`;
+          appendLog(`[ERRO EXCLUSÃO AD] ${err}`);
+          errors.push(err);
+          continue;
+        }
+      } else {
+        if (!fs.existsSync(srcPath)) {
+          errors.push(`Pasta já não existe: ${srcPath}`);
+          continue;
+        }
+        fs.rmSync(srcPath, { recursive: true, force: true });
       }
 
-      // Execute safe recursive delete
-      fs.rmSync(srcPath, { recursive: true, force: true });
       deleted.push(srcPath);
       appendLog(`[EXCLUSÃO ORIGEM SUCESSO] Pasta de origem removida com sucesso: ${srcPath}`);
 
@@ -854,13 +902,26 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
         continue;
       }
 
-      if (!fs.existsSync(destPath)) {
-        undone.push(destPath);
-        continue;
+      const isNetwork = destPath.startsWith('\\\\');
+      const executor = getExecutorPath();
+
+      if (isNetwork && executor && config?.domainUser && config?.adPass) {
+        appendLog(`[DESFAZER AD] Removendo cópia do destino '${destPath}' sob o usuário '${config.domainUser}'...`);
+        const opRes = await executeNativeOperation(['--delete', config.domainUser, config.adPass, destPath]);
+        if (!opRes.success) {
+          const err = `Erro ao desfazer pasta '${destPath}' sob o usuário '${config.domainUser}': ${opRes.error}`;
+          appendLog(`[ERRO DESFAZER AD] ${err}`);
+          errors.push(err);
+          continue;
+        }
+      } else {
+        if (!fs.existsSync(destPath)) {
+          undone.push(destPath);
+          continue;
+        }
+        fs.rmSync(destPath, { recursive: true, force: true });
       }
 
-      // Safe recursive delete of copied folder in destination
-      fs.rmSync(destPath, { recursive: true, force: true });
       undone.push(destPath);
       appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso: ${destPath}. Origem mantida intacta.`);
 
@@ -893,14 +954,6 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
       return { success: false, error: 'Nenhum caminho de pasta informado.' };
     }
     const cleanTarget = path.normalize(targetPath.trim());
-    if (!fs.existsSync(cleanTarget)) {
-      return { success: false, error: `A pasta selecionada não foi encontrada no sistema:\n${cleanTarget}` };
-    }
-
-    const stat = fs.statSync(cleanTarget);
-    if (!stat.isDirectory()) {
-      return { success: false, error: 'O caminho selecionado não é um diretório válido.' };
-    }
 
     if (!newName || typeof newName !== 'string' || !newName.trim()) {
       return { success: false, error: 'O novo nome da pasta não pode estar vazio.' };
@@ -921,22 +974,36 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
     }
 
     const newFullPath = path.join(parentDir, cleanNewName);
-    if (fs.existsSync(newFullPath)) {
-      return { success: false, error: `Já existe uma pasta com o nome '${cleanNewName}' neste mesmo diretório.` };
-    }
+
+    const compName = company || (cleanTarget.toLowerCase().includes('reliquia') ? 'RELIQUIA' : 'RTO');
+    const compConfig = getCompanyConfig(compName);
+    const isNetwork = cleanTarget.startsWith('\\\\');
+    const executor = getExecutorPath();
 
     appendLog('---------------------------------------------------------');
     appendLog(`[RENOMEAR PASTA] Origem: ${cleanTarget}`);
     appendLog(`[NOVO NOME] ${cleanNewName}`);
     appendLog(`[DESTINO FINAL] ${newFullPath}`);
 
-    // Executa a renomeação nativa
-    fs.renameSync(cleanTarget, newFullPath);
+    if (isNetwork && executor && compConfig?.domainUser && compConfig?.adPass) {
+      appendLog(`[RENOMEAR AD] Renomeando pasta de rede sob as credenciais de '${compConfig.domainUser}'...`);
+      const opRes = await executeNativeOperation(['--rename', compConfig.domainUser, compConfig.adPass, cleanTarget, newFullPath]);
+      if (!opRes.success) {
+        const err = `Erro ao renomear pasta sob o usuário '${compConfig.domainUser}': ${opRes.error}`;
+        appendLog(`[ERRO RENOMEAR AD] ${err}`);
+        return { success: false, error: err };
+      }
+    } else {
+      if (!fs.existsSync(cleanTarget)) {
+        return { success: false, error: `A pasta selecionada não foi encontrada no sistema:\n${cleanTarget}` };
+      }
+      if (fs.existsSync(newFullPath)) {
+        return { success: false, error: `Já existe uma pasta com o nome '${cleanNewName}' neste mesmo diretório.` };
+      }
+      fs.renameSync(cleanTarget, newFullPath);
+    }
 
     appendLog(`[SUCESSO RENOMEAR] Pasta renomeada com sucesso: '${oldName}' -> '${cleanNewName}'`);
-
-    const compName = company || 'RTO';
-    const compConfig = getCompanyConfig(compName);
 
     saveHistoryEntry({
       id: Date.now().toString() + Math.random().toString(36).substring(2, 5),

@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.9 (14/09/2026) - **Impersonação Corporativa AD (pasta.paralegal) em Exclusão, Rollback e Renomeação**
+- **Execução Nativa sob Credenciais do Active Directory**:
+  - Motor `ExecuteAsUser.exe` expandido com os comandos `--delete` e `--rename`, permitindo manipular arquivos e diretórios em compartilhamentos de rede UNC sob o token de segurança corporativo configurado (`pasta.paralegal`).
+  - Atualizado o handler `delete-source-folders`: a exclusão da pasta de origem após mover pastas agora roda autenticada via `ExecuteAsUser.exe --delete`, eliminando bloqueios por falta de privilégio do usuário local do Windows.
+  - Atualizado o handler `undo-transfer`: a reversão (rollback) de cópias no destino agora roda via `ExecuteAsUser.exe --delete` sob `pasta.paralegal`.
+  - Atualizado o handler `rename-folder`: a renomeação de diretórios corporativos de rede agora roda via `ExecuteAsUser.exe --rename` sob `pasta.paralegal`.
+  - Remoção automática preventiva de atributos `ReadOnly` antes de exclusões para prevenir falhas de acesso nativas do Windows.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.9** em todo o código-fonte, scripts WiX e documentação técnica.
+- **Novo Pacote Oficial MSI v2.7.9**:
+  - Compilado com WiX Toolset v3.14 e disponibilizado na Área de Trabalho e repositórios locais.
+
+---
+
 ## Versão 2.7.8 (14/09/2026) - **Padronização Global de Larguras e Dimensões de Layout**
 - **Padronização de Largura de Telas e Containers (`max-w-7xl mx-auto`)**:
   - Container da tela **Criar Nova Pasta** (`FolderCreationView.tsx`) expandido de `max-w-3xl` para `max-w-7xl`, alinhando sua largura perfeitamente às telas de **Mover Pastas** e **Renomear Pasta**.

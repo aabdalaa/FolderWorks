@@ -199,6 +199,193 @@ namespace ExecuteAsUser {
             }
         }
 
+        private static void RemoveAttributesRecursive(string path) {
+            try {
+                if (File.Exists(path)) {
+                    File.SetAttributes(path, FileAttributes.Normal);
+                    return;
+                }
+                if (!Directory.Exists(path)) return;
+
+                DirectoryInfo di = new DirectoryInfo(path);
+                di.Attributes = FileAttributes.Normal;
+
+                foreach (FileInfo f in di.GetFiles("*", SearchOption.AllDirectories)) {
+                    try {
+                        f.Attributes = FileAttributes.Normal;
+                    } catch {}
+                }
+                foreach (DirectoryInfo sub in di.GetDirectories("*", SearchOption.AllDirectories)) {
+                    try {
+                        sub.Attributes = FileAttributes.Normal;
+                    } catch {}
+                }
+            } catch {}
+        }
+
+        private static int DeleteDirectory(string fullUser, string password, string targetPath) {
+            targetPath = targetPath.TrimEnd('\\');
+            if (!targetPath.StartsWith(@"\\")) targetPath = @"\\" + targetPath.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            string server = ExtractServerName(targetPath);
+            ConnectServer(server, fullUser, password);
+
+            IntPtr token = IntPtr.Zero;
+            bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
+            WindowsImpersonationContext ctx = null;
+            if (logonOk) {
+                try { ctx = WindowsIdentity.Impersonate(token); } catch {}
+            }
+
+            try {
+                if (!Directory.Exists(targetPath) && !File.Exists(targetPath)) {
+                    Console.WriteLine("{\"success\": true, \"message\": \"Pasta já não existe no servidor.\", \"deleted\": \"" + EscapeJson(targetPath) + "\"}");
+                    return 0;
+                }
+
+                RemoveAttributesRecursive(targetPath);
+
+                bool deleted = false;
+                try {
+                    if (Directory.Exists(targetPath)) {
+                        Directory.Delete(targetPath, true);
+                    } else if (File.Exists(targetPath)) {
+                        File.Delete(targetPath);
+                    }
+                    deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
+                } catch {}
+
+                if (!deleted) {
+                    try {
+                        STARTUPINFO si = new STARTUPINFO();
+                        si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+                        string cmdLine = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", targetPath);
+                        bool ok = CreateProcessWithLogonW(
+                            userOnly, domain, password,
+                            LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                            CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                            ref si, out pi
+                        );
+                        if (ok) {
+                            WaitForSingleObject(pi.hProcess, 45000);
+                            CloseHandle(pi.hProcess);
+                            CloseHandle(pi.hThread);
+                        }
+                    } catch {}
+                    deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
+                }
+
+                if (deleted) {
+                    Console.WriteLine("{\"success\": true, \"deleted\": \"" + EscapeJson(targetPath) + "\"}");
+                    return 0;
+                } else {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível excluir a pasta '" + EscapeJson(targetPath) + "'. Verifique se há arquivos abertos em uso.\"}");
+                    return 1;
+                }
+            } catch (Exception ex) {
+                Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\"}");
+                return 1;
+            } finally {
+                if (ctx != null) { ctx.Dispose(); }
+                if (token != IntPtr.Zero) { CloseHandle(token); }
+            }
+        }
+
+        private static int RenameDirectory(string fullUser, string password, string oldPath, string newPath) {
+            oldPath = oldPath.TrimEnd('\\');
+            newPath = newPath.TrimEnd('\\');
+            if (!oldPath.StartsWith(@"\\")) oldPath = @"\\" + oldPath.TrimStart('\\');
+            if (!newPath.StartsWith(@"\\")) newPath = @"\\" + newPath.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            string server = ExtractServerName(oldPath);
+            ConnectServer(server, fullUser, password);
+
+            IntPtr token = IntPtr.Zero;
+            bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
+            WindowsImpersonationContext ctx = null;
+            if (logonOk) {
+                try { ctx = WindowsIdentity.Impersonate(token); } catch {}
+            }
+
+            try {
+                if (!Directory.Exists(oldPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Pasta de origem não encontrada no servidor: " + EscapeJson(oldPath) + "\"}");
+                    return 1;
+                }
+
+                if (Directory.Exists(newPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Já existe uma pasta com o nome destino no servidor: " + EscapeJson(newPath) + "\"}");
+                    return 1;
+                }
+
+                bool renamed = false;
+                try {
+                    Directory.Move(oldPath, newPath);
+                    renamed = Directory.Exists(newPath);
+                } catch {}
+
+                if (!renamed) {
+                    try {
+                        STARTUPINFO si = new STARTUPINFO();
+                        si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+                        string cmdLine = String.Format("cmd.exe /c move \"{0}\" \"{1}\"", oldPath, newPath);
+                        bool ok = CreateProcessWithLogonW(
+                            userOnly, domain, password,
+                            LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                            CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                            ref si, out pi
+                        );
+                        if (ok) {
+                            WaitForSingleObject(pi.hProcess, 30000);
+                            CloseHandle(pi.hProcess);
+                            CloseHandle(pi.hThread);
+                        }
+                    } catch {}
+                    renamed = Directory.Exists(newPath);
+                }
+
+                if (renamed) {
+                    Console.WriteLine("{\"success\": true, \"oldPath\": \"" + EscapeJson(oldPath) + "\", \"newPath\": \"" + EscapeJson(newPath) + "\"}");
+                    return 0;
+                } else {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível renomear a pasta no servidor. Verifique permissões ou se há arquivos em uso.\"}");
+                    return 1;
+                }
+            } catch (Exception ex) {
+                Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\"}");
+                return 1;
+            } finally {
+                if (ctx != null) { ctx.Dispose(); }
+                if (token != IntPtr.Zero) { CloseHandle(token); }
+            }
+        }
+
         static int Main(string[] args) {
             try {
                 Console.OutputEncoding = new UTF8Encoding(false);
@@ -206,12 +393,24 @@ namespace ExecuteAsUser {
             } catch {}
 
             if (args == null || args.Length < 4) {
-                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | Domain\User> <Password> <Source> <TargetPath>");
+                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | --delete | --rename | Domain\User> <Password> <Source> <TargetPath>");
                 return 16;
             }
 
             if (args[0] == "--list") {
                 return ListDirectories(args[1], args[2], args[3]);
+            }
+
+            if (args[0] == "--delete") {
+                return DeleteDirectory(args[1], args[2], args[3]);
+            }
+
+            if (args[0] == "--rename") {
+                if (args.Length < 5) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Argumentos insuficientes para --rename. Esperado: --rename <User> <Password> <OldPath> <NewPath>\"}");
+                    return 16;
+                }
+                return RenameDirectory(args[1], args[2], args[3], args[4]);
             }
 
             string fullUser = args[0];
