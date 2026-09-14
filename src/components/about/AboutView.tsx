@@ -86,6 +86,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
           <div className="text-right">
             <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-3 py-1 rounded-lg border border-teams-200 dark:border-teams-800">
               v2.7.7 Oficial
+              v2.7.8 Oficial
             </span>
           </div>
         </div>
@@ -189,6 +190,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
           <div className="space-y-1">
             <span className="text-[11px] text-slate-400">Versão da Build</span>
             <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.7.7</p>
+            <p className="font-mono font-bold text-slate-800 dark:text-slate-200">v2.7.8</p>
           </div>
           <div className="space-y-1">
             <span className="text-[11px] text-slate-400">Distribuição</span>

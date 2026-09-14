@@ -61,12 +61,12 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 text-slate-800 dark:text-slate-100 transition-colors select-none">
+    <div className="space-y-6 max-w-7xl mx-auto text-slate-800 dark:text-slate-100 transition-colors select-none">
       {/* Card Principal de Criação */}
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 p-8 shadow-sm relative overflow-hidden">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm relative overflow-hidden">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-neutral-700/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
+            <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 flex items-center justify-center text-teams-600 dark:text-teams-400">
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>

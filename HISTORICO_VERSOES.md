@@ -1,5 +1,17 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.7.8 (14/09/2026) - **Padronização Global de Larguras e Dimensões de Layout**
+- **Padronização de Largura de Telas e Containers (`max-w-7xl mx-auto`)**:
+  - Container da tela **Criar Nova Pasta** (`FolderCreationView.tsx`) expandido de `max-w-3xl` para `max-w-7xl`, alinhando sua largura perfeitamente às telas de **Mover Pastas** e **Renomear Pasta**.
+  - Harmonização de estilos do card principal de criação para `rounded-xl`, `p-6` e ícone `w-9 h-9`, garantindo consonância total com o design system do projeto.
+  - Telas de **Histórico** (`HistoryView.tsx`), **Configurações** (`SettingsView.tsx`) e **Manual do Usuário** (`UserGuideView.tsx`) padronizadas para `max-w-7xl mx-auto`, eliminando saltos de largura ao navegar entre abas.
+- **Sincronização de Metadados e Versionamento SemVer**:
+  - Versão atualizada uniformemente para **v2.7.8** em todo o código-fonte, scripts WiX e documentação técnica.
+- **Novo Pacote Oficial MSI v2.7.8**:
+  - Compilado com WiX Toolset v3.14 e disponibilizado na Área de Trabalho e repositórios locais.
+
+---
+
 ## Versão 2.7.7 (11/09/2026) - **Limpeza Completa de Duplicações Visuais e Refinamento de UI**
 - **Eliminação Integral de Duplicações Visuais na Interface**:
   - Removido o item residual `Criar Pastas` na barra lateral, mantendo unicamente `Criar Nova Pasta`.

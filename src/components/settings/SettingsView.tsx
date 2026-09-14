@@ -289,7 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const currentShortcuts: ShortcutItem[] = activeComp.presetDestinations || [];
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-10 select-none">
+    <div className="space-y-5 max-w-7xl mx-auto pb-10 select-none">
       {/* 1. Header & TI Status Banner */}
       <div
         className={`p-4 rounded-xl border transition-all ${

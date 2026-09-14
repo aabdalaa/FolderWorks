@@ -14,7 +14,7 @@ export const HistoryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="bg-slate-900/90 rounded-2xl border border-slate-800/80 p-6 shadow-xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2.5">
