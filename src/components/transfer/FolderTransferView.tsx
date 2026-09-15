@@ -40,6 +40,7 @@ interface TransferResult {
   fileCount: number;
   totalSizeMB: number;
   durationSeconds: number;
+  method?: 'atomic_move' | 'robocopy';
 }
 
 export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalStateChange }) => {
@@ -216,7 +217,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     setSelectedFolderNames(new Set());
   };
 
-  // 1. Start Safe Transfer
+  // 1. Start Safe Transfer (Parallel Concurrency Pool with Atomic Move)
   const handleStartTransfer = async () => {
     if (!boundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring) return;
 
@@ -229,36 +230,53 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
     const selectedList = folders.filter((f) => selectedFolderNames.has(f.name));
     const results: TransferResult[] = [];
+    const CONCURRENCY = 5;
+    let completedCount = 0;
+    let hasError = false;
+    let transferErrMsg: string | null = null;
 
-    for (let i = 0; i < selectedList.length; i++) {
-      const item = selectedList[i];
-      setCurrentTransferIndex(i + 1);
-      setCurrentTransferName(item.name);
+    let currentIndex = 0;
+    const executeWorker = async () => {
+      while (currentIndex < selectedList.length && !hasError) {
+        const item = selectedList[currentIndex++];
+        if (!item) break;
+        setCurrentTransferName(item.name);
 
-      const res = await window.electronAPI?.safeTransferCopy({
-        company,
-        sourcePath: item.fullPath,
-        destParentPath: destDir,
-      });
-
-      if (res?.success) {
-        results.push({
-          folderName: item.name,
+        const res = await window.electronAPI?.safeTransferCopy({
+          company,
           sourcePath: item.fullPath,
-          finalDestPath: res.finalDestPath || `${destDir}\\${item.name}`,
-          fileCount: res.destMetrics?.fileCount || 0,
-          totalSizeMB: Number(((res.destMetrics?.totalSize || 0) / (1024 * 1024)).toFixed(2)),
-          durationSeconds: res.durationSeconds || 0,
+          destParentPath: destDir,
         });
-      } else {
-        setTransferError(res?.error || `Falha ao copiar pasta: ${item.name}`);
-        break;
+
+        if (res?.success) {
+          completedCount++;
+          setCurrentTransferIndex(completedCount);
+          results.push({
+            folderName: item.name,
+            sourcePath: item.fullPath,
+            finalDestPath: res.finalDestPath || `${destDir}\\${item.name}`,
+            fileCount: res.destMetrics?.fileCount || 0,
+            totalSizeMB: Number(((res.destMetrics?.totalSize || 0) / (1024 * 1024)).toFixed(2)),
+            durationSeconds: res.durationSeconds || 0,
+            method: res.method,
+          });
+        } else {
+          hasError = true;
+          transferErrMsg = res?.error || `Falha ao transferir pasta: ${item.name}`;
+          break;
+        }
       }
-    }
+    };
+
+    const workerCount = Math.min(CONCURRENCY, selectedList.length);
+    const workers = Array.from({ length: workerCount }, () => executeWorker());
+    await Promise.all(workers);
 
     setIsTransferring(false);
 
-    if (results.length === selectedList.length) {
+    if (hasError) {
+      setTransferError(transferErrMsg);
+    } else if (results.length === selectedList.length) {
       setTransferResults(results);
       setShowConfirmationPrompt(true);
     }
@@ -298,10 +316,15 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
   const handleUndoTransfer = async () => {
     setTransferError(null);
     setIsProcessingDecision('undo');
-    const pathsToUndo = transferResults.map((r) => r.finalDestPath);
+    const itemsToUndo = transferResults.map((r) => ({
+      sourcePath: r.sourcePath,
+      destPath: r.finalDestPath,
+      method: r.method,
+    }));
     const undoRes = await window.electronAPI?.undoTransfer({
       company,
-      foldersToUndo: pathsToUndo,
+      foldersToUndo: transferResults.map((r) => r.finalDestPath),
+      items: itemsToUndo,
     });
     setIsProcessingDecision(null);
 

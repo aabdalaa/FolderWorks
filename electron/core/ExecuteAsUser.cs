@@ -218,7 +218,7 @@ namespace ExecuteAsUser {
                     ref siRmdir, out piRmdir
                 );
                 if (okRmdir) {
-                    WaitForSingleObject(piRmdir.hProcess, 10000);
+                    WaitForSingleObject(piRmdir.hProcess, 60000);
                     CloseHandle(piRmdir.hProcess);
                     CloseHandle(piRmdir.hThread);
                 }
@@ -241,7 +241,7 @@ namespace ExecuteAsUser {
                 si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                 PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
                 string appPath = @"C:\Windows\System32\robocopy.exe";
-                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
+                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
 
                 bool ok = CreateProcessWithLogonW(
                     userOnly, domain, password,
@@ -250,7 +250,7 @@ namespace ExecuteAsUser {
                     ref si, out pi
                 );
                 if (ok) {
-                    WaitForSingleObject(pi.hProcess, 15000);
+                    WaitForSingleObject(pi.hProcess, 60000);
                     CloseHandle(pi.hProcess);
                     CloseHandle(pi.hThread);
                 }
@@ -275,7 +275,7 @@ namespace ExecuteAsUser {
                             ref si2, out pi2
                         );
                         if (ok2) {
-                            WaitForSingleObject(pi2.hProcess, 10000);
+                            WaitForSingleObject(pi2.hProcess, 30000);
                             CloseHandle(pi2.hProcess);
                             CloseHandle(pi2.hThread);
                         }
@@ -290,6 +290,116 @@ namespace ExecuteAsUser {
                     Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível excluir a pasta '" + EscapeJson(targetPath) + "'. Verifique se há arquivos abertos em uso.\"}");
                     return 1;
                 }
+            } catch (Exception ex) {
+                Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\"}");
+                return 1;
+            } finally {
+                if (ctx != null) { ctx.Dispose(); }
+                if (token != IntPtr.Zero) { CloseHandle(token); }
+            }
+        }
+
+        private static int MoveDirectory(string fullUser, string password, string srcPath, string destPath) {
+            srcPath = srcPath.TrimEnd('\\');
+            destPath = destPath.TrimEnd('\\');
+            if (!srcPath.StartsWith(@"\\")) srcPath = @"\\" + srcPath.TrimStart('\\');
+            if (!destPath.StartsWith(@"\\")) destPath = @"\\" + destPath.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            IntPtr token = IntPtr.Zero;
+            bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
+            WindowsImpersonationContext ctx = null;
+            if (logonOk) {
+                try { ctx = WindowsIdentity.Impersonate(token); } catch {}
+            }
+
+            try {
+                if (!Directory.Exists(srcPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Pasta de origem não encontrada no servidor: " + EscapeJson(srcPath) + "\"}");
+                    return 1;
+                }
+
+                if (Directory.Exists(destPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Já existe uma pasta com o nome destino no servidor: " + EscapeJson(destPath) + "\"}");
+                    return 1;
+                }
+
+                // Garantir que a pasta pai de destino exista
+                string destParent = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(destParent) && !Directory.Exists(destParent)) {
+                    try { Directory.CreateDirectory(destParent); } catch {}
+                }
+
+                // 1. Tentar movimentação atômica nativa MFT (1-2s para milhares de arquivos)
+                bool moved = false;
+                try {
+                    Directory.Move(srcPath, destPath);
+                    moved = Directory.Exists(destPath) && !Directory.Exists(srcPath);
+                } catch {}
+
+                if (!moved) {
+                    try {
+                        STARTUPINFO si = new STARTUPINFO();
+                        si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+                        string cmdLine = String.Format("cmd.exe /c move \"{0}\" \"{1}\"", srcPath, destPath);
+                        bool ok = CreateProcessWithLogonW(
+                            userOnly, domain, password,
+                            LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                            CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                            ref si, out pi
+                        );
+                        if (ok) {
+                            WaitForSingleObject(pi.hProcess, 30000);
+                            CloseHandle(pi.hProcess);
+                            CloseHandle(pi.hThread);
+                        }
+                    } catch {}
+                    moved = Directory.Exists(destPath) && !Directory.Exists(srcPath);
+                }
+
+                // 2. Se a movimentação atômica falhou (ex: volumes ou servidores distintos), acionar Robocopy /MT:128
+                if (!moved) {
+                    STARTUPINFO siRobo = new STARTUPINFO();
+                    siRobo.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                    PROCESS_INFORMATION piRobo = new PROCESS_INFORMATION();
+                    string appPath = @"C:\Windows\System32\robocopy.exe";
+                    string cmdRobo = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, srcPath, destPath);
+                    bool okRobo = CreateProcessWithLogonW(
+                        userOnly, domain, password,
+                        LOGON_NETCREDENTIALS_ONLY, null, cmdRobo,
+                        CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                        ref siRobo, out piRobo
+                    );
+                    int exitCode = 16;
+                    if (okRobo) {
+                        WaitForSingleObject(piRobo.hProcess, 180000);
+                        GetExitCodeProcess(piRobo.hProcess, out exitCode);
+                        CloseHandle(piRobo.hProcess);
+                        CloseHandle(piRobo.hThread);
+                    }
+                    if (exitCode < 8 && Directory.Exists(destPath)) {
+                        Console.WriteLine("{\"success\": true, \"sourcePath\": \"" + EscapeJson(srcPath) + "\", \"destPath\": \"" + EscapeJson(destPath) + "\", \"method\": \"robocopy\"}");
+                        return 0;
+                    } else {
+                        Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível mover a pasta no servidor. Verifique permissões ou arquivos abertos.\"}");
+                        return 1;
+                    }
+                }
+
+                Console.WriteLine("{\"success\": true, \"sourcePath\": \"" + EscapeJson(srcPath) + "\", \"destPath\": \"" + EscapeJson(destPath) + "\", \"method\": \"atomic_move\"}");
+                return 0;
             } catch (Exception ex) {
                 Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\"}");
                 return 1;
@@ -385,7 +495,7 @@ namespace ExecuteAsUser {
             } catch {}
 
             if (args == null || args.Length < 4) {
-                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | --delete | --rename | Domain\User> <Password> <Source> <TargetPath>");
+                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | --delete | --rename | --move | Domain\User> <Password> <Source> <TargetPath>");
                 return 16;
             }
 
@@ -395,6 +505,14 @@ namespace ExecuteAsUser {
 
             if (args[0] == "--delete") {
                 return DeleteDirectory(args[1], args[2], args[3]);
+            }
+
+            if (args[0] == "--move") {
+                if (args.Length < 5) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Argumentos insuficientes para --move. Esperado: --move <User> <Password> <Source> <Destination>\"}");
+                    return 16;
+                }
+                return MoveDirectory(args[1], args[2], args[3], args[4]);
             }
 
             if (args[0] == "--rename") {
@@ -433,7 +551,7 @@ namespace ExecuteAsUser {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
 
             string appPath = @"C:\Windows\System32\robocopy.exe";
-            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
 
             bool ok = CreateProcessWithLogonW(
                 userOnly,

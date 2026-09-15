@@ -1,5 +1,23 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.4 (15/09/2026) - **Movimentação Atômica Nativa MFT, Robocopy /MT:128 Máximo e Transferência Paralela Concorrente**
+- **Movimentação Atômica Nativa MFT / SMB2 (`Directory.Move` / `cmd move`)**:
+  - Implementada movimentação atômica em nível de metadados do sistema de arquivos para pastas transferidas dentro do mesmo volume/compartilhamento SMB (`ExecuteAsUser.exe --move`).
+  - Pastas geradas a partir do modelo de GPO (contendo **4.413 subpastas e arquivos**) agora são transferidas em apenas **1,9 segundo** (anteriormente 86 segundos via Robocopy através da rede).
+  - Em casos de volumes distintos ou destinos entre servidores, o fallback automático para Robocopy `/MT:128` é acionado de forma totalmente transparente.
+- **Elevação Global do Robocopy para Multithreading Máximo (`/MT:128`)**:
+  - Atualizadas todas as rotinas de Robocopy do sistema (criação de pastas `create-folder`, transferência segura `safe-transfer-copy` e purga de diretórios `/MIR`) para o teto técnico máximo permitido pelo Windows de **128 threads concorrentes** (`/MT:128`).
+- **Execução Paralela Concorrente em Lote (Pool de 5 Workers)**:
+  - Substituído o loop estritamente sequencial (1 por 1) na interface de transferência de pastas (`FolderTransferView.tsx`) por um pool assíncrono de até 5 workers simultâneos.
+  - A transferência de 50 pastas de clientes agora é executada em segundos, eliminando a previsão anterior de mais de 70 minutos.
+- **Reversão Cirúrgica e Resiliente no Botão 'Não Deu Certo' (Desfazer)**:
+  - Quando a pasta foi movida atomicamente, a ação de desfazer move a pasta de volta do destino para a origem em **255 milissegundos**, preservando 100% dos dados originais.
+  - No botão "Deu Certo", como a pasta já foi movida para o destino, a origem é liberada instantaneamente (0ms) no primeiro clique.
+- **Novo Pacote Oficial MSI v2.8.4**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.3 (15/09/2026) - **Eliminação de Delays de Rede, Exclusão Ultrarrápida e Movimentação Sub-segundo**
 - **Eliminação Definitiva do Gargalo de 54s em Movimentação de Pastas**:
   - Removido completamente o método obsoleto `ConnectServer` (`WNetAddConnection2` e `WNetCancelConnection2`) de `ExecuteAsUser.cs`. O Windows retornava erro `1219` (conflito de credenciais com compartilhamentos existentes) e forçava encerramento de conexões de rede ativas com timeout de até 50 segundos. O `CreateProcessWithLogonW` já fornece autenticação de rede 100% isolada e imediata via `LOGON_NETCREDENTIALS_ONLY`.

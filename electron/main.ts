@@ -547,6 +547,26 @@ function getExecutorPath(): string {
   return '';
 }
 
+function isSameVolumeOrShare(path1: string, path2: string): boolean {
+  if (!path1 || !path2) return false;
+  const p1 = path.normalize(path1).toLowerCase().replace(/[\/\\]+$/, '');
+  const p2 = path.normalize(path2).toLowerCase().replace(/[\/\\]+$/, '');
+
+  // UNC paths: \\server\share\...
+  if (p1.startsWith('\\\\') && p2.startsWith('\\\\')) {
+    const parts1 = p1.substring(2).split('\\');
+    const parts2 = p2.substring(2).split('\\');
+    return parts1.length >= 2 && parts2.length >= 2 && parts1[0] === parts2[0] && parts1[1] === parts2[1];
+  }
+
+  // Local paths: C:\...
+  if (p1.length >= 2 && p2.length >= 2 && p1[1] === ':' && p2[1] === ':') {
+    return p1[0] === p2[0];
+  }
+
+  return false;
+}
+
 function executeNativeOperation(args: string[]): Promise<{ success: boolean; data?: any; error?: string }> {
   const executor = getExecutorPath();
   if (!executor) {
@@ -706,7 +726,7 @@ ipcMain.handle('inspect-folder', (_, dirPath: string) => {
 });
 
 // -------------------------------------------------------------
-// Safe Folder Transfer (Robocopy / NTFS DACL Preserved)
+// Safe Folder Transfer (Atomic MFT/SMB Move + Robocopy /MT:128 Fallback)
 // -------------------------------------------------------------
 ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParentPath }: { company: string; sourcePath: string; destParentPath: string }) => {
   const config = getCompanyConfig(company);
@@ -723,7 +743,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
 
   const isNetwork = sourcePath.startsWith('\\\\') || destParentPath.startsWith('\\\\');
 
-  // Para caminhos locais, valida existência prévia. Para rede UNC, o Robocopy sob AD valida e cria nativamente sem travar a thread.
+  // Para caminhos locais, valida existência prévia. Para rede UNC, o Robocopy/Move sob AD valida e cria nativamente sem travar a thread.
   if (!isNetwork) {
     if (!fs.existsSync(sourcePath)) {
       const errorMsg = `[ERRO ORIGEM] A pasta de origem não existe: '${sourcePath}'.`;
@@ -758,19 +778,21 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   const destArg = finalDestPath.replace(/\\$/, '');
 
   isTransferInProgress = true;
+  const sameVolume = isSameVolumeOrShare(sourcePath, destParentPath);
 
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const startTime = Date.now();
 
-    const finishSuccess = (durationSec: number) => {
+    const finishSuccess = (durationSec: number, method: 'atomic_move' | 'robocopy' = 'robocopy') => {
       isTransferInProgress = false;
-      appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s.`);
+      appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s via ${method === 'atomic_move' ? 'movimentação atômica nativa MFT' : 'Robocopy /MT:128'}.`);
       resolve({
         success: true,
         folderName,
         sourcePath,
         finalDestPath,
         durationSeconds: durationSec,
+        method,
       });
     };
 
@@ -780,8 +802,20 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       resolve({ success: false, error: errorMsg });
     };
 
-    if (executorPath) {
-      appendLog(`[IMPERSONAÇÃO AD] Disparando Robocopy sob o token de '${adUser}'...`);
+    if (isNetwork && executorPath && adUser && adPass) {
+      if (sameVolume) {
+        appendLog(`[MOVIMENTAÇÃO ATÔMICA AD] Mesmo volume/compartilhamento de rede detectado. Executando movimentação atômica sob o token de '${adUser}'...`);
+        const opRes = await executeNativeOperation(['--move', adUser, adPass, srcArg, destArg]);
+        const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
+        if (opRes.success) {
+          finishSuccess(durationSec, 'atomic_move');
+          return;
+        } else {
+          appendLog(`[AVISO ATÔMICO] Movimentação direta não foi possível (${opRes.error}). Acionando fallback Robocopy /MT:128...`);
+        }
+      }
+
+      appendLog(`[IMPERSONAÇÃO AD] Disparando Robocopy /MT:128 sob o token de '${adUser}'...`);
       execFile(executorPath, [adUser, adPass, srcArg, destArg], { encoding: 'buffer' }, (error, stdout, stderr) => {
         const stdoutStr = decodeProcessOutput(stdout);
         const stderrStr = decodeProcessOutput(stderr);
@@ -800,14 +834,26 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
         const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
         if (exitCode === 0 || exitCode < 8) {
-          finishSuccess(durationSec);
+          finishSuccess(durationSec, 'robocopy');
         } else {
           finishError(`Falha na cópia Robocopy sob '${adUser}' (Código: ${exitCode}).`);
         }
       });
     } else {
-      appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      if (!isNetwork && sameVolume) {
+        try {
+          appendLog(`[MOVIMENTAÇÃO ATÔMICA LOCAL] Mesmo volume local. Executando renomeação atômica direta...`);
+          fs.renameSync(sourcePath, finalDestPath);
+          const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
+          finishSuccess(durationSec, 'atomic_move');
+          return;
+        } catch (renErr: any) {
+          appendLog(`[AVISO ATÔMICO LOCAL] Movimentação direta falhou (${renErr.message}). Acionando Robocopy...`);
+        }
+      }
+
+      appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto (/MT:128)...`);
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {
@@ -816,7 +862,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
         const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
         if (exitCode < 8) {
-          finishSuccess(durationSec);
+          finishSuccess(durationSec, 'robocopy');
         } else {
           finishError(`Falha no Robocopy direto (Código: ${exitCode}).`);
         }
@@ -836,7 +882,7 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
   const deleted: string[] = [];
   const errors: string[] = [];
 
-  for (const srcPath of foldersToDelete) {
+  const tasks = foldersToDelete.map(async (srcPath) => {
     try {
       const normSrc = path.normalize(path.resolve(srcPath)).toLowerCase();
       // Safety check: Cannot be root, cannot be equal to allowed boundary root
@@ -844,7 +890,7 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
         const msg = `Exclusão bloqueada: caminho '${srcPath}' viola regras de integridade do sistema.`;
         appendLog(`[BLOQUEIO EXCLUSÃO] ${msg}`);
         errors.push(msg);
-        continue;
+        return;
       }
 
       const isNetwork = srcPath.startsWith('\\\\');
@@ -857,12 +903,12 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
           const err = `Erro ao excluir pasta '${srcPath}' sob o usuário '${config.domainUser}': ${opRes.error}`;
           appendLog(`[ERRO EXCLUSÃO AD] ${err}`);
           errors.push(err);
-          continue;
+          return;
         }
       } else {
         if (!fs.existsSync(srcPath)) {
-          errors.push(`Pasta já não existe: ${srcPath}`);
-          continue;
+          deleted.push(srcPath);
+          return;
         }
         fs.rmSync(srcPath, { recursive: true, force: true });
       }
@@ -885,15 +931,17 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
       appendLog(`[ERRO EXCLUSÃO] ${err}`);
       errors.push(err);
     }
-  }
+  });
+
+  await Promise.all(tasks);
 
   return { success: errors.length === 0, deleted, errors };
 });
 
 // -------------------------------------------------------------
-// Safe Transfer Undo (Rollback of Copied Destination Folders)
+// Safe Transfer Undo (Rollback of Copied/Moved Destination Folders)
 // -------------------------------------------------------------
-ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company: string; foldersToUndo: string[] }) => {
+ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { company: string; foldersToUndo?: string[]; items?: Array<{ sourcePath: string; destPath: string; method?: string }> }) => {
   const config = getCompanyConfig(company);
   const allowedBase = config.allowedBasePath || config.destSharePath;
   const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase();
@@ -901,7 +949,20 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
   const undone: string[] = [];
   const errors: string[] = [];
 
-  for (const destPath of foldersToUndo) {
+  const rollbackList: Array<{ sourcePath?: string; destPath: string; method?: string }> = [];
+  if (Array.isArray(items) && items.length > 0) {
+    items.forEach((it) => rollbackList.push(it));
+  } else if (Array.isArray(foldersToUndo)) {
+    foldersToUndo.forEach((p) => rollbackList.push({ destPath: p }));
+  }
+
+  const executor = getExecutorPath();
+
+  const tasks = rollbackList.map(async (item) => {
+    const destPath = item.destPath;
+    const sourcePath = item.sourcePath;
+    const isAtomic = item.method === 'atomic_move' || (sourcePath && !fs.existsSync(sourcePath) && fs.existsSync(destPath));
+
     try {
       const normDest = path.normalize(path.resolve(destPath)).toLowerCase();
       // Safety check: Cannot be root or equal to allowed boundary root
@@ -909,31 +970,53 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
         const msg = `Desfazer bloqueado: caminho '${destPath}' viola regras de integridade do sistema.`;
         appendLog(`[BLOQUEIO DESFAZER] ${msg}`);
         errors.push(msg);
-        continue;
+        return;
       }
 
       const isNetwork = destPath.startsWith('\\\\');
-      const executor = getExecutorPath();
 
-      if (isNetwork && executor && config?.domainUser && config?.adPass) {
-        appendLog(`[DESFAZER AD] Removendo cópia do destino '${destPath}' sob o usuário '${config.domainUser}'...`);
-        const opRes = await executeNativeOperation(['--delete', config.domainUser, config.adPass, destPath]);
-        if (!opRes.success) {
-          const err = `Erro ao desfazer pasta '${destPath}' sob o usuário '${config.domainUser}': ${opRes.error}`;
-          appendLog(`[ERRO DESFAZER AD] ${err}`);
-          errors.push(err);
-          continue;
+      if (isAtomic && sourcePath) {
+        // Atomic move rollback: Move back from destPath to sourcePath!
+        appendLog(`[DESFAZER MOVIMENTAÇÃO ATÔMICA] Movendo de volta '${destPath}' -> '${sourcePath}'...`);
+        if (isNetwork && executor && config?.domainUser && config?.adPass) {
+          const opRes = await executeNativeOperation(['--move', config.domainUser, config.adPass, destPath, sourcePath]);
+          if (!opRes.success) {
+            const err = `Erro ao restaurar pasta para a origem '${sourcePath}': ${opRes.error}`;
+            appendLog(`[ERRO DESFAZER AD] ${err}`);
+            errors.push(err);
+            return;
+          }
+        } else {
+          try {
+            fs.renameSync(destPath, sourcePath);
+          } catch (mErr: any) {
+            const err = `Erro ao restaurar pasta para a origem '${sourcePath}': ${mErr.message}`;
+            appendLog(`[ERRO DESFAZER LOCAL] ${err}`);
+            errors.push(err);
+            return;
+          }
         }
+        undone.push(destPath);
+        appendLog(`[TRANSFERÊNCIA DESFEITA] Pasta restaurada na origem com sucesso: ${sourcePath}.`);
       } else {
-        if (!fs.existsSync(destPath)) {
-          undone.push(destPath);
-          continue;
+        // Robocopy copy rollback: Delete destination copy
+        appendLog(`[DESFAZER CÓPIA] Removendo cópia do destino '${destPath}' sob o usuário '${config?.domainUser}'...`);
+        if (isNetwork && executor && config?.domainUser && config?.adPass) {
+          const opRes = await executeNativeOperation(['--delete', config.domainUser, config.adPass, destPath]);
+          if (!opRes.success) {
+            const err = `Erro ao desfazer pasta '${destPath}' sob o usuário '${config.domainUser}': ${opRes.error}`;
+            appendLog(`[ERRO DESFAZER AD] ${err}`);
+            errors.push(err);
+            return;
+          }
+        } else {
+          if (fs.existsSync(destPath)) {
+            fs.rmSync(destPath, { recursive: true, force: true });
+          }
         }
-        fs.rmSync(destPath, { recursive: true, force: true });
+        undone.push(destPath);
+        appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso: ${destPath}. Origem mantida intacta.`);
       }
-
-      undone.push(destPath);
-      appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso: ${destPath}. Origem mantida intacta.`);
 
       saveHistoryEntry({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
@@ -941,7 +1024,7 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
         company,
         folderName: path.basename(destPath),
         finalPath: `DESFEITO: ${destPath} (origem preservada)`,
-        executedBy: config.domainUser,
+        executedBy: config?.domainUser || 'SYSTEM',
         status: 'TRANSFER_UNDONE_ROLLBACK',
         durationSeconds: 1,
       });
@@ -950,7 +1033,9 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo }: { company:
       appendLog(`[ERRO DESFAZER] ${err}`);
       errors.push(err);
     }
-  }
+  });
+
+  await Promise.all(tasks);
 
   return { success: errors.length === 0, undone, errors };
 });

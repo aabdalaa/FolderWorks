@@ -24,10 +24,11 @@ export interface ElectronAPI {
     sourceMetrics?: { fileCount: number; dirCount: number; totalSize: number };
     destMetrics?: { fileCount: number; dirCount: number; totalSize: number };
     durationSeconds?: number;
+    method?: 'atomic_move' | 'robocopy';
     error?: string;
   }>;
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => Promise<{ success: boolean; deleted: string[]; errors: string[] }>;
-  undoTransfer: (req: { company: string; foldersToUndo: string[] }) => Promise<{ success: boolean; undone: string[]; errors: string[] }>;
+  undoTransfer: (req: { company: string; foldersToUndo?: string[]; items?: Array<{ sourcePath: string; destPath: string; method?: string }> }) => Promise<{ success: boolean; undone: string[]; errors: string[] }>;
   openExternal: (url: string) => Promise<boolean>;
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;

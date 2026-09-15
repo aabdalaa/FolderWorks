@@ -311,13 +311,23 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.8.3 */}
+            {/* v2.8.4 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.3</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.4</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Movimentação Atômica Nativa MFT, Robocopy /MT:128 Máximo e Transferência Paralela Concorrente</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Movimentação atômica instantânea no mesmo volume (Directory.Move / SMB2_SET_INFO), transferindo milhares de arquivos em menos de 2 segundos. Robocopy multithread elevado ao teto máximo de 128 threads (/MT:128) em todas as rotinas. Pool paralelo de transferência para até 5 pastas concorrentes e reversão cirúrgica no botão Desfazer.
+              </p>
+            </div>
+
+            {/* v2.8.3 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.3</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Eliminação de Delays de Rede, Exclusão Ultrarrápida e Movimentação Sub-segundo</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Remoção definitiva de chamadas lentas de WNet/IPC$ e WNetCancelConnection2, eliminando o atraso de 54s em pastas vazias. Implementação de exclusão nativa com rmdir /s /q sob credenciais AD e Robocopy otimizado (/MT:16 /COPY:DAT /DCOPY:DAT), transferindo e excluindo em menos de 1 segundo.
