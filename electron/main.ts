@@ -18,7 +18,7 @@ const defaultCompanyConfigs: Record<string, any> = {
     domainUser: String.raw`RTO\pasta.paralegal`,
     adPass: 'Mestre@300',
     adServerIp: '192.168.50.102',
-    sourcePath: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`,
+    sourcePath: String.raw`\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`,
     destSharePath: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
     allowedBasePath: String.raw`\\192.168.50.102\rto\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
@@ -786,6 +786,9 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
     const finishSuccess = (durationSec: number, method: 'atomic_move' | 'robocopy' = 'robocopy') => {
       isTransferInProgress = false;
       appendLog(`[CÓPIA CONCLUÍDA] Transmissão segura finalizada com sucesso em ${durationSec}s via ${method === 'atomic_move' ? 'movimentação atômica nativa MFT' : 'Robocopy /MT:128'}.`);
+      if (mainWindow) {
+        mainWindow.webContents.send('folders-updated', { company, folderName, action: 'transferred' });
+      }
       resolve({
         success: true,
         folderName,
@@ -935,6 +938,10 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
 
   await Promise.all(tasks);
 
+  if (mainWindow && deleted.length > 0) {
+    mainWindow.webContents.send('folders-updated', { company, folders: deleted, action: 'deleted' });
+  }
+
   return { success: errors.length === 0, deleted, errors };
 });
 
@@ -1037,6 +1044,10 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { c
 
   await Promise.all(tasks);
 
+  if (mainWindow && undone.length > 0) {
+    mainWindow.webContents.send('folders-updated', { company, folders: undone, action: 'undone' });
+  }
+
   return { success: errors.length === 0, undone, errors };
 });
 
@@ -1100,6 +1111,10 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
 
     appendLog(`[SUCESSO RENOMEAR] Pasta renomeada com sucesso: '${oldName}' -> '${cleanNewName}'`);
 
+    if (mainWindow) {
+      mainWindow.webContents.send('folders-updated', { company: compName, oldName, newName: cleanNewName, action: 'renamed' });
+    }
+
     saveHistoryEntry({
       id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
       timestamp: new Date().toLocaleString('pt-BR'),
@@ -1157,10 +1172,18 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   }
   const finalPath = path.join(destShare, trimmedName);
 
+  // Prioridade absoluta para o modelo oficial RTO em produção com DACLs departamentais restritas
+  let effectiveSourcePath = config.sourcePath;
+  if (company === 'RTO') {
+    const authoritativeRtoTemplate = String.raw`\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`;
+    if (fs.existsSync(authoritativeRtoTemplate)) {
+      effectiveSourcePath = authoritativeRtoTemplate;
+    }
+  }
+
   appendLog('---------------------------------------------------------');
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Cliente: ${trimmedName}`);
-  appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Pasta: ${trimmedName}`);
-  appendLog(`[ORIGEM GPO MODELO] ${config.sourcePath}`);
+  appendLog(`[ORIGEM MODELO AD] ${effectiveSourcePath}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
   const adUser = config.domainUser || `${company}\\pasta.paralegal`;
@@ -1212,7 +1235,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
     return { success: false, error: errorMsg };
   }
 
-  const srcArg = config.sourcePath.replace(/\\$/, '');
+  const srcArg = effectiveSourcePath.replace(/\\$/, '');
   const destArg = finalPath.replace(/\\$/, '');
 
   appendLog(`[IMPERSONAÇÃO AD] Executando Robocopy via execFile estritamente sob o token de '${adUser}'...`);
@@ -1240,6 +1263,10 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
       // ExecuteAsUser.exe traduz Robocopy exit code < 8 para 0 (sucesso absoluto)
       if (exitCode === 0) {
         appendLog(`[SUCESSO INTEGRAL] Transmissão de estrutura e permissões NTFS finalizada com sucesso em ${durationSec}s.`);
+
+        if (mainWindow) {
+          mainWindow.webContents.send('folders-updated', { company, folderName: trimmedName, action: 'created' });
+        }
 
         saveHistoryEntry({
           id: Date.now().toString(),

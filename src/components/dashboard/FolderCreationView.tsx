@@ -53,6 +53,12 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
     setIsProcessing(false);
 
     if (res.success) {
+      // Invalida o cache local para que as abas Mover e Renomear atualizem imediatamente
+      try {
+        const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith('fw_folders_cache_'));
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
+
       setLastResult({ success: true, message: `Pasta '${folderName}' criada com sucesso na rede da ${compDisplay}!` });
       setFolderName('');
     } else {

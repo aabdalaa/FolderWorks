@@ -1,5 +1,23 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.7 (15/09/2026) - **Correção Definitiva de Permissões RTO, Limpeza de Interface e Auto-Refresh 5s**
+- **Correção e Priorização do Modelo Oficial de Pastas RTO (`EM USO\MODELO 2026`)**:
+  - Diagnosticada e corrigida a causa raiz da ausência de permissões departamentais nas pastas criadas na rede da RTO: a configuração apontava anteriormente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`, diretório que possuía o grupo `Todos` herdado e sem permissões departamentais explícitas.
+  - Redirecionada a origem para o modelo em produção `\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`, que contém 100% das DACLs departamentais restritas (RH `1111`, Paralegal `1112`, Fiscal `1113`, Contábil `1116`, TI `3608`), sem vazamento de privilégios para o grupo `Todos`.
+  - Adicionada verificação dinâmica prioritária no handler `create-folder` garantindo a utilização do modelo oficial mesmo em ambientes com arquivos de configuração legados.
+- **Ajuste Visual e Limpeza da Tela de Transferência**:
+  - Removido integralmente o container estático e redundante *"2. Status e Confirmação da Transferência"* da interface de movimentação de pastas (`FolderTransferView.tsx`), conforme solicitação do usuário.
+  - A confirmação e validação do operador ocorrem exclusivamente através do modal centralizado, que fecha e reseta o estado de seleção instantaneamente após a confirmação, exibindo um toast/banner discreto e temporário de sucesso.
+- **Auto-Refresh Silencioso a cada 5 Segundos & Invalidação de Cache**:
+  - Implementado mecanismo de polling assíncrono silencioso (`silentRefresh`) com intervalo de 5 segundos nas abas de "Mover Pastas" e "Renomear Pastas".
+  - O cache em `localStorage` é mantido para tempo de carregamento inicial imediato (0ms), mas a lista é atualizada automaticamente em segundo plano sem perda de seleções ativas e sem exibir spinners bloqueantes.
+  - Adicionado gatilho de revalidação imediata no foco da janela (`focus`) e escuta de eventos IPC (`folders-updated`) disparados sempre que uma pasta for criada, transferida, renomeada ou excluída.
+  - Invalidação imediata de cache no formulário de criação de pastas (`FolderCreationView.tsx`) logo após a criação bem-sucedida.
+- **Novo Pacote Oficial MSI v2.8.7**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para a pasta de instaladores e Área de Trabalho.
+
+---
+
 ## Versão 2.8.6 (15/09/2026) - **Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da RELIQUIA**
 - **Restauração Mandatória de Segurança NTFS DACL (`/COPY:DATS /DCOPY:DAT`)**:
   - Reintegrada a flag de segurança `S` em todas as rotinas de cópia e transferência com Robocopy (`ExecuteAsUser.cs` e `electron/main.ts`).

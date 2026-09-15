@@ -311,13 +311,23 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.8.6 */}
+            {/* v2.8.7 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.6</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.7</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Correção de Permissões RTO, Limpeza Visual e Auto-Refresh Silencioso (5s)</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Redirecionamento definitivo da origem de modelos da RTO para o template oficial em produção ('EM USO\MODELO 2026'), garantindo 100% de integridade das DACLs departamentais restritas (RH, Paralegal, Fiscal, Contábil, TI) sem vazamento do grupo Todos. Remoção do bloco redundante de confirmação da tela de transferência e implementação de auto-refresh em background a cada 5 segundos nas abas de Mover e Renomear com invalidação automática de cache na criação de novas pastas.
+              </p>
+            </div>
+
+            {/* v2.8.6 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.6</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da RELIQUIA</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Restauração obrigatória da cópia de segurança NTFS (/COPY:DATS /DCOPY:DAT), garantindo a transferência fidedigna das permissões departamentais (CONTABIL, PESSOAL, FISCAL, PARALEGAL, SPED) do modelo para as empresas criadas. Desacoplamento assíncrono da purga da lixeira em DeleteDirectory, reduzindo o tempo de resposta do botão 'Deu certo' para menos de 1 segundo sem travar a interface. Otimização Robocopy com /MT:128 e /IPG:0 sem retries.

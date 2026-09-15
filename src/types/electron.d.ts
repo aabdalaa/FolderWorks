@@ -32,6 +32,7 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<boolean>;
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;
+  onFoldersUpdated: (callback: (data: any) => void) => () => void;
   minimize: () => void;
   maximize: () => void;
   close: () => void;

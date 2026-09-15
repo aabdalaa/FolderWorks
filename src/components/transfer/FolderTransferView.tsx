@@ -168,6 +168,55 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     }
   };
 
+  // Atualização silenciosa em background (atualiza a cada 5s sem piscar tela ou desmarcar seleções)
+  const silentRefresh = async (dir: string = sourceDir, comp: string = company) => {
+    if (!dir || isTransferring) return;
+    try {
+      const res = await window.electronAPI?.listSubdirectories(dir, comp);
+      if (res?.success && Array.isArray(res.folders)) {
+        setFolders(res.folders);
+        try {
+          const cacheKey = getCacheKey(dir, comp);
+          localStorage.setItem(cacheKey, JSON.stringify(res.folders));
+        } catch {}
+      }
+    } catch {}
+  };
+
+  // Auto-dismiss do banner de notificação após 6 segundos
+  useEffect(() => {
+    if (decisionCompleted) {
+      const t = setTimeout(() => setDecisionCompleted(null), 6000);
+      return () => clearTimeout(t);
+    }
+  }, [decisionCompleted]);
+
+  // Polling automático a cada 5 segundos + revalidação no foco e em eventos IPC
+  useEffect(() => {
+    if (!sourceDir || isTransferring) return;
+
+    const interval = setInterval(() => {
+      silentRefresh(sourceDir, company);
+    }, 5000);
+
+    const handleFocus = () => {
+      silentRefresh(sourceDir, company);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const unsubFolders = window.electronAPI?.onFoldersUpdated?.((data) => {
+      if (!data || !data.company || data.company === company) {
+        silentRefresh(sourceDir, company);
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      if (unsubFolders) unsubFolders();
+    };
+  }, [sourceDir, company, isTransferring]);
+
   const handleBrowseSource = async () => {
     const picked = await window.electronAPI?.selectDirectory(sourceDir);
     if (picked) {
@@ -373,6 +422,58 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           </div>
         </div>
       </div>
+
+      {/* Notificação de Conclusão / Desfazer */}
+      {decisionCompleted && (
+        <div
+          className={`p-4 rounded-xl border flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm ${
+            decisionCompleted.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
+              : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {decisionCompleted.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            )}
+            <span>
+              {decisionCompleted.type === 'success'
+                ? `Transferência validada com sucesso! ${decisionCompleted.count} ${decisionCompleted.count === 1 ? 'pasta transferida' : 'pastas transferidas'} e removidas da origem para liberar espaço.`
+                : `Transferência desfeita com sucesso! Os arquivos foram removidos do destino e a pasta original foi mantida 100% intacta na origem.`}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setDecisionCompleted(null);
+              setSelectedFolderNames(new Set());
+            }}
+            className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors cursor-pointer ml-4"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* Alerta de Erro na Transferência */}
+      {transferError && !showConfirmationPrompt && !isTransferring && (
+        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Aviso na Operação</p>
+              <p className="mt-1 text-[11px]">{transferError}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setTransferError(null)}
+            className="text-xs font-semibold px-2 py-1 rounded hover:bg-rose-100 dark:hover:bg-rose-900/40 cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
 
       {/* Card 1: Seleção de Pastas e Governança de TI */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-6">
@@ -631,67 +732,6 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           </button>
         </div>
       </div>
-
-      {/* Card 2: Status e Confirmação da Transferência */}
-      {(isTransferring || showConfirmationPrompt || decisionCompleted || transferError) && (
-        <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-neutral-700/80 pb-4">
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <FileCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">2. Status e Confirmação da Transferência</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Acompanhamento da transferência e confirmação das ações.
-              </p>
-            </div>
-          </div>
-
-          {/* Transfer Error Alert */}
-          {transferError && (
-            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Erro na Execução</p>
-                <p className="mt-1 text-[11px]">{transferError}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Final Completed Summary */}
-          {decisionCompleted && (
-            <div
-              className={`p-4 rounded-xl border flex items-center justify-between text-xs animate-in fade-in duration-200 ${
-                decisionCompleted.type === 'success'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200'
-                  : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60 text-blue-900 dark:text-blue-200'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                {decisionCompleted.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                ) : (
-                  <RotateCcw className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                )}
-                <span>
-                  {decisionCompleted.type === 'success'
-                    ? `Transferência validada com sucesso! ${decisionCompleted.count} ${decisionCompleted.count === 1 ? 'pasta transferida' : 'pastas transferidas'} e removidas da origem para liberar espaço.`
-                    : `Transferência desfeita com sucesso! Os arquivos foram removidos do destino e a pasta original foi mantida 100% intacta na origem.`}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setDecisionCompleted(null);
-                  setSelectedFolderNames(new Set());
-                }}
-                className="font-semibold underline hover:opacity-80 transition-opacity ml-4 cursor-pointer"
-              >
-                Nova Transferência
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ------------------------------------------------------------- */}
       {/* 1. Modal Bloqueante durante Transferência em Execução         */}

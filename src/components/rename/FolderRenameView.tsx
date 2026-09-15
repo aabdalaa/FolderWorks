@@ -119,6 +119,47 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     }
   };
 
+  // Atualização silenciosa em background (5s)
+  const silentRefresh = async (dir: string = currentSourceDir, comp: string = company) => {
+    if (!dir || isRenaming) return;
+    try {
+      const res = await window.electronAPI?.listSubdirectories(dir, comp);
+      if (res?.success && Array.isArray(res.folders)) {
+        setFolders(res.folders);
+        try {
+          const cacheKey = getCacheKey(dir, comp);
+          localStorage.setItem(cacheKey, JSON.stringify(res.folders));
+        } catch {}
+      }
+    } catch {}
+  };
+
+  // Polling automático a cada 5 segundos + revalidação no foco e em eventos IPC
+  useEffect(() => {
+    if (!currentSourceDir || isRenaming) return;
+
+    const interval = setInterval(() => {
+      silentRefresh(currentSourceDir, company);
+    }, 5000);
+
+    const handleFocus = () => {
+      silentRefresh(currentSourceDir, company);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    const unsubFolders = window.electronAPI?.onFoldersUpdated?.((data) => {
+      if (!data || !data.company || data.company === company) {
+        silentRefresh(currentSourceDir, company);
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      if (unsubFolders) unsubFolders();
+    };
+  }, [currentSourceDir, company, isRenaming]);
+
   // Pastas filtradas pela pesquisa em tempo real
   const filteredFolders = useMemo(() => {
     if (!searchQuery.trim()) return folders;

@@ -32,6 +32,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('config-updated', handler);
     return () => ipcRenderer.removeListener('config-updated', handler);
   },
+  onFoldersUpdated: (callback: (data: any) => void) => {
+    const handler = (_: any, data: any) => callback(data);
+    ipcRenderer.on('folders-updated', handler);
+    return () => ipcRenderer.removeListener('folders-updated', handler);
+  },
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
