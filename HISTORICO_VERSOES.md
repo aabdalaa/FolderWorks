@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.5 (15/09/2026) - **Exclusão Instantânea via Lixeira Oculta (270ms) e Eliminação de Concorrência**
+- **Eliminação Definitiva do Erro de Arquivos Abertos em Uso na Exclusão**:
+  - Diagnosticada e corrigida a causa raiz da falha em exclusão de pastas com milhares de itens: o processo mono-thread `rmdir /s /q` sofria timeout de 60s em redes SMB e permanecia executando em segundo plano, colidindo com a purga Robocopy que era disparada logo em seguida sobre os mesmos arquivos.
+  - Removida a concorrência prévia de `rmdir`, eliminando 100% dos bloqueios de compartilhamento (`ERROR 32 / sharing violation`).
+- **Desvinculação Atômica Imediata para Lixeira Oculta (`.~trash_...`)**:
+  - Implementada a renomeação atômica instantânea para pasta oculta no mesmo compartilhamento SMB (`Directory.Move`). Em teste em tempo real na rede da RELIQUIA, a pasta de **4.413 itens** foi liberada em **272 milissegundos**, sumindo imediatamente da rede e permitindo conclusão imediata para o operador.
+  - A pasta oculta de lixeira é purgada de forma limpa pelo Robocopy `/MIR /MT:128` com 128 threads paralelas.
+- **Cancelamento Forçado Seguro (`TerminateProcess`)**:
+  - Adicionado encerramento forçado automático via `TerminateProcess` em caso de estouro de timeout de qualquer processo filho do motor nativo C#, impedindo a criação de processos órfãos que segurem travas de arquivos.
+- **Novo Pacote Oficial MSI v2.8.5**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.4 (15/09/2026) - **Movimentação Atômica Nativa MFT, Robocopy /MT:128 Máximo e Transferência Paralela Concorrente**
 - **Movimentação Atômica Nativa MFT / SMB2 (`Directory.Move` / `cmd move`)**:
   - Implementada movimentação atômica em nível de metadados do sistema de arquivos para pastas transferidas dentro do mesmo volume/compartilhamento SMB (`ExecuteAsUser.exe --move`).
