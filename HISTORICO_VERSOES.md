@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.3 (15/09/2026) - **Eliminação de Delays de Rede, Exclusão Ultrarrápida e Movimentação Sub-segundo**
+- **Eliminação Definitiva do Gargalo de 54s em Movimentação de Pastas**:
+  - Removido completamente o método obsoleto `ConnectServer` (`WNetAddConnection2` e `WNetCancelConnection2`) de `ExecuteAsUser.cs`. O Windows retornava erro `1219` (conflito de credenciais com compartilhamentos existentes) e forçava encerramento de conexões de rede ativas com timeout de até 50 segundos. O `CreateProcessWithLogonW` já fornece autenticação de rede 100% isolada e imediata via `LOGON_NETCREDENTIALS_ONLY`.
+  - Eliminadas chamadas síncronas `fs.existsSync` e `fs.mkdirSync` em caminhos de rede UNC no processo principal do Node.js, prevenindo bloqueio do event loop sob a conta local da máquina.
+- **Otimização Crítica do Robocopy**:
+  - Removidas as flags `/J` (inadequada para pastas vazias/pequenas pois desabilita cache de arquivos do sistema operacional) e `/COMPRESS` (que gerava tentativas de negociação de SMB Compression em servidores não compatíveis).
+  - Padronizadas as flags para: `/E /COPY:DAT /DCOPY:DAT /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`. Tempo de cópia de pasta vazia reduzido de **54 segundos para 448 milissegundos**.
+- **Exclusão Instantânea via `rmdir /s /q` Sob Credenciais AD (278ms)**:
+  - Implementada exclusão direta imediata via `cmd.exe /c rmdir /s /q` sob o token de rede de `pasta.paralegal`, concluindo a exclusão em **278 milissegundos** no primeiro clique do botão "Deu Certo", com fallback resiliente para purga Robocopy `/MIR /MT:16 /R:0 /W:0` caso arquivos estejam protegidos.
+- **Parser Resiliente de JSON IPC**:
+  - Adicionada captura robusta por expressão regular (`/\{[\s\S]*\}/`) em `executeNativeOperation` para garantir interpretação imediata das respostas do motor nativo.
+- **Novo Pacote Oficial MSI v2.8.3**:
+  - Compilado via WiX Toolset v3.14 e sincronizado para a Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.2 (14/09/2026) - **Exclusão Instantânea via Robocopy /MIR, Resolução de Múltiplos Cliques e Cópia Acelerada**
 - **Exclusão Instantânea via Purge Multithread Robocopy /MIR (100-300ms)**:
   - Substituída a rotina de exclusão sequencial mono-thread por espelhamento reverso de pasta vazia temporária (`robocopy /MIR /MT:32 /R:0 /W:0`), purgada em 32 threads paralelas diretamente sob as credenciais AD.

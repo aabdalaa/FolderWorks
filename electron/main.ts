@@ -137,7 +137,7 @@ function getTIPassword(): string {
     }
   }
 
-  return 'Admin@123';
+  return 'mestre@300';
 }
 
 function getCompanyConfig(company: string) {
@@ -560,7 +560,9 @@ function executeNativeOperation(args: string[]): Promise<{ success: boolean; dat
 
       if (stdoutStr) {
         try {
-          const parsed = JSON.parse(stdoutStr);
+          // Extrai JSON diretamente ou via regex se houver logs precedentes
+          const jsonText = stdoutStr.startsWith('{') ? stdoutStr : (stdoutStr.match(/\{[\s\S]*\}/)?.[0] || stdoutStr);
+          const parsed = JSON.parse(jsonText);
           if (parsed.success) {
             resolve({ success: true, data: parsed });
             return;
@@ -719,20 +721,24 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
     return { success: false, error: errorMsg };
   }
 
-  if (!fs.existsSync(sourcePath)) {
-    const errorMsg = `[ERRO ORIGEM] A pasta de origem não existe: '${sourcePath}'.`;
-    appendLog(errorMsg);
-    return { success: false, error: errorMsg };
-  }
+  const isNetwork = sourcePath.startsWith('\\\\') || destParentPath.startsWith('\\\\');
 
-  // Ensure destination parent directory exists
-  if (!fs.existsSync(destParentPath)) {
-    try {
-      fs.mkdirSync(destParentPath, { recursive: true });
-    } catch (mkErr: any) {
-      const errorMsg = `[ERRO DESTINO] Não foi possível criar a pasta destino '${destParentPath}': ${mkErr.message}`;
+  // Para caminhos locais, valida existência prévia. Para rede UNC, o Robocopy sob AD valida e cria nativamente sem travar a thread.
+  if (!isNetwork) {
+    if (!fs.existsSync(sourcePath)) {
+      const errorMsg = `[ERRO ORIGEM] A pasta de origem não existe: '${sourcePath}'.`;
       appendLog(errorMsg);
       return { success: false, error: errorMsg };
+    }
+
+    if (!fs.existsSync(destParentPath)) {
+      try {
+        fs.mkdirSync(destParentPath, { recursive: true });
+      } catch (mkErr: any) {
+        const errorMsg = `[ERRO DESTINO] Não foi possível criar a pasta destino '${destParentPath}': ${mkErr.message}`;
+        appendLog(errorMsg);
+        return { success: false, error: errorMsg };
+      }
     }
   }
 
@@ -801,7 +807,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       });
     } else {
       appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:32 /J /COMPRESS /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {

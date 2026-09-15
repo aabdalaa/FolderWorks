@@ -14,7 +14,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ isLocked = false }) => {
         </div>
         <span className="font-bold text-xs tracking-tight text-slate-800 dark:text-white">Entropy FolderWorks</span>
         <span className="text-[10px] px-2 py-0.5 rounded-md bg-teams-50 dark:bg-teams-950 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-teams-800 font-mono font-bold">
-          v2.8.2
+          v2.8.3
         </span>
       </div>
 

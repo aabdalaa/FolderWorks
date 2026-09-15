@@ -72,25 +72,6 @@ namespace ExecuteAsUser {
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetExitCodeProcess(IntPtr hProcess, out int lpExitCode);
 
-        [DllImport("mpr.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern int WNetAddConnection2(ref NETRESOURCE lpNetResource, string lpPassword, string lpUsername, int dwFlags);
-
-        [DllImport("mpr.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern int WNetCancelConnection2(string lpName, int dwFlags, bool fForce);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct NETRESOURCE {
-            public int dwScope;
-            public int dwType;
-            public int dwUsage;
-            public int dwDisplayType;
-            public string lpLocalName;
-            public string lpRemoteName;
-            public string lpComment;
-            public string lpProvider;
-        }
-
-        private const int RESOURCETYPE_DISK = 0x00000001;
         const int LOGON_NETCREDENTIALS_ONLY = 2;
         const int CREATE_NO_WINDOW = 0x08000000;
         const int LOGON32_LOGON_NEW_CREDENTIALS = 9;
@@ -102,24 +83,6 @@ namespace ExecuteAsUser {
             int slashIdx = clean.IndexOf('\\');
             if (slashIdx > 0) return @"\\" + clean.Substring(0, slashIdx);
             return @"\\" + clean;
-        }
-
-        private static void ConnectServer(string server, string user, string password) {
-            if (string.IsNullOrEmpty(server)) return;
-
-            NETRESOURCE nr = new NETRESOURCE();
-            nr.dwType = RESOURCETYPE_DISK;
-            nr.lpRemoteName = server + @"\IPC$";
-
-            int res = WNetAddConnection2(ref nr, password, user, 0);
-            if (res == 1219) {
-                try { WNetCancelConnection2(server + @"\IPC$", 0, true); } catch {}
-                try { WNetCancelConnection2(server, 0, true); } catch {}
-                WNetAddConnection2(ref nr, password, user, 0);
-            } else if (res != 0) {
-                nr.lpRemoteName = server;
-                WNetAddConnection2(ref nr, password, user, 0);
-            }
         }
 
         private static string EscapeJson(string s) {
@@ -230,9 +193,6 @@ namespace ExecuteAsUser {
                 domain = parts[1];
             }
 
-            string server = ExtractServerName(targetPath);
-            ConnectServer(server, fullUser, password);
-
             IntPtr token = IntPtr.Zero;
             bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
             WindowsImpersonationContext ctx = null;
@@ -246,20 +206,42 @@ namespace ExecuteAsUser {
                     return 0;
                 }
 
-                // 1. Criar diretório temporário local vazio para purge ultrarrápido
-                string tempEmpty = Path.Combine(Path.GetTempPath(), "_fw_empty_purge");
+                // 1. Tentar exclusão imediata direta via cmd.exe /c rmdir /s /q sob o token de rede do usuário (< 300ms)
+                STARTUPINFO siRmdir = new STARTUPINFO();
+                siRmdir.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                PROCESS_INFORMATION piRmdir = new PROCESS_INFORMATION();
+                string cmdRmdirDirect = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", targetPath);
+                bool okRmdir = CreateProcessWithLogonW(
+                    userOnly, domain, password,
+                    LOGON_NETCREDENTIALS_ONLY, null, cmdRmdirDirect,
+                    CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                    ref siRmdir, out piRmdir
+                );
+                if (okRmdir) {
+                    WaitForSingleObject(piRmdir.hProcess, 10000);
+                    CloseHandle(piRmdir.hProcess);
+                    CloseHandle(piRmdir.hThread);
+                }
+
+                bool deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
+                if (deleted) {
+                    Console.WriteLine("{\"success\": true, \"deleted\": \"" + EscapeJson(targetPath) + "\"}");
+                    return 0;
+                }
+
+                // 2. Se rmdir direto falhar (por exemplo, atributos restritivos ou arquivos protegidos), usar purga com Robocopy /MIR em pasta vazia
+                string tempEmpty = Path.Combine(Environment.GetEnvironmentVariable("TEMP") ?? @"C:\Windows\Temp", "_fw_empty_purge");
                 try {
                     if (!Directory.Exists(tempEmpty)) {
                         Directory.CreateDirectory(tempEmpty);
                     }
                 } catch {}
 
-                // 2. Disparar Robocopy /MIR com 32 threads sob credenciais AD (purga instantânea de subpastas e arquivos, inclusive Read-Only)
                 STARTUPINFO si = new STARTUPINFO();
                 si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                 PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
                 string appPath = @"C:\Windows\System32\robocopy.exe";
-                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:32 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
+                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
 
                 bool ok = CreateProcessWithLogonW(
                     userOnly, domain, password,
@@ -268,28 +250,24 @@ namespace ExecuteAsUser {
                     ref si, out pi
                 );
                 if (ok) {
-                    WaitForSingleObject(pi.hProcess, 30000);
+                    WaitForSingleObject(pi.hProcess, 15000);
                     CloseHandle(pi.hProcess);
                     CloseHandle(pi.hThread);
                 }
 
                 // 3. Remover a pasta raiz vazia remanescente
-                bool deleted = false;
                 try {
-                    if (Directory.Exists(targetPath)) {
-                        Directory.Delete(targetPath);
-                    } else if (File.Exists(targetPath)) {
-                        File.Delete(targetPath);
-                    }
-                    deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
+                    if (Directory.Exists(targetPath)) Directory.Delete(targetPath);
+                    else if (File.Exists(targetPath)) File.Delete(targetPath);
                 } catch {}
 
+                deleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
                 if (!deleted) {
                     try {
                         STARTUPINFO si2 = new STARTUPINFO();
                         si2.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                         PROCESS_INFORMATION pi2 = new PROCESS_INFORMATION();
-                        string cmdRmdir = String.Format("cmd.exe /c rmdir /q \"{0}\"", targetPath);
+                        string cmdRmdir = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", targetPath);
                         bool ok2 = CreateProcessWithLogonW(
                             userOnly, domain, password,
                             LOGON_NETCREDENTIALS_ONLY, null, cmdRmdir,
@@ -297,7 +275,7 @@ namespace ExecuteAsUser {
                             ref si2, out pi2
                         );
                         if (ok2) {
-                            WaitForSingleObject(pi2.hProcess, 15000);
+                            WaitForSingleObject(pi2.hProcess, 10000);
                             CloseHandle(pi2.hProcess);
                             CloseHandle(pi2.hThread);
                         }
@@ -338,9 +316,6 @@ namespace ExecuteAsUser {
                 userOnly = parts[0];
                 domain = parts[1];
             }
-
-            string server = ExtractServerName(oldPath);
-            ConnectServer(server, fullUser, password);
 
             IntPtr token = IntPtr.Zero;
             bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
@@ -450,17 +425,6 @@ namespace ExecuteAsUser {
                 domain = parts[1];
             }
 
-            string srcServer = ExtractServerName(src);
-            string destServer = ExtractServerName(dest);
-
-            Console.WriteLine(String.Format("[AUTENTICAÇÃO REDE AD] Mapeando credenciais de '{0}' nos servidores ({1}, {2})...", fullUser, srcServer, destServer));
-            Console.WriteLine(String.Format("[AUTENTICACAO REDE AD] Mapeando credenciais de '{0}' nos servidores ({1}, {2})...", fullUser, srcServer, destServer));
-
-            ConnectServer(srcServer, fullUser, password);
-            if (destServer != srcServer) {
-                ConnectServer(destServer, fullUser, password);
-            }
-
             Console.WriteLine(String.Format("[IMPERSONAÇÃO WIN32] Disparando Robocopy sob o token nativo de '{0}\\{1}' via CreateProcessWithLogonW...", domain, userOnly));
             Console.WriteLine(String.Format("[IMPERSONACAO WIN32] Disparando Robocopy sob o token nativo de '{0}\\{1}' via CreateProcessWithLogonW...", domain, userOnly));
 
@@ -469,7 +433,7 @@ namespace ExecuteAsUser {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
 
             string appPath = @"C:\Windows\System32\robocopy.exe";
-            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:32 /J /COMPRESS /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:16 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
 
             bool ok = CreateProcessWithLogonW(
                 userOnly,
