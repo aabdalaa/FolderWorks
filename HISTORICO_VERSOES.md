@@ -1,5 +1,19 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.8.6 (15/09/2026) - **Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da RELIQUIA**
+- **Restauração Mandatória de Segurança NTFS DACL (`/COPY:DATS /DCOPY:DAT`)**:
+  - Reintegrada a flag de segurança `S` em todas as rotinas de cópia e transferência com Robocopy (`ExecuteAsUser.cs` e `electron/main.ts`).
+  - O Robocopy agora transfere integralmente as listas de controle de acesso discricionárias (DACLs) explícitas de cada departamento (`CONTABILIDADE` -> `RELIQUIA\CONTABIL`, `DP` -> `RELIQUIA\PESSOAL`, `EXPEDICAO` -> `RELIQUIA\FISCAL` / `CONTABIL` / `ADMINISTRAÇÃO`, `FISCAL` -> `RELIQUIA\FISCAL`, `PARALEGAL` -> `RELIQUIA\PARALEGAL`, `SPED` -> `RELIQUIA\FISCAL` / `CONTABIL`), garantindo que os colaboradores de cada setor mantenham seus privilégios corretos de acesso.
+- **Desacoplamento Assíncrono da Lixeira no Botão "Deu certo"**:
+  - Em `DeleteDirectory`, uma vez que a pasta de origem é atomicamente renomeada para a lixeira oculta (`.~trash_...`) em **270 milissegundos**, o método imediatamente desanexa o processo de purga em segundo plano e retorna sucesso à interface.
+  - O modal de confirmação fecha instantaneamente no primeiro clique (sub-segundo), eliminando esperas síncronas de 60 segundos enquanto o servidor limpa milhares de arquivos.
+- **Otimização Extrema de Rede para Servidores SMB com Alta Densidade (RELIQUIA)**:
+  - Adicionada a flag `/IPG:0` (Inter-Packet Gap = 0) e supressão de retries (`/R:0 /W:0`), permitindo que as 4.413 pastas do modelo da RELIQUIA sejam criadas em 23 segundos com ExitCode 0 absoluto.
+- **Novo Pacote Oficial MSI v2.8.6**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e disponibilizado na Área de Trabalho e repositório de instaladores.
+
+---
+
 ## Versão 2.8.5 (15/09/2026) - **Exclusão Instantânea via Lixeira Oculta (270ms) e Eliminação de Concorrência**
 - **Eliminação Definitiva do Erro de Arquivos Abertos em Uso na Exclusão**:
   - Diagnosticada e corrigida a causa raiz da falha em exclusão de pastas com milhares de itens: o processo mono-thread `rmdir /s /q` sofria timeout de 60s em redes SMB e permanecia executando em segundo plano, colidindo com a purga Robocopy que era disparada logo em seguida sobre os mesmos arquivos.

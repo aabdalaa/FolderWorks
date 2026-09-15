@@ -853,7 +853,7 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       }
 
       appendLog(`[ROBOCOPY NATIVO] Executando Robocopy direto (/MT:128)...`);
-      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
+      const robocopyCmd = `robocopy "${srcArg}" "${destArg}" /E /COPY:DATS /DCOPY:DAT /MT:128 /IPG:0 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np`;
       exec(robocopyCmd, (error) => {
         let exitCode = 0;
         if (error) {

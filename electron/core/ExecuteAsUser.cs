@@ -251,18 +251,21 @@ namespace ExecuteAsUser {
                 string pathToPurge = trashed ? trashPath : targetPath;
 
                 // 3. Purga multithread direta via Robocopy /MIR /MT:128 (128 threads paralelas sem concorrência de processos)
-                string tempEmpty = Path.Combine(Environment.GetEnvironmentVariable("TEMP") ?? @"C:\Windows\Temp", "_fw_empty_purge");
+                string tempEmpty = @"C:\Windows\Temp\_fw_empty_purge";
                 try {
                     if (!Directory.Exists(tempEmpty)) {
                         Directory.CreateDirectory(tempEmpty);
                     }
-                } catch {}
+                } catch {
+                    tempEmpty = Path.Combine(Path.GetTempPath(), "_fw_empty_purge");
+                    if (!Directory.Exists(tempEmpty)) Directory.CreateDirectory(tempEmpty);
+                }
 
                 STARTUPINFO si = new STARTUPINFO();
                 si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                 PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
                 string appPath = @"C:\Windows\System32\robocopy.exe";
-                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:128 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, pathToPurge);
+                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:128 /IPG:0 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, pathToPurge);
 
                 bool ok = CreateProcessWithLogonW(
                     userOnly, domain, password,
@@ -270,6 +273,19 @@ namespace ExecuteAsUser {
                     CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
                     ref si, out pi
                 );
+
+                if (trashed) {
+                    // Se a pasta já foi atomicamente renomeada para a lixeira oculta (270ms),
+                    // a pasta original do cliente já não existe mais no diretório de destino.
+                    // Desanexamos a purga em background para que a interface feche instantaneamente sem esperar.
+                    if (ok) {
+                        CloseHandle(pi.hProcess);
+                        CloseHandle(pi.hThread);
+                    }
+                    Console.WriteLine("{\"success\": true, \"deleted\": \"" + EscapeJson(targetPath) + "\", \"unlinked\": true}");
+                    return 0;
+                }
+
                 if (ok) {
                     int waitRes = WaitForSingleObject(pi.hProcess, 180000);
                     if (waitRes == WAIT_TIMEOUT) {
@@ -403,7 +419,7 @@ namespace ExecuteAsUser {
                     siRobo.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                     PROCESS_INFORMATION piRobo = new PROCESS_INFORMATION();
                     string appPath = @"C:\Windows\System32\robocopy.exe";
-                    string cmdRobo = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, srcPath, destPath);
+                    string cmdRobo = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DATS /DCOPY:DAT /MT:128 /IPG:0 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, srcPath, destPath);
                     bool okRobo = CreateProcessWithLogonW(
                         userOnly, domain, password,
                         LOGON_NETCREDENTIALS_ONLY, null, cmdRobo,
@@ -579,7 +595,7 @@ namespace ExecuteAsUser {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
 
             string appPath = @"C:\Windows\System32\robocopy.exe";
-            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DAT /DCOPY:DAT /MT:128 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
+            string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /E /COPY:DATS /DCOPY:DAT /MT:128 /IPG:0 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, src, dest);
 
             bool ok = CreateProcessWithLogonW(
                 userOnly,
