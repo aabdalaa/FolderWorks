@@ -76,7 +76,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Criar Nova Pasta</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Criar Pasta</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Copia o modelo de pastas criado no AD para o diretório de destino
               </p>
@@ -137,10 +137,10 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             </div>
           </div>
 
-          {/* Nome da Nova Pasta */}
+          {/* Nome da Pasta */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
-              Nome da Nova Pasta
+              Nome da Pasta
             </label>
             <div className="relative">
               <input
@@ -154,7 +154,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-teams-500" />
-              <span>Digite o nome desejado para a nova pasta a ser criada.</span>
+              <span>Digite o nome desejado para a pasta a ser criada.</span>
             </p>
           </div>
 
@@ -190,7 +190,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             ) : (
               <>
                 <FolderPlus className="w-4 h-4" />
-                <span>Criar Nova Pasta</span>
+                <span>Criar Pasta</span>
               </>
             )}
           </button>

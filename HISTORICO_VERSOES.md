@@ -1,5 +1,26 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.0 (17/09/2026) - **Auditoria Descentralizada em Rede (P2P SMB), Rastreamento de Operadores e Correção Gramatical**
+- **Histórico e Logs Corporativos Compartilhados em Rede (P2P SMB)**:
+  - Implementada arquitetura de auditoria descentralizada sem necessidade de servidor central ou banco de dados externo: os computadores sincronizam suas ações silenciosamente através dos compartilhamentos corporativos já existentes da RTO e RELIQUIA (`.folderworks_audit/events/`).
+  - Cada operação realizada (criação, movimentação, renomeação, exclusão de origem, desfeita) gera um arquivo JSON atômico e collision-free (`evt_<timestamp>_<machine>_<random>.json`), eliminando completamente conflitos de concorrência ou bloqueios de arquivo SMB.
+  - Se um computador estiver momentaneamente desconectado, o evento é enfileirado localmente em `pending_audit/` e sincronizado automaticamente na rede assim que restabelecida a conectividade.
+  - Gravação simultânea de trilha legível de auditoria em `network_activity.log` em cada compartilhamento corporativo.
+- **Rastreamento de Identidade do Operador e Telemetria**:
+  - Captura automática e silenciosa do usuário do Windows (`process.env.USERNAME` / `os.userInfo().username`), nome da estação/computador (`os.hostname()`), domínio e IP local.
+  - As ações agora identificam com clareza o operador responsável (ex.: Franciele, Luana, Julio, David, André Abdala) e a máquina em que a execução ocorreu.
+- **Interface de Histórico Corporativo e Logs de TI Modernizada**:
+  - Exibição unificada das operações de todas as estações de trabalho com badge indicador de rede sincronizada e identificação visual de cada operador.
+  - Auto-refresh em tempo real a cada 5 segundos, com recarga instantânea ao focar a janela ou receber notificações IPC de rede.
+  - Filtros instantâneos por Empresa (Todas, RTO, RELIQUIA), por Tipo de Ação e por Colaborador/Operador, além de barra de busca textual completa.
+  - Modal de logs de TI atualizado com seletor de abas entre *Log Local* e *Auditoria da Rede*.
+- **Correção Gramatical e Remoção de Redundância ("Criar Pasta")**:
+  - Removida a redundância gramatical da palavra *"Nova"* em todos os botões, títulos de abas, formulários, menu lateral e manual do usuário (`Criar Nova Pasta` -> `Criar Pasta`).
+- **Novo Pacote Oficial MSI v2.9.0**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para o repositório de instaladores e Área de Trabalho.
+
+---
+
 ## Versão 2.8.7 (15/09/2026) - **Correção Definitiva de Permissões RTO, Limpeza de Interface e Auto-Refresh 5s**
 - **Correção e Priorização do Modelo Oficial de Pastas RTO (`EM USO\MODELO 2026`)**:
   - Diagnosticada e corrigida a causa raiz da ausência de permissões departamentais nas pastas criadas na rede da RTO: a configuração apontava anteriormente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`, diretório que possuía o grupo `Todos` herdado e sem permissões departamentais explícitas.

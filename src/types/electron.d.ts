@@ -1,3 +1,28 @@
+export interface SharedAuditEvent {
+  id: string;
+  timestamp: string;
+  isoTimestamp?: string;
+  company: string;
+  action: string;
+  actionLabel?: string;
+  folderName: string;
+  sourcePath?: string;
+  targetPath?: string;
+  finalPath?: string;
+  operator?: {
+    username: string;
+    computerName: string;
+    userDomain?: string;
+    ipAddress?: string;
+  };
+  executedBy?: string;
+  impersonatedUser?: string;
+  status: string;
+  durationSeconds: number;
+  details?: string;
+  appVersion?: string;
+}
+
 export interface ElectronAPI {
   getConfig: () => Promise<any>;
   saveConfig: (cfg: any) => Promise<any>;
@@ -7,8 +32,10 @@ export interface ElectronAPI {
   clearLogs: () => Promise<boolean>;
   openLogFile: () => Promise<boolean>;
   verifyTIPassword: (password: string) => Promise<boolean>;
-  getHistory: () => Promise<any[]>;
-  clearHistory: () => Promise<any[]>;
+  getHistory: () => Promise<SharedAuditEvent[]>;
+  clearHistory: () => Promise<SharedAuditEvent[]>;
+  getNetworkLogs: () => Promise<string[]>;
+  getOperatorInfo: () => Promise<{ username: string; computerName: string; userDomain: string; ipAddress?: string }>;
   testServerConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
   renameFolder: (req: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; oldName?: string; newName?: string; error?: string }>;
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => Promise<{ success: boolean; msiPath?: string; error?: string }>;
@@ -33,6 +60,7 @@ export interface ElectronAPI {
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;
   onFoldersUpdated: (callback: (data: any) => void) => () => void;
+  onHistoryUpdated: (callback: (data: any) => void) => () => void;
   minimize: () => void;
   maximize: () => void;
   close: () => void;

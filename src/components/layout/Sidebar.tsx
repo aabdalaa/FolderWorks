@@ -19,7 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   serverStatuses,
 }) => {
   const navItems = [
-    { id: 'dashboard' as const, label: 'Criar Nova Pasta', icon: LayoutDashboard },
+    { id: 'dashboard' as const, label: 'Criar Pasta', icon: LayoutDashboard },
     { id: 'transfer' as const, label: 'Mover Pastas', icon: FolderOutput },
     { id: 'rename' as const, label: 'Renomear Pasta', icon: FolderEdit },
     { id: 'settings' as const, label: 'Configurações', icon: Settings },

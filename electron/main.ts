@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import { exec, execFile, execSync } from 'child_process';
 
 let mainWindow: BrowserWindow | null = null;
@@ -10,6 +11,13 @@ const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
 const historyPath = path.join(userDataPath, 'history.json');
 const logsPath = path.join(userDataPath, 'app.log');
+const auditEventsLocalDir = path.join(userDataPath, 'audit_events');
+const pendingAuditDir = path.join(userDataPath, 'pending_audit');
+
+try {
+  if (!fs.existsSync(auditEventsLocalDir)) fs.mkdirSync(auditEventsLocalDir, { recursive: true });
+  if (!fs.existsSync(pendingAuditDir)) fs.mkdirSync(pendingAuditDir, { recursive: true });
+} catch {}
 
 // Default Corporate Config with IT Governance Perimeter
 const defaultCompanyConfigs: Record<string, any> = {
@@ -165,15 +173,270 @@ function appendLog(msg: string) {
   }
 }
 
-function saveHistoryEntry(entry: any) {
-  let list = [];
+function getLocalOperatorInfo() {
+  let username = process.env.USERNAME || '';
+  if (!username) {
+    try {
+      username = os.userInfo().username;
+    } catch {}
+  }
+  const computerName = os.hostname() || process.env.COMPUTERNAME || 'DESCONHECIDO';
+  const userDomain = process.env.USERDOMAIN || '';
+  let ipAddress = '';
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const ifaceName of Object.keys(interfaces)) {
+      for (const iface of interfaces[ifaceName] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          ipAddress = iface.address;
+          break;
+        }
+      }
+      if (ipAddress) break;
+    }
+  } catch {}
+
+  return {
+    username: username || 'Operador',
+    computerName,
+    userDomain,
+    ipAddress,
+  };
+}
+
+function getCompanyAuditDir(company: string): string | null {
+  if (company === 'RTO') {
+    return String.raw`\\192.168.50.102\rto\CLIENTES\.folderworks_audit`;
+  }
+  if (company === 'RELIQUIA') {
+    return String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\.folderworks_audit`;
+  }
+  try {
+    const cfg = loadConfig();
+    const compCfg = cfg[company] || defaultCompanyConfigs[company];
+    if (compCfg?.allowedBasePath) {
+      return path.join(compCfg.allowedBasePath, '.folderworks_audit');
+    }
+  } catch {}
+  return null;
+}
+
+function getAllCompanyAuditDirs(): string[] {
+  const dirs: string[] = [
+    String.raw`\\192.168.50.102\rto\CLIENTES\.folderworks_audit`,
+    String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\.folderworks_audit`,
+  ];
+  try {
+    const cfg = loadConfig();
+    for (const comp of Object.keys(cfg)) {
+      const dir = getCompanyAuditDir(comp);
+      if (dir && !dirs.includes(dir)) {
+        dirs.push(dir);
+      }
+    }
+  } catch {}
+  return dirs;
+}
+
+export interface SharedAuditEvent {
+  id: string;
+  timestamp: string;
+  isoTimestamp: string;
+  company: string;
+  action: string;
+  actionLabel?: string;
+  folderName: string;
+  sourcePath?: string;
+  targetPath?: string;
+  finalPath?: string;
+  operator: {
+    username: string;
+    computerName: string;
+    userDomain: string;
+    ipAddress?: string;
+  };
+  executedBy?: string;
+  impersonatedUser?: string;
+  status: string;
+  durationSeconds: number;
+  details?: string;
+  appVersion: string;
+}
+
+const memoryAuditCache = new Map<string, SharedAuditEvent>();
+
+function saveHistoryEntry(input: any) {
+  const operator = getLocalOperatorInfo();
+  const now = new Date();
+  const id = input.id || `evt_${Date.now()}_${operator.computerName.replace(/\W/g, '')}_${Math.random().toString(36).substring(2, 6)}`;
+  const timestamp = input.timestamp || now.toLocaleString('pt-BR');
+  const isoTimestamp = input.isoTimestamp || now.toISOString();
+  const durationSeconds = typeof input.durationSeconds === 'number' ? input.durationSeconds : 1;
+
+  let action = input.action || '';
+  let actionLabel = input.actionLabel || '';
+  if (!action) {
+    if (input.status === 'TRANSFER_COMPLETED_AND_PURGED' || (input.finalPath && String(input.finalPath).includes('EXCLUIDO'))) {
+      action = 'EXCLUIR_ORIGEM';
+      actionLabel = 'Exclusão Origem';
+    } else if (input.status === 'UNDO_COMPLETED' || (input.finalPath && String(input.finalPath).includes('DESFEITO'))) {
+      action = 'DESFAZER_TRANSFERENCIA';
+      actionLabel = 'Desfazer Transferência';
+    } else if (input.details && String(input.details).includes('Renomear')) {
+      action = 'RENOMEAR_PASTA';
+      actionLabel = 'Renomear Pasta';
+    } else if (input.status === 'SUCCESS' && input.sourcePath && input.finalDestPath) {
+      action = 'MOVER_PASTA';
+      actionLabel = 'Mover Pasta';
+    } else {
+      action = 'CRIAR_PASTA';
+      actionLabel = 'Criar Pasta';
+    }
+  }
+  if (!actionLabel) {
+    switch (action) {
+      case 'CRIAR_PASTA': actionLabel = 'Criar Pasta'; break;
+      case 'MOVER_PASTA': actionLabel = 'Mover Pasta'; break;
+      case 'RENOMEAR_PASTA': actionLabel = 'Renomear Pasta'; break;
+      case 'EXCLUIR_ORIGEM': actionLabel = 'Exclusão Origem'; break;
+      case 'DESFAZER_TRANSFERENCIA': actionLabel = 'Desfazer Transferência'; break;
+      default: actionLabel = action; break;
+    }
+  }
+
+  const record: SharedAuditEvent = {
+    id,
+    timestamp,
+    isoTimestamp,
+    company: input.company || 'CORPORATIVO',
+    action,
+    actionLabel,
+    folderName: input.folderName || 'Pasta',
+    sourcePath: input.sourcePath,
+    targetPath: input.targetPath || input.finalPath,
+    finalPath: input.finalPath || input.targetPath,
+    operator,
+    executedBy: `${operator.computerName}\\${operator.username}`,
+    impersonatedUser: input.executedBy,
+    status: input.status || 'SUCCESS',
+    durationSeconds,
+    details: input.details,
+    appVersion: '2.9.0',
+  };
+
+  // 1. Guardar no cache de memória local
+  memoryAuditCache.set(record.id, record);
+
+  // 2. Salvar localmente no audit_events e no history.json
+  try {
+    const localEventFile = path.join(auditEventsLocalDir, `${record.id}.json`);
+    fs.writeFileSync(localEventFile, JSON.stringify(record, null, 2), 'utf-8');
+
+    let list: any[] = [];
+    if (fs.existsSync(historyPath)) {
+      try {
+        list = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+      } catch {}
+    }
+    list.unshift(record);
+    if (list.length > 500) list = list.slice(0, 500);
+    fs.writeFileSync(historyPath, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e: any) {
+    appendLog(`[AUDITORIA LOCAL ERRO] ${e.message}`);
+  }
+
+  // 3. Salvar no compartilhamento de rede descentralizado (P2P SMB)
+  try {
+    const netDir = getCompanyAuditDir(record.company);
+    if (netDir) {
+      const netEventsDir = path.join(netDir, 'events');
+      if (!fs.existsSync(netEventsDir)) {
+        fs.mkdirSync(netEventsDir, { recursive: true });
+      }
+      const netEventFile = path.join(netEventsDir, `${record.id}.json`);
+      fs.writeFileSync(netEventFile, JSON.stringify(record, null, 2), 'utf-8');
+
+      // Append no log de auditoria em texto compartilhado
+      const netLogFile = path.join(netDir, 'network_activity.log');
+      const logLine = `[${record.timestamp}] [${operator.computerName}\\${operator.username}] [${record.company}] [${record.action}] ${record.status} (${record.durationSeconds}s) - '${record.folderName}'\n`;
+      fs.appendFileSync(netLogFile, logLine, 'utf-8');
+      appendLog(`[AUDITORIA REDE SUCESSO] Gravado na rede em: ${netEventFile}`);
+    }
+  } catch (netErr: any) {
+    try {
+      const pendingFile = path.join(pendingAuditDir, `${record.id}.json`);
+      fs.writeFileSync(pendingFile, JSON.stringify(record, null, 2), 'utf-8');
+    } catch {}
+    appendLog(`[AUDITORIA REDE PENDENTE] Salvo localmente para envio posterior: ${netErr.message}`);
+  }
+
+  // 4. Notificar a interface
+  if (mainWindow) {
+    mainWindow.webContents.send('history-updated', record);
+  }
+}
+
+function syncNetworkAuditEvents(): boolean {
+  let foundNew = false;
+  const auditDirs = getAllCompanyAuditDirs();
+
+  for (const auditDir of auditDirs) {
+    try {
+      const netEventsDir = path.join(auditDir, 'events');
+      if (!fs.existsSync(netEventsDir)) continue;
+
+      // 1. Flush de eventos pendentes locais para a rede
+      try {
+        if (fs.existsSync(pendingAuditDir)) {
+          const pendingFiles = fs.readdirSync(pendingAuditDir);
+          for (const pf of pendingFiles) {
+            if (!pf.endsWith('.json')) continue;
+            const fullPending = path.join(pendingAuditDir, pf);
+            const targetNet = path.join(netEventsDir, pf);
+            try {
+              fs.copyFileSync(fullPending, targetNet);
+              fs.unlinkSync(fullPending);
+              appendLog(`[AUDITORIA FLUSH] Evento pendente sincronizado com sucesso na rede: ${pf}`);
+            } catch {}
+          }
+        }
+      } catch {}
+
+      // 2. Ler eventos existentes na rede
+      const files = fs.readdirSync(netEventsDir);
+      for (const file of files) {
+        if (!file.endsWith('.json')) continue;
+        const id = file.replace('.json', '');
+        if (memoryAuditCache.has(id)) continue;
+
+        try {
+          const filePath = path.join(netEventsDir, file);
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const ev = JSON.parse(content);
+          if (ev && ev.id) {
+            memoryAuditCache.set(ev.id, ev);
+            foundNew = true;
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // Carregar eventos locais pré-existentes se não estiverem na memória
   if (fs.existsSync(historyPath)) {
     try {
-      list = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
-    } catch (e) {}
+      const localList = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+      if (Array.isArray(localList)) {
+        for (const item of localList) {
+          if (item && item.id && !memoryAuditCache.has(item.id)) {
+            memoryAuditCache.set(item.id, item);
+          }
+        }
+      }
+    } catch {}
   }
-  list.unshift(entry);
-  fs.writeFileSync(historyPath, JSON.stringify(list, null, 2), 'utf-8');
+
+  return foundNew;
 }
 
 function getFolderMetrics(dirPath: string): { fileCount: number; dirCount: number; totalSize: number } {
@@ -269,7 +532,21 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    createWindow();
+    try {
+      syncNetworkAuditEvents();
+    } catch {}
+    // Sincronização periódica silenciosa em background a cada 6 segundos
+    setInterval(() => {
+      try {
+        const foundNew = syncNetworkAuditEvents();
+        if (foundNew && mainWindow) {
+          mainWindow.webContents.send('history-updated', { total: memoryAuditCache.size });
+        }
+      } catch {}
+    }, 6000);
+  });
 }
 
 app.on('window-all-closed', () => {
@@ -351,18 +628,48 @@ ipcMain.handle('open-external', async (_, url: string) => {
 });
 
 ipcMain.handle('get-history', () => {
-  if (fs.existsSync(historyPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
-    } catch (e) {}
-  }
-  return [];
+  try {
+    syncNetworkAuditEvents();
+  } catch {}
+
+  const all = Array.from(memoryAuditCache.values());
+  // Ordenar decrescente por data/hora
+  all.sort((a, b) => {
+    const tA = a.isoTimestamp ? new Date(a.isoTimestamp).getTime() : (parseInt(String(a.id).replace(/\D/g, '')) || 0);
+    const tB = b.isoTimestamp ? new Date(b.isoTimestamp).getTime() : (parseInt(String(b.id).replace(/\D/g, '')) || 0);
+    return tB - tA;
+  });
+
+  return all.slice(0, 500);
 });
 
 ipcMain.handle('clear-history', () => {
-  fs.writeFileSync(historyPath, '[]', 'utf-8');
-  appendLog('[AUDITORIA] Histórico de auditoria limpo pelo operador.');
+  memoryAuditCache.clear();
+  try {
+    fs.writeFileSync(historyPath, '[]', 'utf-8');
+  } catch {}
+  appendLog('[AUDITORIA] Cache de visualização do histórico limpo pelo operador.');
   return [];
+});
+
+ipcMain.handle('get-network-logs', () => {
+  const lines: string[] = [];
+  const auditDirs = getAllCompanyAuditDirs();
+  for (const dir of auditDirs) {
+    try {
+      const logFile = path.join(dir, 'network_activity.log');
+      if (fs.existsSync(logFile)) {
+        const content = fs.readFileSync(logFile, 'utf-8');
+        const split = content.split('\n').filter((l) => l.trim().length > 0);
+        lines.push(...split);
+      }
+    } catch {}
+  }
+  return lines.slice(-200);
+});
+
+ipcMain.handle('get-operator-info', () => {
+  return getLocalOperatorInfo();
 });
 
 // Test AD / SMB Connection & Service Account Authentication
@@ -789,6 +1096,19 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
       if (mainWindow) {
         mainWindow.webContents.send('folders-updated', { company, folderName, action: 'transferred' });
       }
+      saveHistoryEntry({
+        company,
+        action: 'MOVER_PASTA',
+        actionLabel: 'Mover Pasta',
+        folderName,
+        sourcePath,
+        targetPath: finalDestPath,
+        finalPath: finalDestPath,
+        executedBy: adUser,
+        status: 'SUCCESS',
+        durationSeconds: durationSec,
+        details: `Método: ${method === 'atomic_move' ? 'Atômico (MFT)' : 'Robocopy /MT:128'}`,
+      });
       resolve({
         success: true,
         folderName,

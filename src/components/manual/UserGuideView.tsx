@@ -40,14 +40,14 @@ export const UserGuideView: React.FC = () => {
 
       {/* Conteúdo Principal */}
       <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-6 sm:p-8 shadow-sm space-y-8">
-        {/* Seção 1: Como Criar uma Nova Pasta */}
+        {/* Seção 1: Como Criar Pastas */}
         <section className="space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-neutral-800">
             <div className="p-1.5 rounded-lg bg-teams-50 dark:bg-teams-950/80 text-teams-600 dark:text-teams-400">
               <FolderPlus className="w-4 h-4" />
             </div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              1. Como Criar uma Nova Pasta
+              1. Como Criar Pastas
             </h4>
           </div>
 
@@ -57,16 +57,16 @@ export const UserGuideView: React.FC = () => {
 
           <ol className="list-decimal list-inside space-y-2.5 pl-2 text-slate-600 dark:text-slate-400 leading-relaxed">
             <li>
-              Acesse a aba <strong>Criar Nova Pasta</strong> no menu lateral do aplicativo.
+              Acesse a aba <strong>Criar Pasta</strong> no menu lateral do aplicativo.
             </li>
             <li>
               Selecione a <strong>empresa</strong> correspondente à operação.
             </li>
             <li>
-              No campo <em>Nome da Nova Pasta</em>, digite o nome desejado para a pasta a ser criada (Exemplo ilustrativo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">0001 - CLIENTE EXEMPLO LTDA</span>).
+              No campo <em>Nome da Pasta</em>, digite o nome desejado para a pasta a ser criada (Exemplo ilustrativo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">0001 - CLIENTE EXEMPLO LTDA</span>).
             </li>
             <li>
-              Clique no botão <strong>Criar Nova Pasta</strong>.
+              Clique no botão <strong>Criar Pasta</strong>.
             </li>
             <li>
               O sistema criará automaticamente a estrutura corporativa padronizada copiando o modelo de pastas criado no Active Directory para o diretório de destino.

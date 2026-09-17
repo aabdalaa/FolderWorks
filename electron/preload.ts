@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   verifyTIPassword: (password: string) => ipcRenderer.invoke('verify-ti-password', password),
   getHistory: () => ipcRenderer.invoke('get-history'),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
+  getNetworkLogs: () => ipcRenderer.invoke('get-network-logs'),
+  getOperatorInfo: () => ipcRenderer.invoke('get-operator-info'),
   testServerConnection: (company: string, overrideConfig?: any) => ipcRenderer.invoke('test-connection', company, overrideConfig),
   renameFolder: (req: { targetPath: string; newName: string; company?: string }) => ipcRenderer.invoke('rename-folder', req),
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => ipcRenderer.invoke('build-custom-msi', req),
@@ -36,6 +38,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_: any, data: any) => callback(data);
     ipcRenderer.on('folders-updated', handler);
     return () => ipcRenderer.removeListener('folders-updated', handler);
+  },
+  onHistoryUpdated: (callback: (data: any) => void) => {
+    const handler = (_: any, data: any) => callback(data);
+    ipcRenderer.on('history-updated', handler);
+    return () => ipcRenderer.removeListener('history-updated', handler);
   },
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
