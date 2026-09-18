@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import dgram from 'dgram';
 import { exec, execFile, execSync } from 'child_process';
 
 let mainWindow: BrowserWindow | null = null;
@@ -11,13 +12,6 @@ const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
 const historyPath = path.join(userDataPath, 'history.json');
 const logsPath = path.join(userDataPath, 'app.log');
-const auditEventsLocalDir = path.join(userDataPath, 'audit_events');
-const pendingAuditDir = path.join(userDataPath, 'pending_audit');
-
-try {
-  if (!fs.existsSync(auditEventsLocalDir)) fs.mkdirSync(auditEventsLocalDir, { recursive: true });
-  if (!fs.existsSync(pendingAuditDir)) fs.mkdirSync(pendingAuditDir, { recursive: true });
-} catch {}
 
 // Default Corporate Config with IT Governance Perimeter
 const defaultCompanyConfigs: Record<string, any> = {
@@ -163,10 +157,30 @@ function saveConfig(cfg: any) {
   }
 }
 
+const MAX_LOG_LINES = 1000;
+const TRIM_LOG_LINES = 500;
+
 function appendLog(msg: string) {
   const time = new Date().toLocaleTimeString('pt-BR');
   const line = `[${time}] ${msg}`;
-  fs.appendFileSync(logsPath, line + '\n', 'utf-8');
+
+  try {
+    fs.appendFileSync(logsPath, line + '\n', 'utf-8');
+
+    // Rotação circular automática: impede crescimento infinito do app.log
+    if (fs.existsSync(logsPath)) {
+      const stat = fs.statSync(logsPath);
+      if (stat.size > 120 * 1024) { // Acima de 120 KB
+        const raw = fs.readFileSync(logsPath, 'utf-8');
+        const lines = raw.split('\n').filter(Boolean);
+        if (lines.length > MAX_LOG_LINES) {
+          const kept = lines.slice(-TRIM_LOG_LINES);
+          fs.writeFileSync(logsPath, kept.join('\n') + '\n', 'utf-8');
+        }
+      }
+    }
+  } catch {}
+
   if (mainWindow) {
     mainWindow.webContents.send('log-entry', line);
     mainWindow.webContents.send('log-updated', line);
@@ -204,40 +218,6 @@ function getLocalOperatorInfo() {
   };
 }
 
-function getCompanyAuditDir(company: string): string | null {
-  if (company === 'RTO') {
-    return String.raw`\\192.168.50.102\rto\CLIENTES\.folderworks_audit`;
-  }
-  if (company === 'RELIQUIA') {
-    return String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\.folderworks_audit`;
-  }
-  try {
-    const cfg = loadConfig();
-    const compCfg = cfg[company] || defaultCompanyConfigs[company];
-    if (compCfg?.allowedBasePath) {
-      return path.join(compCfg.allowedBasePath, '.folderworks_audit');
-    }
-  } catch {}
-  return null;
-}
-
-function getAllCompanyAuditDirs(): string[] {
-  const dirs: string[] = [
-    String.raw`\\192.168.50.102\rto\CLIENTES\.folderworks_audit`,
-    String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\.folderworks_audit`,
-  ];
-  try {
-    const cfg = loadConfig();
-    for (const comp of Object.keys(cfg)) {
-      const dir = getCompanyAuditDir(comp);
-      if (dir && !dirs.includes(dir)) {
-        dirs.push(dir);
-      }
-    }
-  } catch {}
-  return dirs;
-}
-
 export interface SharedAuditEvent {
   id: string;
   timestamp: string;
@@ -264,6 +244,106 @@ export interface SharedAuditEvent {
 }
 
 const memoryAuditCache = new Map<string, SharedAuditEvent>();
+
+// -------------------------------------------------------------
+// Motor P2P UDP Broadcast (Porta 48899)
+// -------------------------------------------------------------
+const UDP_P2P_PORT = 48899;
+let udpSocket: dgram.Socket | null = null;
+
+function getBroadcastAddresses(): string[] {
+  const broadcasts = ['255.255.255.255'];
+  try {
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const iface of ifaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal && iface.netmask) {
+          const ipParts = iface.address.split('.').map(Number);
+          const maskParts = iface.netmask.split('.').map(Number);
+          const bcast = ipParts.map((part, i) => (part | (~maskParts[i] & 255))).join('.');
+          broadcasts.push(bcast);
+        }
+      }
+    }
+  } catch {}
+  broadcasts.push('192.168.50.255');
+  broadcasts.push('192.168.1.255');
+  return Array.from(new Set(broadcasts));
+}
+
+function initUdpP2P() {
+  try {
+    udpSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+
+    udpSocket.on('error', (err) => {
+      appendLog(`[P2P REDE AVISO] Erro no socket UDP: ${err.message}`);
+    });
+
+    udpSocket.on('message', (msg, rinfo) => {
+      try {
+        const payload = JSON.parse(msg.toString('utf-8'));
+        if (payload && payload.type === 'FOLDERWORKS_AUDIT_EVENT' && payload.id && payload.record) {
+          const op = payload.record.operator;
+          const myOp = getLocalOperatorInfo();
+          // Ignorar se foi enviado pela própria máquina (já inserido localmente)
+          if (op && op.computerName === myOp.computerName && op.username === myOp.username) {
+            return;
+          }
+          if (!memoryAuditCache.has(payload.id)) {
+            memoryAuditCache.set(payload.id, payload.record);
+            appendLog(`[P2P REDE RECEBIDO] Ação de ${op?.username || 'Operador'} (${op?.computerName || rinfo.address}): ${payload.record.actionLabel || payload.record.action} - '${payload.record.folderName}'`);
+            if (mainWindow) {
+              mainWindow.webContents.send('history-updated', payload.record);
+            }
+          }
+        }
+      } catch {}
+    });
+
+    udpSocket.bind(UDP_P2P_PORT, () => {
+      try {
+        udpSocket?.setBroadcast(true);
+        appendLog(`[P2P REDE INICIALIZADO] Escutando eventos descentralizados via UDP Broadcast na porta ${UDP_P2P_PORT}`);
+      } catch {}
+    });
+  } catch (err: any) {
+    appendLog(`[P2P REDE FALHA] Falha ao vincular socket UDP: ${err.message}`);
+  }
+}
+
+function broadcastUdpEvent(record: SharedAuditEvent) {
+  if (!udpSocket) return;
+  try {
+    const payload = Buffer.from(JSON.stringify({
+      type: 'FOLDERWORKS_AUDIT_EVENT',
+      version: '2.9.1',
+      id: record.id,
+      record,
+    }), 'utf-8');
+
+    const targets = getBroadcastAddresses();
+    targets.forEach((addr) => {
+      try {
+        udpSocket?.send(payload, 0, payload.length, UDP_P2P_PORT, addr, () => {});
+      } catch {}
+    });
+  } catch {}
+}
+
+function loadLocalHistoryIntoMemory() {
+  if (fs.existsSync(historyPath)) {
+    try {
+      const localList = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+      if (Array.isArray(localList)) {
+        for (const item of localList) {
+          if (item && item.id && !memoryAuditCache.has(item.id)) {
+            memoryAuditCache.set(item.id, item);
+          }
+        }
+      }
+    } catch {}
+  }
+}
 
 function saveHistoryEntry(input: any) {
   const operator = getLocalOperatorInfo();
@@ -321,17 +401,14 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.0',
+    appVersion: '2.9.1',
   };
 
   // 1. Guardar no cache de memória local
   memoryAuditCache.set(record.id, record);
 
-  // 2. Salvar localmente no audit_events e no history.json
+  // 2. Salvar localmente no history.json do usuário (máximo 500 registros)
   try {
-    const localEventFile = path.join(auditEventsLocalDir, `${record.id}.json`);
-    fs.writeFileSync(localEventFile, JSON.stringify(record, null, 2), 'utf-8');
-
     let list: any[] = [];
     if (fs.existsSync(historyPath)) {
       try {
@@ -345,98 +422,13 @@ function saveHistoryEntry(input: any) {
     appendLog(`[AUDITORIA LOCAL ERRO] ${e.message}`);
   }
 
-  // 3. Salvar no compartilhamento de rede descentralizado (P2P SMB)
-  try {
-    const netDir = getCompanyAuditDir(record.company);
-    if (netDir) {
-      const netEventsDir = path.join(netDir, 'events');
-      if (!fs.existsSync(netEventsDir)) {
-        fs.mkdirSync(netEventsDir, { recursive: true });
-      }
-      const netEventFile = path.join(netEventsDir, `${record.id}.json`);
-      fs.writeFileSync(netEventFile, JSON.stringify(record, null, 2), 'utf-8');
+  // 3. Transmissão em tempo real pura via UDP Broadcast (zero arquivos nos servidores de rede)
+  broadcastUdpEvent(record);
 
-      // Append no log de auditoria em texto compartilhado
-      const netLogFile = path.join(netDir, 'network_activity.log');
-      const logLine = `[${record.timestamp}] [${operator.computerName}\\${operator.username}] [${record.company}] [${record.action}] ${record.status} (${record.durationSeconds}s) - '${record.folderName}'\n`;
-      fs.appendFileSync(netLogFile, logLine, 'utf-8');
-      appendLog(`[AUDITORIA REDE SUCESSO] Gravado na rede em: ${netEventFile}`);
-    }
-  } catch (netErr: any) {
-    try {
-      const pendingFile = path.join(pendingAuditDir, `${record.id}.json`);
-      fs.writeFileSync(pendingFile, JSON.stringify(record, null, 2), 'utf-8');
-    } catch {}
-    appendLog(`[AUDITORIA REDE PENDENTE] Salvo localmente para envio posterior: ${netErr.message}`);
-  }
-
-  // 4. Notificar a interface
+  // 4. Notificar a interface do operador local
   if (mainWindow) {
     mainWindow.webContents.send('history-updated', record);
   }
-}
-
-function syncNetworkAuditEvents(): boolean {
-  let foundNew = false;
-  const auditDirs = getAllCompanyAuditDirs();
-
-  for (const auditDir of auditDirs) {
-    try {
-      const netEventsDir = path.join(auditDir, 'events');
-      if (!fs.existsSync(netEventsDir)) continue;
-
-      // 1. Flush de eventos pendentes locais para a rede
-      try {
-        if (fs.existsSync(pendingAuditDir)) {
-          const pendingFiles = fs.readdirSync(pendingAuditDir);
-          for (const pf of pendingFiles) {
-            if (!pf.endsWith('.json')) continue;
-            const fullPending = path.join(pendingAuditDir, pf);
-            const targetNet = path.join(netEventsDir, pf);
-            try {
-              fs.copyFileSync(fullPending, targetNet);
-              fs.unlinkSync(fullPending);
-              appendLog(`[AUDITORIA FLUSH] Evento pendente sincronizado com sucesso na rede: ${pf}`);
-            } catch {}
-          }
-        }
-      } catch {}
-
-      // 2. Ler eventos existentes na rede
-      const files = fs.readdirSync(netEventsDir);
-      for (const file of files) {
-        if (!file.endsWith('.json')) continue;
-        const id = file.replace('.json', '');
-        if (memoryAuditCache.has(id)) continue;
-
-        try {
-          const filePath = path.join(netEventsDir, file);
-          const content = fs.readFileSync(filePath, 'utf-8');
-          const ev = JSON.parse(content);
-          if (ev && ev.id) {
-            memoryAuditCache.set(ev.id, ev);
-            foundNew = true;
-          }
-        } catch {}
-      }
-    } catch {}
-  }
-
-  // Carregar eventos locais pré-existentes se não estiverem na memória
-  if (fs.existsSync(historyPath)) {
-    try {
-      const localList = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
-      if (Array.isArray(localList)) {
-        for (const item of localList) {
-          if (item && item.id && !memoryAuditCache.has(item.id)) {
-            memoryAuditCache.set(item.id, item);
-          }
-        }
-      }
-    } catch {}
-  }
-
-  return foundNew;
 }
 
 function getFolderMetrics(dirPath: string): { fileCount: number; dirCount: number; totalSize: number } {
@@ -535,17 +527,9 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     createWindow();
     try {
-      syncNetworkAuditEvents();
+      loadLocalHistoryIntoMemory();
+      initUdpP2P();
     } catch {}
-    // Sincronização periódica silenciosa em background a cada 6 segundos
-    setInterval(() => {
-      try {
-        const foundNew = syncNetworkAuditEvents();
-        if (foundNew && mainWindow) {
-          mainWindow.webContents.send('history-updated', { total: memoryAuditCache.size });
-        }
-      } catch {}
-    }, 6000);
   });
 }
 
@@ -628,10 +612,6 @@ ipcMain.handle('open-external', async (_, url: string) => {
 });
 
 ipcMain.handle('get-history', () => {
-  try {
-    syncNetworkAuditEvents();
-  } catch {}
-
   const all = Array.from(memoryAuditCache.values());
   // Ordenar decrescente por data/hora
   all.sort((a, b) => {
@@ -653,18 +633,19 @@ ipcMain.handle('clear-history', () => {
 });
 
 ipcMain.handle('get-network-logs', () => {
-  const lines: string[] = [];
-  const auditDirs = getAllCompanyAuditDirs();
-  for (const dir of auditDirs) {
-    try {
-      const logFile = path.join(dir, 'network_activity.log');
-      if (fs.existsSync(logFile)) {
-        const content = fs.readFileSync(logFile, 'utf-8');
-        const split = content.split('\n').filter((l) => l.trim().length > 0);
-        lines.push(...split);
-      }
-    } catch {}
-  }
+  const all = Array.from(memoryAuditCache.values());
+  all.sort((a, b) => {
+    const tA = a.isoTimestamp ? new Date(a.isoTimestamp).getTime() : (parseInt(String(a.id).replace(/\D/g, '')) || 0);
+    const tB = b.isoTimestamp ? new Date(b.isoTimestamp).getTime() : (parseInt(String(b.id).replace(/\D/g, '')) || 0);
+    return tA - tB;
+  });
+  const lines: string[] = all.map((evt) => {
+    const op = evt.operator?.username || 'Operador';
+    const host = evt.operator?.computerName || 'Rede';
+    const action = evt.actionLabel || evt.action;
+    const folder = evt.folderName || path.basename(evt.targetPath || evt.sourcePath || '');
+    return `[${evt.timestamp}] [${host}\\${op}] ${action}: "${folder}" (${evt.company}) - Status: ${evt.status}`;
+  });
   return lines.slice(-200);
 });
 
@@ -954,7 +935,6 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
 
     // Se for caminho de rede UNC e dispomos de executor e credenciais de serviço AD:
     if (isNetwork && executor && cfg && cfg.domainUser && cfg.adPass) {
-      appendLog(`[LISTAGEM AD] Listando diretório de rede estritamente sob as credenciais de '${cfg.domainUser}'...`);
       return new Promise((resolve) => {
         execFile(executor, ['--list', cfg.domainUser, cfg.adPass, targetDir], { timeout: 35000, encoding: 'buffer' }, (err, stdout, stderr) => {
           const stdoutStr = decodeProcessOutput(stdout);
@@ -975,7 +955,6 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
                 resultFolders = resultFolders.filter((f: any) => !f.name.startsWith('00 -') && !f.name.startsWith('01 -'));
               }
               resultFolders.sort((a: any, b: any) => a.name.localeCompare(b.name));
-              appendLog(`[LISTAGEM AD] Sucesso: ${resultFolders.length} pastas autorizadas listadas sob '${cfg.domainUser}'.`);
               resolve({ success: true, folders: resultFolders });
               return;
             } else {

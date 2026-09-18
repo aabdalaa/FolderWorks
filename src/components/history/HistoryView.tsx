@@ -181,7 +181,7 @@ export const HistoryView: React.FC = () => {
                 </h3>
                 <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <Network className="w-3 h-3 animate-pulse" />
-                  <span>Rede Sincronizada</span>
+                  <span>Rede P2P UDP Ativa (Porta 48899)</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

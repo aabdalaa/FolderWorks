@@ -1,5 +1,21 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.1 (18/09/2026) - **Comunicação Peer-to-Peer UDP (Porta 48899), Zero Arquivos nos Servidores e Controle Estrito de Logs**
+- **Protocolo de Rede P2P UDP Puro (Porta 48899)**:
+  - Eliminação definitiva de qualquer gravação de arquivos de auditoria ou logs nos servidores de arquivos (`\\192.168.50.102` e `\\192.168.1.242`). Remoção total do diretório `.folderworks_audit`.
+  - Comunicação peer-to-peer direta entre as estações de trabalho através de sockets UDP Broadcast na porta 48899 (`reuseAddr: true` e `setBroadcast(true)`), cobrindo broadcast universal e sub-redes dirigidas (255.255.255.255, 192.168.50.255, 192.168.1.255).
+  - O aplicativo transmite e recebe eventos de auditoria silenciosamente pela rede local em milissegundos, mantendo todas as instâncias da equipe sincronizadas em tempo real sem sobrecarregar discos de rede.
+- **Eliminação de Spam e Buffer Circular de Logs**:
+  - Removidas mensagens de rotina a cada 5 segundos da função `list-subdirectories` (`[LISTAGEM AD] Listando...` e `[LISTAGEM AD] Sucesso:...`), preservando o arquivo `app.log` limpo apenas para operações reais do usuário e erros críticos.
+  - Implementado sistema de log rotativo circular com limite de 120 KB ou 1.000 linhas, reduzindo automaticamente para as últimas 500 linhas e prevenindo qualquer inchaço em disco.
+- **Interface e Histórico de TI Atualizados**:
+  - Badge de telemetria atualizado para `Rede P2P UDP Ativa (Porta 48899)`.
+  - Histórico corporativo e modal de auditoria alimentados em tempo real diretamente da memória dos pacotes UDP recebidos.
+- **Novo Pacote Oficial MSI v2.9.1**:
+  - Compilado via WiX Toolset v3.14 com GUID de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído.
+
+---
+
 ## Versão 2.9.0 (17/09/2026) - **Auditoria Descentralizada em Rede (P2P SMB), Rastreamento de Operadores e Correção Gramatical**
 - **Histórico e Logs Corporativos Compartilhados em Rede (P2P SMB)**:
   - Implementada arquitetura de auditoria descentralizada sem necessidade de servidor central ou banco de dados externo: os computadores sincronizam suas ações silenciosamente através dos compartilhamentos corporativos já existentes da RTO e RELIQUIA (`.folderworks_audit/events/`).
