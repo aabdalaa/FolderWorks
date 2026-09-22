@@ -1,5 +1,23 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.3 (22/09/2026) - **Aplicação Estrita do Perímetro de Segurança de TI em Todos os Módulos**
+- **Perímetro de Segurança Canônico e Inviolável (`allowedBasePath`)**:
+  - Implementado algoritmo canônico de validação de perímetro (`isWithinBoundary`): normaliza os caminhos de rede e barras (`/` e `\`), garantindo que diretórios fora do perímetro configurado pela TI (ex.: acessar `\\192.168.50.102\rto\DEPARTAMENTOS` quando o perímetro é restrito a `\\192.168.50.102\rto\CLIENTES`) sejam estritamente bloqueados.
+  - Prevenção contra bypass de correspondência parcial de string (`CLIENTES_SECRET` não corresponde a `CLIENTES`).
+- **Bloqueio em Nível de Backend (Electron IPC) em Todas as Operações**:
+  - `list-subdirectories`: Bloqueia requisições fora do perímetro e recusa-se a listar conteúdos de pastas restritas, retornando mensagem explícita de segurança de TI.
+  - `safe-transfer-copy`: Valida rigorosamente tanto o caminho de origem (`sourcePath`) quanto o de destino (`destParentPath`), além de impedir a transferência do próprio diretório-raiz da empresa.
+  - `rename-folder`: Valida o caminho da pasta-alvo e o caminho final renomeado contra o perímetro, impedindo alteração da raiz ou renomeação fora do diretório autorizado.
+  - `create-folder`: Valida o caminho final de destino contra o perímetro configurado.
+  - `select-directory`: Diálogo nativo do Windows bloqueia a seleção de diretórios fora do perímetro quando invocado com `enforceBoundary: true`, exibindo alerta visual de restrição de TI.
+- **Interface com Validação em Tempo Real (Mover e Renomear)**:
+  - Módulo **Mover Pastas**: Validação visual imediata do campo de origem (`Onde está a pasta?`). Se o caminho for alterado para fora do perímetro, a borda torna-se vermelha, surge o indicador `Origem Não Permitida`, a grade de pastas é esvaziada e o botão de transferência é desativado.
+  - Módulo **Renomear Pastas**: Validação imediata do diretório de trabalho. Se estiver fora do perímetro, exibe alerta visual de perímetro, limpa a listagem de pastas e bloqueia a execução da renomeação.
+- **Novo Pacote Oficial MSI v2.9.3**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído.
+
+---
+
 ## Versão 2.9.2 (22/09/2026) - **Restauração do Modelo Oficial GPO RTO e Otimização da Criação de Pastas**
 - **Restauração do Modelo Oficial GPO da RTO (`gpo\criarpastas_paralegal\MODELO`)**:
   - Corrigido o caminho de origem do modelo RTO para apontar estritamente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`.

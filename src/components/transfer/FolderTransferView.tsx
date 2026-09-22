@@ -58,6 +58,12 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     message: '',
   });
 
+  const [sourceBoundaryStatus, setSourceBoundaryStatus] = useState<{ isValid: boolean; allowedBase: string; message: string }>({
+    isValid: true,
+    allowedBase: '',
+    message: '',
+  });
+
   // Folders in source directory
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loadingFolders, setLoadingFolders] = useState<boolean>(false);
@@ -83,6 +89,20 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     onModalStateChange?.(isTransferring || showConfirmationPrompt);
   }, [isTransferring, showConfirmationPrompt, onModalStateChange]);
 
+  const validateBoundary = async (targetPath: string, comp: string) => {
+    if (!window.electronAPI?.validateBoundary) return { isValid: true, allowedBase: '', message: '' };
+    const res = await window.electronAPI.validateBoundary({ targetPath, company: comp });
+    setBoundaryStatus(res);
+    return res;
+  };
+
+  const validateSourceBoundary = async (targetPath: string, comp: string) => {
+    if (!window.electronAPI?.validateBoundary) return { isValid: true, allowedBase: '', message: '' };
+    const res = await window.electronAPI.validateBoundary({ targetPath, company: comp });
+    setSourceBoundaryStatus(res);
+    return res;
+  };
+
   // Load config on mount or company change
   useEffect(() => {
     window.electronAPI?.getConfig().then((allCfg) => {
@@ -99,8 +119,9 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
         const fallbackPreset = cur.allowedBasePath ? `${cur.allowedBasePath}\\00 - EX CLIENTES` : `${cur.destSharePath?.replace(/\\EMPRESAS$/i, '')}\\00 - EX CLIENTES`;
         const preset = cur.presetDestinations?.[0]?.path || fallbackPreset;
         setDestDir(preset);
-        loadSubdirectories(src, targetComp);
+        validateSourceBoundary(src, targetComp);
         validateBoundary(preset, targetComp);
+        loadSubdirectories(src, targetComp);
       }
     });
 
@@ -112,16 +133,17 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     };
   }, [company]);
 
-  const validateBoundary = async (targetPath: string, comp: string) => {
-    if (!window.electronAPI?.validateBoundary) return;
-    const res = await window.electronAPI.validateBoundary({ targetPath, company: comp });
-    setBoundaryStatus(res);
-  };
-
   const getCacheKey = (dir: string, comp: string) => `fw_folders_cache_${comp}_${dir.toLowerCase().trim()}`;
 
   const loadSubdirectories = async (dir: string, comp: string = company) => {
     if (!dir) return;
+    const boundRes = await validateSourceBoundary(dir, comp);
+    if (!boundRes.isValid) {
+      setFolders([]);
+      setFolderError(boundRes.message);
+      setLoadingFolders(false);
+      return;
+    }
     const cacheKey = getCacheKey(dir, comp);
     const cached = localStorage.getItem(cacheKey);
     let hasCache = false;
@@ -170,7 +192,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   // Atualização silenciosa em background (atualiza a cada 5s sem piscar tela ou desmarcar seleções)
   const silentRefresh = async (dir: string = sourceDir, comp: string = company) => {
-    if (!dir || isTransferring) return;
+    if (!dir || isTransferring || !sourceBoundaryStatus.isValid) return;
     try {
       const res = await window.electronAPI?.listSubdirectories(dir, comp);
       if (res?.success && Array.isArray(res.folders)) {
@@ -218,15 +240,23 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
   }, [sourceDir, company, isTransferring]);
 
   const handleBrowseSource = async () => {
-    const picked = await window.electronAPI?.selectDirectory(sourceDir);
+    const picked = await window.electronAPI?.selectDirectory({
+      defaultPath: sourceDir,
+      company,
+      enforceBoundary: true,
+    });
     if (picked) {
       setSourceDir(picked);
-      loadSubdirectories(picked);
+      loadSubdirectories(picked, company);
     }
   };
 
   const handleBrowseDest = async () => {
-    const picked = await window.electronAPI?.selectDirectory(destDir);
+    const picked = await window.electronAPI?.selectDirectory({
+      defaultPath: destDir,
+      company,
+      enforceBoundary: true,
+    });
     if (picked) {
       setDestDir(picked);
       validateBoundary(picked, company);
@@ -268,7 +298,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
 
   // 1. Start Safe Transfer (Parallel Concurrency Pool with Atomic Move)
   const handleStartTransfer = async () => {
-    if (!boundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring) return;
+    if (!boundaryStatus.isValid || !sourceBoundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring) return;
 
     setIsTransferring(true);
     setTransferError(null);
@@ -498,21 +528,35 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 <FolderOpen className="w-4 h-4 text-slate-500" />
                 <span>Onde está a pasta?</span>
               </label>
-              <button
-                onClick={() => loadSubdirectories(sourceDir)}
-                className="text-teams-600 dark:text-teams-400 hover:underline flex items-center gap-1 text-[11px] font-medium"
-              >
-                <RefreshCw className={`w-3 h-3 ${loadingFolders ? 'animate-spin' : ''}`} />
-                <span>Recarregar</span>
-              </button>
+              {!sourceBoundaryStatus.isValid ? (
+                <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3" />
+                  <span>Origem Não Permitida</span>
+                </span>
+              ) : (
+                <button
+                  onClick={() => loadSubdirectories(sourceDir, company)}
+                  className="text-teams-600 dark:text-teams-400 hover:underline flex items-center gap-1 text-[11px] font-medium"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loadingFolders ? 'animate-spin' : ''}`} />
+                  <span>Recarregar</span>
+                </button>
+              )}
             </div>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={sourceDir}
-                onChange={(e) => setSourceDir(e.target.value)}
+                onChange={(e) => {
+                  setSourceDir(e.target.value);
+                  validateSourceBoundary(e.target.value, company);
+                }}
                 onBlur={() => loadSubdirectories(sourceDir, company)}
-                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teams-500"
+                className={`flex-1 px-3 py-2 bg-slate-50 dark:bg-neutral-900 border rounded-lg text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none transition-colors ${
+                  sourceBoundaryStatus.isValid
+                    ? 'border-slate-200 dark:border-neutral-700 focus:border-teams-500'
+                    : 'border-rose-500 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300'
+                }`}
               />
               <button
                 type="button"
@@ -585,12 +629,16 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
         </div>
 
         {/* Boundary Violation Alert */}
-        {!boundaryStatus.isValid && (
+        {(!boundaryStatus.isValid || !sourceBoundaryStatus.isValid) && (
           <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
             <div>
-              <p className="font-bold">Local de Destino Inválido</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed">{boundaryStatus.message}</p>
+              <p className="font-bold">
+                {!sourceBoundaryStatus.isValid ? 'Local de Origem Fora do Perímetro Autorizado' : 'Local de Destino Inválido'}
+              </p>
+              <p className="mt-0.5 text-[11px] leading-relaxed">
+                {!sourceBoundaryStatus.isValid ? sourceBoundaryStatus.message : boundaryStatus.message}
+              </p>
             </div>
           </div>
         )}
@@ -715,7 +763,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           <button
             type="button"
             onClick={handleStartTransfer}
-            disabled={!boundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring}
+            disabled={!boundaryStatus.isValid || !sourceBoundaryStatus.isValid || selectedFolderNames.size === 0 || isTransferring}
             className="px-6 py-3 bg-teams-600 hover:bg-teams-700 dark:bg-teams-600 dark:hover:bg-teams-500 text-white rounded-xl text-xs font-semibold shadow-md transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTransferring ? (

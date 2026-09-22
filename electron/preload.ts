@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testServerConnection: (company: string, overrideConfig?: any) => ipcRenderer.invoke('test-connection', company, overrideConfig),
   renameFolder: (req: { targetPath: string; newName: string; company?: string }) => ipcRenderer.invoke('rename-folder', req),
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => ipcRenderer.invoke('build-custom-msi', req),
-  selectDirectory: (defaultPath?: string) => ipcRenderer.invoke('select-directory', defaultPath),
+  selectDirectory: (params?: any) => ipcRenderer.invoke('select-directory', params),
   validateBoundary: (req: { targetPath: string; company: string }) => ipcRenderer.invoke('validate-boundary', req),
   inspectFolder: (dirPath: string) => ipcRenderer.invoke('inspect-folder', dirPath),
   listSubdirectories: (targetDir: string, company?: string) => ipcRenderer.invoke('list-subdirectories', { targetDir, company }),

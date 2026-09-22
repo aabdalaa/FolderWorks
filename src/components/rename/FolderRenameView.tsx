@@ -12,6 +12,7 @@ import {
   Folder,
   CheckSquare,
   Square,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface FolderItem {
@@ -29,6 +30,20 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   const [config, setConfig] = useState<any>(null);
   const [currentSourceDir, setCurrentSourceDir] = useState<string>('');
   
+  // IT Boundary validation
+  const [boundaryStatus, setBoundaryStatus] = useState<{ isValid: boolean; allowedBase: string; message: string }>({
+    isValid: true,
+    allowedBase: '',
+    message: '',
+  });
+
+  const validateBoundary = async (targetPath: string, comp: string) => {
+    if (!window.electronAPI?.validateBoundary) return { isValid: true, allowedBase: '', message: '' };
+    const res = await window.electronAPI.validateBoundary({ targetPath, company: comp });
+    setBoundaryStatus(res);
+    return res;
+  };
+
   // Lista de pastas da empresa
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loadingFolders, setLoadingFolders] = useState<boolean>(false);
@@ -55,6 +70,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
       if (cur) {
         const src = cur.defaultSourceFolder || cur.destSharePath || '';
         setCurrentSourceDir(src);
+        validateBoundary(src, targetComp);
         loadSubdirectories(src, targetComp);
       }
     });
@@ -74,6 +90,13 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   // Carrega lista de subpastas do diretório
   const loadSubdirectories = async (dir: string, comp: string = company) => {
     if (!dir) return;
+    const bRes = await validateBoundary(dir, comp);
+    if (!bRes.isValid) {
+      setFolders([]);
+      setFolderError(bRes.message);
+      setLoadingFolders(false);
+      return;
+    }
     const cacheKey = getCacheKey(dir, comp);
     const cached = localStorage.getItem(cacheKey);
     let hasCache = false;
@@ -121,7 +144,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
 
   // Atualização silenciosa em background (5s)
   const silentRefresh = async (dir: string = currentSourceDir, comp: string = company) => {
-    if (!dir || isRenaming) return;
+    if (!dir || isRenaming || !boundaryStatus.isValid) return;
     try {
       const res = await window.electronAPI?.listSubdirectories(dir, comp);
       if (res?.success && Array.isArray(res.folders)) {
@@ -179,9 +202,14 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   const handleBrowseSource = async () => {
     setStatusMessage(null);
     const defaultStart = currentSourceDir || config?.[company]?.destSharePath || undefined;
-    const pathChosen = await window.electronAPI?.selectDirectory(defaultStart);
+    const pathChosen = await window.electronAPI?.selectDirectory({
+      defaultPath: defaultStart,
+      company,
+      enforceBoundary: true,
+    });
     if (pathChosen) {
       setCurrentSourceDir(pathChosen);
+      validateBoundary(pathChosen, company);
       loadSubdirectories(pathChosen, company);
       setSelectedPath('');
       setCurrentFolderName('');
@@ -193,6 +221,11 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   const handleExecuteRename = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(null);
+
+    if (!boundaryStatus.isValid) {
+      setStatusMessage({ type: 'error', message: boundaryStatus.message });
+      return;
+    }
 
     if (!selectedPath) {
       setStatusMessage({ type: 'error', message: 'Selecione uma pasta na lista acima para renomear.' });
@@ -387,6 +420,17 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
           </div>
         </div>
 
+        {/* Boundary Violation Alert */}
+        {!boundaryStatus.isValid && (
+          <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+            <div>
+              <p className="font-bold">Diretório Fora do Perímetro Autorizado</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed">{boundaryStatus.message}</p>
+            </div>
+          </div>
+        )}
+
         {/* Tabela de Pastas */}
         <div className="border border-slate-200 dark:border-neutral-700 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-neutral-900/50">
           <div className="max-h-72 overflow-y-auto divide-y divide-slate-200/70 dark:divide-neutral-700/60">
@@ -540,7 +584,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
 
             <button
               type="submit"
-              disabled={!selectedPath || !newFolderName.trim() || isRenaming}
+              disabled={!selectedPath || !newFolderName.trim() || isRenaming || !boundaryStatus.isValid}
               className="px-6 py-2.5 bg-teams-600 hover:bg-teams-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
               {isRenaming ? (

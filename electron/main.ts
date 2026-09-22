@@ -742,14 +742,48 @@ exit 0
 // -------------------------------------------------------------
 // Directory Selection & IT Governance Boundary Validation
 // -------------------------------------------------------------
-ipcMain.handle('select-directory', async (_, defaultPath?: string) => {
+function isWithinBoundary(targetPath: string, allowedBasePath: string): boolean {
+  if (!targetPath || !allowedBasePath) return false;
+  const normTarget = path.normalize(path.resolve(targetPath)).toLowerCase().replace(/[\\/]+$/, '');
+  const normAllowed = path.normalize(path.resolve(allowedBasePath)).toLowerCase().replace(/[\\/]+$/, '');
+  return normTarget === normAllowed || normTarget.startsWith(normAllowed + path.sep);
+}
+
+ipcMain.handle('select-directory', async (_, req?: any) => {
   if (!mainWindow) return null;
+  let defaultPath: string | undefined;
+  let company: string | undefined;
+  let enforceBoundary = false;
+
+  if (typeof req === 'string') {
+    defaultPath = req;
+  } else if (req && typeof req === 'object') {
+    defaultPath = req.defaultPath;
+    company = req.company;
+    enforceBoundary = !!req.enforceBoundary;
+  }
+
   const res = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
     defaultPath: defaultPath && fs.existsSync(defaultPath) ? defaultPath : undefined,
   });
   if (res.canceled || res.filePaths.length === 0) return null;
-  return res.filePaths[0];
+  const chosen = res.filePaths[0];
+
+  if (enforceBoundary && company) {
+    const cfg = getCompanyConfig(company);
+    const allowedBase = cfg.allowedBasePath || cfg.destSharePath;
+    if (allowedBase && !isWithinBoundary(chosen, allowedBase)) {
+      dialog.showMessageBoxSync(mainWindow, {
+        type: 'warning',
+        title: 'Perímetro de Segurança - Bloqueio de TI',
+        message: `A pasta selecionada está fora do Perímetro de Segurança corporativo autorizado:\n\n${chosen}\n\nPerímetro permitido: ${allowedBase}\n\nAcesso não permitido pela governança de TI.`,
+      });
+      return null;
+    }
+  }
+
+  return chosen;
 });
 
 /**
@@ -929,8 +963,26 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
       return { success: false, error: 'Caminho não informado.', folders: [] };
     }
 
+    // Inferir empresa se não especificada explicitamente
+    if (!company) {
+      if (targetDir.toLowerCase().includes('192.168.1.242') || targetDir.toLowerCase().includes('reliquia')) {
+        company = 'RELIQUIA';
+      } else if (targetDir.toLowerCase().includes('192.168.50.102') || targetDir.toLowerCase().includes('rto')) {
+        company = 'RTO';
+      }
+    }
+
     const executor = getExecutorPath();
     const cfg = company ? getCompanyConfig(company) : null;
+    const allowedBase = cfg?.allowedBasePath || cfg?.destSharePath;
+
+    // Governança estrita do Perímetro de TI: impedir listar qualquer pasta fora da base autorizada
+    if (allowedBase && !isWithinBoundary(targetDir, allowedBase)) {
+      const boundaryError = `Acesso Bloqueado pelo TI: o diretório '${targetDir}' está fora do Perímetro de Segurança corporativo autorizado ('${allowedBase}'). Pastas fora deste limite são estritamente restritas.`;
+      appendLog(`[BLOQUEIO TI LISTAGEM] ${boundaryError}`);
+      return { success: false, error: boundaryError, folders: [] };
+    }
+
     const isNetwork = targetDir.startsWith('\\\\');
 
     // Se for caminho de rede UNC e dispomos de executor e credenciais de serviço AD:
@@ -991,17 +1043,13 @@ ipcMain.handle('validate-boundary', (_, { targetPath, company }: { targetPath: s
     return { isValid: false, allowedBase: allowedBase || '', message: 'Caminho ou perímetro corporativo não especificado.' };
   }
 
-  const normTarget = path.normalize(path.resolve(targetPath)).toLowerCase();
-  const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase();
-
-  // Target path must strictly start with the allowed boundary and not be the root itself
-  const isValid = normTarget.startsWith(normAllowed) && normTarget !== normAllowed;
+  const isValid = isWithinBoundary(targetPath, allowedBase);
   return {
     isValid,
     allowedBase,
     message: isValid
       ? 'Caminho em conformidade com o perímetro de governança de TI.'
-      : `Destino Bloqueado pelo TI: o caminho selecionado deve estar estritamente dentro de '${allowedBase}'. Pastas fora desse limite (como PUBLICO ou DIRETORIA) são proibidas.`,
+      : `Bloqueado pelo TI: o caminho selecionado deve estar estritamente dentro de '${allowedBase}'. Pastas fora desse limite (como DEPARTAMENTOS, PUBLICO ou DIRETORIA) são proibidas.`,
   };
 });
 
@@ -1018,13 +1066,25 @@ ipcMain.handle('safe-transfer-copy', async (_, { company, sourcePath, destParent
   const config = getCompanyConfig(company);
   const allowedBase = config.allowedBasePath || config.destSharePath;
 
-  // Boundary Security Check
-  const normDest = path.normalize(path.resolve(destParentPath)).toLowerCase();
-  const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase();
-  if (!normDest.startsWith(normAllowed)) {
-    const errorMsg = `[BLOQUEIO TI] O destino '${destParentPath}' viola o perímetro corporativo autorizado ('${allowedBase}').`;
-    appendLog(errorMsg);
-    return { success: false, error: errorMsg };
+  // Boundary Security Check em Ambos os Caminhos (Origem e Destino)
+  if (allowedBase) {
+    if (!isWithinBoundary(sourcePath, allowedBase)) {
+      const errorMsg = `[BLOQUEIO TI] A origem '${sourcePath}' viola o perímetro corporativo autorizado ('${allowedBase}').`;
+      appendLog(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+    if (!isWithinBoundary(destParentPath, allowedBase)) {
+      const errorMsg = `[BLOQUEIO TI] O destino '${destParentPath}' viola o perímetro corporativo autorizado ('${allowedBase}').`;
+      appendLog(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+    const normSrc = path.normalize(path.resolve(sourcePath)).toLowerCase().replace(/[\\/]+$/, '');
+    const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase().replace(/[\\/]+$/, '');
+    if (normSrc === normAllowed) {
+      const errorMsg = `[BLOQUEIO TI] Operação proibida: não é permitido mover a pasta raiz do perímetro ('${allowedBase}').`;
+      appendLog(errorMsg);
+      return { success: false, error: errorMsg };
+    }
   }
 
   const isNetwork = sourcePath.startsWith('\\\\') || destParentPath.startsWith('\\\\');
@@ -1382,6 +1442,29 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
 
     const compName = company || (cleanTarget.toLowerCase().includes('reliquia') ? 'RELIQUIA' : 'RTO');
     const compConfig = getCompanyConfig(compName);
+    const allowedBase = compConfig?.allowedBasePath || compConfig?.destSharePath;
+
+    // Governança estrita do Perímetro de TI para Renomeação
+    if (allowedBase) {
+      if (!isWithinBoundary(cleanTarget, allowedBase)) {
+        const errorMsg = `[BLOQUEIO TI] A pasta '${cleanTarget}' está fora do Perímetro de Segurança autorizado ('${allowedBase}'). Renomeação proibida.`;
+        appendLog(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      if (!isWithinBoundary(newFullPath, allowedBase)) {
+        const errorMsg = `[BLOQUEIO TI] O novo caminho '${newFullPath}' viola o Perímetro de Segurança autorizado ('${allowedBase}').`;
+        appendLog(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      const normTarget = path.normalize(path.resolve(cleanTarget)).toLowerCase().replace(/[\\/]+$/, '');
+      const normAllowed = path.normalize(path.resolve(allowedBase)).toLowerCase().replace(/[\\/]+$/, '');
+      if (normTarget === normAllowed) {
+        const errorMsg = `[BLOQUEIO TI] Não é permitido renomear a pasta raiz do perímetro ('${allowedBase}').`;
+        appendLog(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+    }
+
     const isNetwork = cleanTarget.startsWith('\\\\');
     const executor = getExecutorPath();
 
@@ -1470,6 +1553,12 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
     return { success: false, error: `Caminho de destino não configurado para a empresa '${company}'.` };
   }
   const finalPath = path.join(destShare, trimmedName);
+  const allowedBase = config.allowedBasePath || config.destSharePath;
+  if (allowedBase && !isWithinBoundary(finalPath, allowedBase)) {
+    const errorMsg = `[BLOQUEIO TI] O destino de criação '${finalPath}' está fora do Perímetro de Segurança autorizado ('${allowedBase}'). Criação proibida.`;
+    appendLog(errorMsg);
+    return { success: false, error: errorMsg };
+  }
 
   const effectiveSourcePath = config.sourcePath;
 

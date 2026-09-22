@@ -39,7 +39,7 @@ export interface ElectronAPI {
   testServerConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
   renameFolder: (req: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; oldName?: string; newName?: string; error?: string }>;
   buildCustomMSI: (req: { config: any; outputMsiName: string }) => Promise<{ success: boolean; msiPath?: string; error?: string }>;
-  selectDirectory: (defaultPath?: string) => Promise<string | null>;
+  selectDirectory: (params?: string | { defaultPath?: string; company?: string; enforceBoundary?: boolean }) => Promise<string | null>;
   listSubdirectories: (targetDir: string, company?: string) => Promise<{ success: boolean; folders: { name: string; fullPath: string; mtime?: string }[]; error?: string }>;
   validateBoundary: (req: { targetPath: string; company: string }) => Promise<{ isValid: boolean; allowedBase: string; message: string }>;
   inspectFolder: (dirPath: string) => Promise<{ exists: boolean; fileCount: number; dirCount: number; totalSize: number }>;
