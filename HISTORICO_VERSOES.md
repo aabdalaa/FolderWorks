@@ -1,5 +1,18 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.2 (22/09/2026) - **Restauração do Modelo Oficial GPO RTO e Otimização da Criação de Pastas**
+- **Restauração do Modelo Oficial GPO da RTO (`gpo\criarpastas_paralegal\MODELO`)**:
+  - Corrigido o caminho de origem do modelo RTO para apontar estritamente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`.
+  - Eliminado o redirecionamento forçado anterior para a pasta `MODELO 2026` em `rto\MODELOS`.
+  - Replicadas com 100% de fidelidade as permissões departamentais oficiais (ex.: `EXPEDICAO` contendo unicamente `FISCAL`, `CONTABIL`, `administrativo`, `JURIDICO-CPA`, `Administradores`, `suporte` e `SISTEMA`, sem vazamento para setores indevidos como `PARALEGAL` ou `PESSOAL`).
+- **Otimização de Criação e Remoção de Validação Externa**:
+  - Removida a validação externa síncrona via PowerShell LDAP que executava consultas no Domain Controller antes da criação.
+  - O fluxo de criação dispara diretamente para o executável nativo Win32 `ExecuteAsUser.exe`, reduzindo a latência pré-cópia a zero.
+- **Novo Pacote Oficial MSI v2.9.2**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído.
+
+---
+
 ## Versão 2.9.1 (18/09/2026) - **Comunicação Peer-to-Peer UDP (Porta 48899), Zero Arquivos nos Servidores e Controle Estrito de Logs**
 - **Protocolo de Rede P2P UDP Puro (Porta 48899)**:
   - Eliminação definitiva de qualquer gravação de arquivos de auditoria ou logs nos servidores de arquivos (`\\192.168.50.102` e `\\192.168.1.242`). Remoção total do diretório `.folderworks_audit`.

@@ -20,7 +20,7 @@ const defaultCompanyConfigs: Record<string, any> = {
     domainUser: String.raw`RTO\pasta.paralegal`,
     adPass: 'Mestre@300',
     adServerIp: '192.168.50.102',
-    sourcePath: String.raw`\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`,
+    sourcePath: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`,
     destSharePath: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
     allowedBasePath: String.raw`\\192.168.50.102\rto\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
@@ -1471,14 +1471,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   }
   const finalPath = path.join(destShare, trimmedName);
 
-  // Prioridade absoluta para o modelo oficial RTO em produção com DACLs departamentais restritas
-  let effectiveSourcePath = config.sourcePath;
-  if (company === 'RTO') {
-    const authoritativeRtoTemplate = String.raw`\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`;
-    if (fs.existsSync(authoritativeRtoTemplate)) {
-      effectiveSourcePath = authoritativeRtoTemplate;
-    }
-  }
+  const effectiveSourcePath = config.sourcePath;
 
   appendLog('---------------------------------------------------------');
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO] Empresa: ${company} | Cliente: ${trimmedName}`);
@@ -1490,27 +1483,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   const adPass = config.adPass || 'Mestre@300';
   const adServerIp = config.adServerIp;
 
-  // 1. LDAP DIRECTORY ENTRY AD CHECK (Strict Isolated Domain Check)
-  if (adServerIp) {
-    appendLog(`[VALIDAÇÃO AD ${company}] Verificando existência de '${pureUser}' no AD (${adServerIp})...`);
-    let userExists = false;
-    try {
-      const psCheckCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "$entry = New-Object System.DirectoryServices.DirectoryEntry('LDAP://${adServerIp}'); $searcher = New-Object System.DirectoryServices.DirectorySearcher($entry); $searcher.Filter = '(sAMAccountName=${pureUser})'; $res = $searcher.FindOne(); if ($res -ne $null) { exit 0 } else { exit 1 }"`;
-      execSync(psCheckCmd, { stdio: 'ignore' });
-      userExists = true;
-      appendLog(`[VALIDAÇÃO AD ${company}] Conta '${pureUser}' confirmada no Active Directory de ${company}.`);
-    } catch (e) {
-      userExists = false;
-    }
-
-    if (!userExists) {
-      const errorMsg = `[ERRO CRÍTICO AD] A conta de serviço '${pureUser}' não foi encontrada no Active Directory da ${company} (${adServerIp}).\n\nPor favor, crie a conta '${pureUser}' no Active Directory da ${company} (com a senha '${adPass}') antes de criar pastas nesta rede.`;
-      appendLog(`[ABORTADO ${company}] ${errorMsg}`);
-      return { success: false, error: errorMsg };
-    }
-  }
-
-  // 2. SEARCH FOR ExecuteAsUser.exe IN ALL BUNDLE LOCATIONS
+  // SEARCH FOR ExecuteAsUser.exe IN ALL BUNDLE LOCATIONS
   const possibleExecutorPaths = [
     path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
     path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'core', 'ExecuteAsUser.exe'),
