@@ -211,46 +211,8 @@ namespace ExecuteAsUser {
                     return 0;
                 }
 
-                // 2. Estratégia de Renomeação Atômica Instantânea para Lixeira Oculta (270ms)
-                // Renomear atomicamente a pasta no mesmo volume desvincula o caminho original imediatamente,
-                // liberando a pasta do cliente sem travamentos ou delays de rede.
-                string parentDir = Path.GetDirectoryName(targetPath);
-                string folderName = Path.GetFileName(targetPath);
-                string trashPath = Path.Combine(parentDir, ".~trash_" + folderName + "_" + Guid.NewGuid().ToString("N").Substring(0, 8));
-
-                bool trashed = false;
-                try {
-                    Directory.Move(targetPath, trashPath);
-                    trashed = Directory.Exists(trashPath) && !Directory.Exists(targetPath);
-                } catch {}
-
-                if (!trashed) {
-                    try {
-                        STARTUPINFO siMove = new STARTUPINFO();
-                        siMove.cb = Marshal.SizeOf(typeof(STARTUPINFO));
-                        PROCESS_INFORMATION piMove = new PROCESS_INFORMATION();
-                        string cmdMove = String.Format("cmd.exe /c move \"{0}\" \"{1}\"", targetPath, trashPath);
-                        bool okMove = CreateProcessWithLogonW(
-                            userOnly, domain, password,
-                            LOGON_NETCREDENTIALS_ONLY, null, cmdMove,
-                            CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
-                            ref siMove, out piMove
-                        );
-                        if (okMove) {
-                            int waitMove = WaitForSingleObject(piMove.hProcess, 10000);
-                            if (waitMove == WAIT_TIMEOUT) {
-                                try { TerminateProcess(piMove.hProcess, 1); } catch {}
-                            }
-                            CloseHandle(piMove.hProcess);
-                            CloseHandle(piMove.hThread);
-                        }
-                    } catch {}
-                    trashed = Directory.Exists(trashPath) && !Directory.Exists(targetPath);
-                }
-
-                string pathToPurge = trashed ? trashPath : targetPath;
-
-                // 3. Purga multithread direta via Robocopy /MIR /MT:128 (128 threads paralelas sem concorrência de processos)
+                // 2. Exclusão direta e limpa via Robocopy /MIR a partir de pasta temporária vazia
+                // Purga instantânea do conteúdo multithread sem criar pastas intermediárias .trash no compartilhamento
                 string tempEmpty = @"C:\Windows\Temp\_fw_empty_purge";
                 try {
                     if (!Directory.Exists(tempEmpty)) {
@@ -265,7 +227,7 @@ namespace ExecuteAsUser {
                 si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                 PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
                 string appPath = @"C:\Windows\System32\robocopy.exe";
-                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:128 /IPG:0 /R:0 /W:0 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, pathToPurge);
+                string cmdLine = String.Format("\"{0}\" \"{1}\" \"{2}\" /MIR /MT:128 /IPG:0 /R:1 /W:1 /NFL /NDL /NJH /NJS /nc /ns /np", appPath, tempEmpty, targetPath);
 
                 bool ok = CreateProcessWithLogonW(
                     userOnly, domain, password,
@@ -274,20 +236,8 @@ namespace ExecuteAsUser {
                     ref si, out pi
                 );
 
-                if (trashed) {
-                    // Se a pasta já foi atomicamente renomeada para a lixeira oculta (270ms),
-                    // a pasta original do cliente já não existe mais no diretório de destino.
-                    // Desanexamos a purga em background para que a interface feche instantaneamente sem esperar.
-                    if (ok) {
-                        CloseHandle(pi.hProcess);
-                        CloseHandle(pi.hThread);
-                    }
-                    Console.WriteLine("{\"success\": true, \"deleted\": \"" + EscapeJson(targetPath) + "\", \"unlinked\": true}");
-                    return 0;
-                }
-
                 if (ok) {
-                    int waitRes = WaitForSingleObject(pi.hProcess, 180000);
+                    int waitRes = WaitForSingleObject(pi.hProcess, 60000);
                     if (waitRes == WAIT_TIMEOUT) {
                         try { TerminateProcess(pi.hProcess, 1); } catch {}
                     }
@@ -295,19 +245,20 @@ namespace ExecuteAsUser {
                     CloseHandle(pi.hThread);
                 }
 
-                // 4. Remover a pasta raiz vazia remanescente
+                // 3. Remover a pasta raiz vazia remanescente com Directory.Delete
                 try {
-                    if (Directory.Exists(pathToPurge)) Directory.Delete(pathToPurge);
-                    else if (File.Exists(pathToPurge)) File.Delete(pathToPurge);
+                    if (Directory.Exists(targetPath)) Directory.Delete(targetPath, true);
+                    else if (File.Exists(targetPath)) File.Delete(targetPath);
                 } catch {}
 
-                bool purgeOk = !Directory.Exists(pathToPurge) && !File.Exists(pathToPurge);
+                // 4. Se ainda persistir, executar rmdir /s /q sob o token autenticado
+                bool purgeOk = !Directory.Exists(targetPath) && !File.Exists(targetPath);
                 if (!purgeOk) {
                     try {
                         STARTUPINFO si2 = new STARTUPINFO();
                         si2.cb = Marshal.SizeOf(typeof(STARTUPINFO));
                         PROCESS_INFORMATION pi2 = new PROCESS_INFORMATION();
-                        string cmdRmdir = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", pathToPurge);
+                        string cmdRmdir = String.Format("cmd.exe /c rmdir /s /q \"{0}\"", targetPath);
                         bool ok2 = CreateProcessWithLogonW(
                             userOnly, domain, password,
                             LOGON_NETCREDENTIALS_ONLY, null, cmdRmdir,
@@ -325,13 +276,12 @@ namespace ExecuteAsUser {
                     } catch {}
                 }
 
-                // Se o targetPath foi movido para o trash ou completamente excluído, a operação de desvinculação da origem foi um sucesso absoluto
                 bool targetDeleted = !Directory.Exists(targetPath) && !File.Exists(targetPath);
                 if (targetDeleted) {
                     Console.WriteLine("{\"success\": true, \"deleted\": \"" + EscapeJson(targetPath) + "\"}");
                     return 0;
                 } else {
-                    Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível excluir a pasta '" + EscapeJson(targetPath) + "'. Verifique se há arquivos abertos em uso.\"}");
+                    Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível excluir a pasta '" + EscapeJson(targetPath) + "'. Verifique se há arquivos abertos em uso por outro usuário.\"}");
                     return 1;
                 }
             } catch (Exception ex) {

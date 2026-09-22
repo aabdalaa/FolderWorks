@@ -1,5 +1,24 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.4 (22/09/2026) - **Erradicação Total do Mecanismo .trash, Liberação Automática de Firewall UDP 48899 e Sincronização P2P Bidirecional**
+- **Erradicação Definitiva do Mecanismo de Arquivos e Pastas `.trash`**:
+  - Eliminado 100% qualquer geração ou renomeação para pastas temporárias `.~trash_*` no motor nativo `ExecuteAsUser.cs` durante operações de exclusão ou movimentação de diretórios.
+  - O motor agora executa a limpeza rápida via Robocopy `/MIR` de um diretório temporário vazio diretamente no caminho de destino (`targetPath`), aguarda a finalização síncrona do processo e em seguida chama `Directory.Delete(targetPath, true)` com fallback Win32 `rmdir /s /q`.
+  - Se algum arquivo estiver aberto ou travado por outro usuário na rede, o diretório permanece com seu nome original e retorna mensagem de erro explicativa, sem jamais gerar lixo ou pastas fantasmas no servidor.
+  - Limpeza imediata realizada de qualquer pasta órfã remanescente nos servidores RTO e RELIQUIA.
+- **Abertura Automática do Windows Firewall para UDP 48899 via Instalador MSI**:
+  - Injetadas CustomActions elevadas no instalador WiX (`build_msi.js` e `build_custom_msi.js`) executadas com privilégio `SYSTEM` (`Impersonate="no"` e `Execute="deferred"`).
+  - Configura automaticamente regras de entrada e saída no firewall do Windows (`netsh advfirewall firewall add rule name="Entropy FolderWorks P2P UDP" dir=in/out action=allow protocol=UDP localport=48899 profile=any`) em todas as estações sem intervenção do usuário.
+  - Implementada também verificação e criação dinâmica em tempo de execução dentro de `electron/main.ts`.
+- **Sincronização P2P Bidirecional Ativa e Roteamento para a Sub-rede das Estações (`192.168.80.255`)**:
+  - Adicionada a sub-rede física das estações de trabalho (`192.168.80.255`) à lista explícita de broadcast, além de `255.255.255.255`, `192.168.50.255` e `192.168.1.255`.
+  - Implementado protocolo de sincronização ativa bidirecional via UDP (`FOLDERWORKS_SYNC_REQUEST` e `FOLDERWORKS_SYNC_RESPONSE`): ao inicializar o app ou consultar a aba de histórico, a máquina solicita os eventos recentes aos computadores vizinhos na rede, garantindo que mesmo estações recém-iniciadas obtenham a trilha de auditoria completa em tempo real.
+  - Vinculação do socket UDP a `0.0.0.0` com `reuseAddr: true` para captura irrestrita de pacotes em todas as interfaces.
+- **Novo Pacote Oficial MSI v2.9.4**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído.
+
+---
+
 ## Versão 2.9.3 (22/09/2026) - **Aplicação Estrita do Perímetro de Segurança de TI em Todos os Módulos**
 - **Perímetro de Segurança Canônico e Inviolável (`allowedBasePath`)**:
   - Implementado algoritmo canônico de validação de perímetro (`isWithinBoundary`): normaliza os caminhos de rede e barras (`/` e `\`), garantindo que diretórios fora do perímetro configurado pela TI (ex.: acessar `\\192.168.50.102\rto\DEPARTAMENTOS` quando o perímetro é restrito a `\\192.168.50.102\rto\CLIENTES`) sejam estritamente bloqueados.

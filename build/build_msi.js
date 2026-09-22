@@ -146,7 +146,7 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.9.3',
+    version: '2.9.4',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {
@@ -156,7 +156,7 @@ async function buildMSI() {
 
   await msiCreator.create();
 
-  // Injetar encerramento forçado e automático de instâncias em execução
+  // Injetar encerramento forçado e automático de instâncias em execução e liberação de porta no Firewall
   const wxsFilePath = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.wxs');
   if (fs.existsSync(wxsFilePath)) {
     let wxsContent = fs.readFileSync(wxsFilePath, 'utf-8');
@@ -164,6 +164,10 @@ async function buildMSI() {
     <!-- Encerramento Automático de Instâncias Anteriores do FolderWorks (Evita Files in Use) -->
     <CustomAction Id="SetKillAppCmd" Property="QtExecCmdLine" Value="&quot;[SystemFolder]taskkill.exe&quot; /F /IM FolderWorks.exe /T" Execute="immediate" />
     <CustomAction Id="KillRunningApp" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="immediate" Return="ignore" />
+
+    <!-- Liberação Automática no Windows Defender Firewall (UDP 48899 P2P de Logs e Auditoria) -->
+    <CustomAction Id="AddFwInboundUdp" Directory="TARGETDIR" ExeCommand="&quot;[SystemFolder]netsh.exe&quot; advfirewall firewall add rule name=&quot;FolderWorks UDP P2P (Port 48899)&quot; dir=in action=allow protocol=UDP localport=48899 profile=any enable=yes" Execute="deferred" Return="ignore" Impersonate="no" />
+    <CustomAction Id="AddFwOutboundUdp" Directory="TARGETDIR" ExeCommand="&quot;[SystemFolder]netsh.exe&quot; advfirewall firewall add rule name=&quot;FolderWorks UDP Outbound&quot; dir=out action=allow protocol=UDP localport=48899 profile=any enable=yes" Execute="deferred" Return="ignore" Impersonate="no" />
     
     <util:CloseApplication Id="CloseFolderWorks" Target="FolderWorks.exe" CloseMessage="no" Description="Fechando FolderWorks em execução..." TerminateProcess="1" Timeout="3" RebootPrompt="no" />
 
@@ -174,11 +178,13 @@ async function buildMSI() {
     <InstallExecuteSequence>
       <Custom Action="SetKillAppCmd" Before="KillRunningApp">1</Custom>
       <Custom Action="KillRunningApp" Before="InstallValidate">1</Custom>
+      <Custom Action="AddFwInboundUdp" After="InstallFiles">NOT Installed OR REINSTALL</Custom>
+      <Custom Action="AddFwOutboundUdp" After="AddFwInboundUdp">NOT Installed OR REINSTALL</Custom>
     </InstallExecuteSequence>
 `;
     wxsContent = wxsContent.replace('</Product>', killAppSnippet + '\n</Product>');
     fs.writeFileSync(wxsFilePath, wxsContent, 'utf-8');
-    console.log('✓ Injetado encerramento forçado de instâncias ativas (taskkill + util:CloseApplication) no FolderWorks.wxs');
+    console.log('✓ Injetado encerramento forçado de instâncias ativas e liberação de regras de firewall no FolderWorks.wxs');
   }
 
   await msiCreator.compile();

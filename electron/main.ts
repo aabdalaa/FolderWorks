@@ -251,6 +251,23 @@ const memoryAuditCache = new Map<string, SharedAuditEvent>();
 const UDP_P2P_PORT = 48899;
 let udpSocket: dgram.Socket | null = null;
 
+function ensureWindowsFirewallRule() {
+  if (process.platform !== 'win32') return;
+  try {
+    const { exec } = require('child_process');
+    exec('netsh advfirewall firewall show rule name="FolderWorks UDP P2P (Port 48899)"', (err: any) => {
+      if (err) {
+        exec('netsh advfirewall firewall add rule name="FolderWorks UDP P2P (Port 48899)" dir=in action=allow protocol=UDP localport=48899 profile=any enable=yes', (addErr: any) => {
+          if (!addErr) {
+            appendLog('[FIREWALL] Regra de entrada UDP 48899 registrada com sucesso no Windows Firewall.');
+          }
+        });
+        exec('netsh advfirewall firewall add rule name="FolderWorks UDP Outbound" dir=out action=allow protocol=UDP localport=48899 profile=any enable=yes');
+      }
+    });
+  } catch {}
+}
+
 function getBroadcastAddresses(): string[] {
   const broadcasts = ['255.255.255.255'];
   try {
@@ -266,13 +283,37 @@ function getBroadcastAddresses(): string[] {
       }
     }
   } catch {}
-  broadcasts.push('192.168.50.255');
-  broadcasts.push('192.168.1.255');
+  // Sub-redes físicas dos escritórios e servidores
+  broadcasts.push('192.168.80.255'); // Sub-rede local das estações de trabalho
+  broadcasts.push('192.168.50.255'); // Sub-rede RTO
+  broadcasts.push('192.168.1.255');  // Sub-rede RELIQUIA
+  broadcasts.push('192.168.0.255');
+  broadcasts.push('10.0.0.255');
   return Array.from(new Set(broadcasts));
+}
+
+function requestHistorySyncFromPeers() {
+  if (!udpSocket) return;
+  try {
+    const myOp = getLocalOperatorInfo();
+    const payload = Buffer.from(JSON.stringify({
+      type: 'FOLDERWORKS_SYNC_REQUEST',
+      version: '2.9.4',
+      requester: myOp,
+    }), 'utf-8');
+
+    const targets = getBroadcastAddresses();
+    targets.forEach((addr) => {
+      try {
+        udpSocket?.send(payload, 0, payload.length, UDP_P2P_PORT, addr, () => {});
+      } catch {}
+    });
+  } catch {}
 }
 
 function initUdpP2P() {
   try {
+    ensureWindowsFirewallRule();
     udpSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
     udpSocket.on('error', (err) => {
@@ -282,7 +323,10 @@ function initUdpP2P() {
     udpSocket.on('message', (msg, rinfo) => {
       try {
         const payload = JSON.parse(msg.toString('utf-8'));
-        if (payload && payload.type === 'FOLDERWORKS_AUDIT_EVENT' && payload.id && payload.record) {
+        if (!payload) return;
+
+        // 1. Evento de Auditoria de Operação Realizada
+        if (payload.type === 'FOLDERWORKS_AUDIT_EVENT' && payload.id && payload.record) {
           const op = payload.record.operator;
           const myOp = getLocalOperatorInfo();
           // Ignorar se foi enviado pela própria máquina (já inserido localmente)
@@ -297,13 +341,49 @@ function initUdpP2P() {
             }
           }
         }
+        // 2. Pedido de sincronização de histórico recebido de outra máquina recém-aberta
+        else if (payload.type === 'FOLDERWORKS_SYNC_REQUEST') {
+          const myOp = getLocalOperatorInfo();
+          if (payload.requester && payload.requester.computerName === myOp.computerName && payload.requester.username === myOp.username) {
+            return;
+          }
+          const allEvts = Array.from(memoryAuditCache.values()).slice(0, 50);
+          if (allEvts.length > 0 && udpSocket) {
+            const respPayload = Buffer.from(JSON.stringify({
+              type: 'FOLDERWORKS_SYNC_RESPONSE',
+              version: '2.9.4',
+              events: allEvts,
+              responder: myOp,
+            }), 'utf-8');
+            try {
+              udpSocket.send(respPayload, 0, respPayload.length, UDP_P2P_PORT, rinfo.address, () => {});
+            } catch {}
+          }
+        }
+        // 3. Resposta com histórico recebida de outro nó da rede
+        else if (payload.type === 'FOLDERWORKS_SYNC_RESPONSE' && Array.isArray(payload.events)) {
+          let newItemsCount = 0;
+          for (const ev of payload.events) {
+            if (ev && ev.id && !memoryAuditCache.has(ev.id)) {
+              memoryAuditCache.set(ev.id, ev);
+              newItemsCount++;
+            }
+          }
+          if (newItemsCount > 0) {
+            appendLog(`[P2P REDE SINCRONIZADO] Recebidos ${newItemsCount} eventos históricos de ${payload.responder?.username || rinfo.address}.`);
+            if (mainWindow) {
+              mainWindow.webContents.send('history-updated', null);
+            }
+          }
+        }
       } catch {}
     });
 
-    udpSocket.bind(UDP_P2P_PORT, () => {
+    udpSocket.bind(UDP_P2P_PORT, '0.0.0.0', () => {
       try {
         udpSocket?.setBroadcast(true);
-        appendLog(`[P2P REDE INICIALIZADO] Escutando eventos descentralizados via UDP Broadcast na porta ${UDP_P2P_PORT}`);
+        appendLog(`[P2P REDE INICIALIZADO] Escutando eventos descentralizados via UDP Broadcast na porta ${UDP_P2P_PORT} (0.0.0.0)`);
+        requestHistorySyncFromPeers();
       } catch {}
     });
   } catch (err: any) {
@@ -316,7 +396,7 @@ function broadcastUdpEvent(record: SharedAuditEvent) {
   try {
     const payload = Buffer.from(JSON.stringify({
       type: 'FOLDERWORKS_AUDIT_EVENT',
-      version: '2.9.1',
+      version: '2.9.4',
       id: record.id,
       record,
     }), 'utf-8');
@@ -401,7 +481,7 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.1',
+    appVersion: '2.9.4',
   };
 
   // 1. Guardar no cache de memória local
@@ -612,6 +692,9 @@ ipcMain.handle('open-external', async (_, url: string) => {
 });
 
 ipcMain.handle('get-history', () => {
+  try {
+    requestHistorySyncFromPeers();
+  } catch {}
   const all = Array.from(memoryAuditCache.values());
   // Ordenar decrescente por data/hora
   all.sort((a, b) => {
