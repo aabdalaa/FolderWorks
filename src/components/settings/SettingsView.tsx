@@ -20,8 +20,10 @@ import {
   ShieldCheck,
   FileText,
   ExternalLink,
+  Palette,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
+import { useIconColor } from '../../hooks/useIconColor';
 
 interface SettingsViewProps {
   onTestConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
@@ -179,6 +181,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTesting((prev) => ({ ...prev, [compKey]: false }));
   };
 
+  // Icon Color Customization Hook
+  const { selectedColorId, availableColors, setIconColor } = useIconColor();
+
+  // Shortcuts status
+  const [shortcutsStatus, setShortcutsStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [shortcutsSaving, setShortcutsSaving] = useState(false);
+
   const handleBrowseFolder = async (compKey: string, fieldKey: string, currentVal: string) => {
     if (!isTIUnlocked) return;
     const selected = await window.electronAPI?.selectDirectory(currentVal);
@@ -188,8 +197,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleBrowseShortcut = async (compKey: string, index: number, currentVal: string) => {
-    if (!isTIUnlocked) return;
-    const selected = await window.electronAPI?.selectDirectory(currentVal);
+    const allowedBase = config[compKey]?.allowedBasePath || config[compKey]?.destSharePath || '';
+    const selected = await window.electronAPI?.selectDirectory({
+      defaultPath: currentVal || allowedBase,
+      company: compKey,
+      enforceBoundary: true,
+    });
     if (selected) {
       handleShortcutChange(compKey, index, 'path', selected);
     }
@@ -209,31 +222,83 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleShortcutChange = (compKey: string, index: number, field: 'name' | 'path', val: string) => {
-    if (!isTIUnlocked) return;
     const curShortcuts: ShortcutItem[] = [...(config[compKey]?.presetDestinations || [])];
     if (curShortcuts[index]) {
       curShortcuts[index] = { ...curShortcuts[index], [field]: val };
-      handleFieldChange(compKey, 'presetDestinations', curShortcuts);
+      setConfig((prev: any) => ({
+        ...prev,
+        [compKey]: {
+          ...prev[compKey],
+          presetDestinations: curShortcuts,
+        },
+      }));
     }
   };
 
   const handleAddShortcut = (compKey: string) => {
-    if (!isTIUnlocked) return;
     const curShortcuts: ShortcutItem[] = [...(config[compKey]?.presetDestinations || [])];
     const newIndex = curShortcuts.length + 1;
     const basePath = config[compKey]?.allowedBasePath || config[compKey]?.destSharePath || '';
     curShortcuts.push({
-      name: `ATALHO ${newIndex}`,
-      path: basePath ? `${basePath}\\PASTA_${newIndex}` : '',
+      name: `Atalho ${newIndex}`,
+      path: basePath ? `${basePath}\\Pasta_${newIndex}` : '',
     });
-    handleFieldChange(compKey, 'presetDestinations', curShortcuts);
+    setConfig((prev: any) => ({
+      ...prev,
+      [compKey]: {
+        ...prev[compKey],
+        presetDestinations: curShortcuts,
+      },
+    }));
   };
 
   const handleRemoveShortcut = (compKey: string, index: number) => {
-    if (!isTIUnlocked) return;
     const curShortcuts: ShortcutItem[] = [...(config[compKey]?.presetDestinations || [])];
     curShortcuts.splice(index, 1);
-    handleFieldChange(compKey, 'presetDestinations', curShortcuts);
+    setConfig((prev: any) => ({
+      ...prev,
+      [compKey]: {
+        ...prev[compKey],
+        presetDestinations: curShortcuts,
+      },
+    }));
+  };
+
+  const handleSaveShortcuts = async (compKey: string) => {
+    setShortcutsSaving(true);
+    setShortcutsStatus(null);
+    try {
+      const curShortcuts: ShortcutItem[] = config[compKey]?.presetDestinations || [];
+      // Validação estrita de cada atalho contra o perímetro da empresa
+      for (const s of curShortcuts) {
+        if (!s.name.trim() || !s.path.trim()) {
+          throw new Error('Todos os atalhos devem conter um nome e um caminho UNC válidos.');
+        }
+        if (window.electronAPI?.validateBoundary) {
+          const valRes = await window.electronAPI.validateBoundary({
+            targetPath: s.path.trim(),
+            company: compKey,
+          });
+          if (!valRes.isValid) {
+            throw new Error(`O atalho "${s.name}" (${s.path}) está fora do perímetro de segurança corporativo autorizado ("${valRes.allowedBase}"). Corrija o caminho para salvar.`);
+          }
+        }
+      }
+
+      await window.electronAPI?.saveConfig(config);
+      setShortcutsStatus({
+        type: 'success',
+        message: `Atalhos da empresa ${compKey} validados e salvos com sucesso!`,
+      });
+      setTimeout(() => setShortcutsStatus(null), 4000);
+    } catch (err: any) {
+      setShortcutsStatus({
+        type: 'error',
+        message: err.message || 'Falha ao salvar atalhos.',
+      });
+    } finally {
+      setShortcutsSaving(false);
+    }
   };
 
   const handleAddCompany = () => {
@@ -484,7 +549,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* 2. Main Company Box */}
+      {/* 2. Cores dos Ícones do Sistema (Livre para o Usuário) */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0">
+              <Palette className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Cores dos Ícones do Sistema</h3>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Livre para o Usuário
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Escolha a tonalidade de destaque dos ícones da aplicação. A escolha é salva automaticamente.
+              </p>
+            </div>
+          </div>
+
+          {/* Seletor de Cores */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {availableColors.map((color) => {
+              const isSelected = selectedColorId === color.id;
+              return (
+                <button
+                  key={color.id}
+                  type="button"
+                  onClick={() => setIconColor(color.id)}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-slate-900 dark:text-white ring-2 ring-teams-600/30 shadow-xs'
+                      : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-neutral-900/50'
+                  }`}
+                  title={`Selecionar ${color.name}`}
+                >
+                  <span
+                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
+                    style={{ backgroundColor: color.hex }}
+                  />
+                  <span className="text-[11px] truncate">{color.name.split(' ')[0]}</span>
+                  {isSelected && <CheckCircle2 className="w-3 h-3 text-teams-600 dark:text-teams-400 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Company Box */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs">
         {/* Company Tabs Bar */}
         <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/60 px-4 pt-2 gap-2">
@@ -905,29 +1019,64 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <hr className="border-slate-100 dark:border-neutral-700" />
 
-          {/* Atalhos Rápidos de Destino */}
+          {/* Atalhos Rápidos de Destino (Liberado para Usuários com Validação de Perímetro) */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <FolderOutput className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
-                <span>Atalhos Rápidos de Destino</span>
-              </h4>
-              {isTIUnlocked && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <FolderOutput className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+                  <span>Atalhos Rápidos de Destino</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Adicione e organize atalhos rápidos. Todos os caminhos devem estar dentro do perímetro autorizado.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleAddShortcut(activeCompanyTab)}
-                  className="flex items-center gap-1 text-xs font-bold text-teams-600 dark:text-teams-400 hover:underline cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-teams-50 dark:bg-teams-950/50 hover:bg-teams-100 dark:hover:bg-teams-900/60 text-teams-700 dark:text-teams-300 rounded-lg text-xs font-bold border border-teams-200 dark:border-teams-800 transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Adicionar Atalho</span>
                 </button>
-              )}
+
+                <button
+                  type="button"
+                  onClick={() => handleSaveShortcuts(activeCompanyTab)}
+                  disabled={shortcutsSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  title="Salvar alterações nos atalhos"
+                >
+                  <Save className={`w-3.5 h-3.5 ${shortcutsSaving ? 'animate-spin' : ''}`} />
+                  <span>{shortcutsSaving ? 'Validando...' : 'Salvar Atalhos'}</span>
+                </button>
+              </div>
             </div>
+
+            {/* Notificação de Status dos Atalhos */}
+            {shortcutsStatus && (
+              <div
+                className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                  shortcutsStatus.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+                }`}
+              >
+                {shortcutsStatus.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                )}
+                <span className="font-medium">{shortcutsStatus.message}</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               {currentShortcuts.length === 0 ? (
                 <div className="p-3 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-neutral-700 rounded-lg">
-                  Nenhum atalho rápido configurado para esta empresa.
+                  Nenhum atalho rápido configurado para esta empresa. Clique em "Adicionar Atalho" acima.
                 </div>
               ) : (
                 currentShortcuts.map((shortcut, idx) => (
@@ -937,49 +1086,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   >
                     <input
                       type="text"
-                      placeholder="Nome do Atalho"
-                      readOnly={!isTIUnlocked}
+                      placeholder="Nome do Atalho (ex: 00 - EX CLIENTES)"
                       value={shortcut.name}
                       onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'name', e.target.value)}
-                      className={`sm:w-1/3 p-1.5 rounded-md font-semibold text-xs ${
-                        isTIUnlocked
-                          ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                          : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                      }`}
+                      className="sm:w-1/3 p-1.5 rounded-md font-semibold text-xs bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500"
                     />
                     <div className="flex-1 flex gap-2">
                       <input
                         type="text"
-                        placeholder="Caminho UNC"
-                        readOnly={!isTIUnlocked}
+                        placeholder="Caminho UNC na Rede"
                         value={shortcut.path}
                         onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'path', e.target.value)}
-                        className={`flex-1 p-1.5 rounded-md font-mono text-[11px] ${
-                          isTIUnlocked
-                            ? 'bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                            : 'bg-transparent border-transparent text-slate-700 dark:text-slate-300 cursor-not-allowed'
-                        }`}
+                        className="flex-1 p-1.5 rounded-md font-mono text-[11px] bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500"
                       />
-                      {isTIUnlocked && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
-                            className="p-1.5 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
-                            title="Procurar pasta"
-                          >
-                            <FolderOpen className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveShortcut(activeCompanyTab, idx)}
-                            className="p-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-md transition-colors cursor-pointer"
-                            title="Excluir atalho"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
+                        className="p-1.5 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
+                        title="Procurar pasta (Respeita o perímetro de TI)"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveShortcut(activeCompanyTab, idx)}
+                        className="p-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-md transition-colors cursor-pointer"
+                        title="Excluir atalho"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))

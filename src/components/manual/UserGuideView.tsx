@@ -312,12 +312,24 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.9.6 */}
+            {/* v2.9.7 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.6</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.7</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
+              </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Auditoria Enriquecida, Buffer Circular FIFO de 500 Registros, Pop-up Toast Windows (10s), Modal Fluent e Atalhos Livres</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Logs de auditoria enriquecidos com máquina física local, operador real do Windows (sem uso da conta de serviço AD como operador), empresa, ação, pasta, status, data/hora, versão da aplicação e cronometragem de duração precisa em todas as rotinas. Buffer circular FIFO automático de 500 registros no arquivo centralizado de rede GPO impedindo sobrecarga via SMB. Limpeza inicial automática (Clean Slate) para que novas builds iniciem com histórico limpo diretamente do repositório da rede. Pop-up Toast moderno estilo Windows 11 com barra regressiva de 10s pós-criação/renomeação, com botões para 'Abrir Pasta' no Explorer e 'Refazer/Desfazer'. Modal corporativo personalizado Fluent Design em substituição aos diálogos genéricos do Windows para bloqueio de perímetro. Auto-bloqueio instantâneo da sessão do TI ao trocar de módulo. Atalhos rápidos liberados para usuários com validação estrita de perímetro e seletor personalizável de cores de ícones.
+              </p>
+            </div>
+
+            {/* v2.9.6 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.6</span>
               </div>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas e Armazenamento Duplo</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">

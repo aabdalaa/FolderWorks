@@ -403,6 +403,24 @@ function resolveCompanyLogFile(companyKey?: string): string | null {
 }
 
 function loadLocalHistoryIntoMemory() {
+  // Clean slate para v2.9.7: se não existir o marcador .v297_clean_slate, reinicializa histórico e logs anteriores
+  const cleanSlateMarker = path.join(userDataPath, '.v297_clean_slate');
+  if (!fs.existsSync(cleanSlateMarker)) {
+    try {
+      if (fs.existsSync(historyPath)) {
+        fs.writeFileSync(historyPath, '[]', 'utf-8');
+      }
+      if (fs.existsSync(logsPath)) {
+        fs.writeFileSync(logsPath, '', 'utf-8');
+      }
+      memoryAuditCache.clear();
+      fs.writeFileSync(cleanSlateMarker, new Date().toISOString(), 'utf-8');
+      appendLog('[SISTEMA v2.9.7] Base de histórico e logs anterior reinicializada com sucesso (Clean Slate). Contagem iniciada do zero a partir do repositório corporativo.');
+    } catch (err: any) {
+      appendLog(`[SISTEMA v2.9.7 AVISO] Falha ao criar marcador clean slate: ${err.message}`);
+    }
+  }
+
   if (fs.existsSync(historyPath)) {
     try {
       const localList = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
@@ -448,7 +466,7 @@ function formatSharedLogEntry(record: SharedAuditEvent, ext: string, isNewFile: 
     if (record.sourcePath) lines.push(`  sourcePath: "${record.sourcePath.replace(/\\/g, '\\\\')}"`);
     if (targetStr) lines.push(`  targetPath: "${targetStr.replace(/\\/g, '\\\\')}"`);
     if (record.details) lines.push(`  details: "${record.details.replace(/"/g, '\\"')}"`);
-    lines.push(`  appVersion: "${record.appVersion || '2.9.6'}"`);
+    lines.push(`  appVersion: "${record.appVersion || '2.9.7'}"`);
     return lines.join('\n') + '\n';
   }
 
@@ -502,6 +520,40 @@ function appendSharedLogEntry(record: SharedAuditEvent, targetPath?: string) {
     const content = formatSharedLogEntry(record, ext, isNew);
     fs.appendFileSync(sharedPath, content, 'utf-8');
     appendLog(`[LOG COMPARTILHADO] Evento anexado com sucesso no arquivo '${sharedPath}' (${ext}).`);
+
+    // Buffer Circular FIFO de no máximo 500 registros: poda automática dos mais antigos
+    if (fs.existsSync(sharedPath)) {
+      if (ext === '.json') {
+        const raw = fs.readFileSync(sharedPath, 'utf-8');
+        const lines = raw.split('\n').filter((l) => l.trim().length > 0);
+        if (lines.length > 500) {
+          const trimmed = lines.slice(-500);
+          fs.writeFileSync(sharedPath, trimmed.join('\n') + '\n', 'utf-8');
+          appendLog(`[ROTAÇÃO LOG COMPARTILHADO] Arquivo circular mantido em 500 registros mais recentes.`);
+        }
+      } else if (ext === '.txt') {
+        const raw = fs.readFileSync(sharedPath, 'utf-8');
+        const lines = raw.split('\n').filter((l) => l.trim().length > 0);
+        if (lines.length > 500) {
+          const trimmed = lines.slice(-500);
+          fs.writeFileSync(sharedPath, trimmed.join('\n') + '\n', 'utf-8');
+          appendLog(`[ROTAÇÃO LOG COMPARTILHADO] Arquivo circular mantido em 500 registros mais recentes.`);
+        }
+      } else if (ext === '.md') {
+        const raw = fs.readFileSync(sharedPath, 'utf-8');
+        const lines = raw.split('\n');
+        const tableRows = lines.filter((l) => l.trim().startsWith('|') && !l.includes('---') && !l.toLowerCase().includes('data / hora'));
+        if (tableRows.length > 500) {
+          const keptRows = tableRows.slice(-500);
+          let newMd = '# Registro de Auditoria e Atividades - FolderWorks\n\n';
+          newMd += '| Data / Hora | Operador | Empresa | Ação | Pasta / Item | Destino / Detalhes | Status | Duração |\n';
+          newMd += '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n';
+          newMd += keptRows.join('\n') + '\n';
+          fs.writeFileSync(sharedPath, newMd, 'utf-8');
+          appendLog(`[ROTAÇÃO LOG COMPARTILHADO] Tabela Markdown mantida em 500 registros mais recentes.`);
+        }
+      }
+    }
   } catch (err: any) {
     appendLog(`[AVISO LOG COMPARTILHADO] Falha ao gravar no arquivo configurado: ${err.message}`);
   }
@@ -573,7 +625,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
               status: statusMatch ? statusMatch[1] : 'SUCCESS',
               durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
               details: detMatch ? detMatch[1] : undefined,
-              appVersion: '2.9.6',
+              appVersion: '2.9.7',
             });
           }
         } catch {}
@@ -612,7 +664,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             executedBy: opRaw,
             status: status.includes('SUCESSO') || status.includes('SUCCESS') ? 'SUCCESS' : status,
             durationSeconds: durRaw,
-            appVersion: '2.9.6',
+            appVersion: '2.9.7',
           });
         }
       }
@@ -658,7 +710,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             status: statusMatch ? statusMatch[1] : 'SUCCESS',
             durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
             details: detMatch ? detMatch[1] : undefined,
-            appVersion: '2.9.6',
+            appVersion: '2.9.7',
           });
         }
       }
@@ -725,7 +777,7 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.6',
+    appVersion: '2.9.7',
   };
 
   // 1. Guardar no cache de memória local
@@ -1344,16 +1396,33 @@ ipcMain.handle('select-directory', async (_, req?: any) => {
     const cfg = getCompanyConfig(company);
     const allowedBase = cfg.allowedBasePath || cfg.destSharePath;
     if (allowedBase && !isWithinBoundary(chosen, allowedBase)) {
-      dialog.showMessageBoxSync(mainWindow, {
-        type: 'warning',
-        title: 'Perímetro de Segurança - Bloqueio de TI',
-        message: `A pasta selecionada está fora do Perímetro de Segurança corporativo autorizado:\n\n${chosen}\n\nPerímetro permitido: ${allowedBase}\n\nAcesso não permitido pela governança de TI.`,
+      appendLog(`[BLOQUEIO PERÍMETRO TI] Pasta fora do perímetro corporativo: '${chosen}'. Permitido: '${allowedBase}'`);
+      mainWindow.webContents.send('perimeter-blocked', {
+        chosenPath: chosen,
+        allowedBasePath: allowedBase,
+        company,
       });
       return null;
     }
   }
 
   return chosen;
+});
+
+ipcMain.handle('open-folder-in-explorer', async (_, targetPath: string) => {
+  if (!targetPath) return false;
+  try {
+    if (fs.existsSync(targetPath)) {
+      await shell.openPath(targetPath);
+      return true;
+    }
+    const parent = path.dirname(targetPath);
+    if (fs.existsSync(parent)) {
+      await shell.openPath(parent);
+      return true;
+    }
+  } catch {}
+  return false;
 });
 
 /**
@@ -1815,6 +1884,7 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
   const errors: string[] = [];
 
   const tasks = foldersToDelete.map(async (srcPath) => {
+    const itemStartTime = Date.now();
     try {
       const normSrc = path.normalize(path.resolve(srcPath)).toLowerCase();
       // Safety check: Cannot be root, cannot be equal to allowed boundary root
@@ -1846,7 +1916,8 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
       }
 
       deleted.push(srcPath);
-      appendLog(`[EXCLUSÃO ORIGEM SUCESSO] Pasta de origem removida com sucesso: ${srcPath}`);
+      const durationSeconds = Math.max(1, Math.round((Date.now() - itemStartTime) / 1000));
+      appendLog(`[EXCLUSÃO ORIGEM SUCESSO] Pasta de origem removida com sucesso em ${durationSeconds}s: ${srcPath}`);
 
       saveHistoryEntry({
         id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
@@ -1856,7 +1927,7 @@ ipcMain.handle('delete-source-folders', async (_, { company, foldersToDelete }: 
         finalPath: `EXCLUIDO_ORIGEM: ${srcPath}`,
         executedBy: config.domainUser,
         status: 'TRANSFER_COMPLETED_AND_PURGED',
-        durationSeconds: 1,
+        durationSeconds,
       });
     } catch (e: any) {
       const err = `Erro ao excluir pasta '${srcPath}': ${e.message}`;
@@ -1895,6 +1966,7 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { c
   const executor = getExecutorPath();
 
   const tasks = rollbackList.map(async (item) => {
+    const itemStartTime = Date.now();
     const destPath = item.destPath;
     const sourcePath = item.sourcePath;
     const isAtomic = item.method === 'atomic_move' || (sourcePath && !fs.existsSync(sourcePath) && fs.existsSync(destPath));
@@ -1933,7 +2005,19 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { c
           }
         }
         undone.push(destPath);
-        appendLog(`[TRANSFERÊNCIA DESFEITA] Pasta restaurada na origem com sucesso: ${sourcePath}.`);
+        const durationSeconds = Math.max(1, Math.round((Date.now() - itemStartTime) / 1000));
+        appendLog(`[TRANSFERÊNCIA DESFEITA] Pasta restaurada na origem com sucesso em ${durationSeconds}s: ${sourcePath}.`);
+
+        saveHistoryEntry({
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+          timestamp: new Date().toLocaleString('pt-BR'),
+          company,
+          folderName: path.basename(destPath),
+          finalPath: `DESFEITO: ${destPath} (origem preservada)`,
+          executedBy: config?.domainUser || 'SYSTEM',
+          status: 'TRANSFER_UNDONE_ROLLBACK',
+          durationSeconds,
+        });
       } else {
         // Robocopy copy rollback: Delete destination copy
         appendLog(`[DESFAZER CÓPIA] Removendo cópia do destino '${destPath}' sob o usuário '${config?.domainUser}'...`);
@@ -1951,19 +2035,20 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { c
           }
         }
         undone.push(destPath);
-        appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso: ${destPath}. Origem mantida intacta.`);
-      }
+        const durationSeconds = Math.max(1, Math.round((Date.now() - itemStartTime) / 1000));
+        appendLog(`[TRANSFERÊNCIA DESFEITA] Cópia removida do destino com sucesso em ${durationSeconds}s: ${destPath}. Origem mantida intacta.`);
 
-      saveHistoryEntry({
-        id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
-        timestamp: new Date().toLocaleString('pt-BR'),
-        company,
-        folderName: path.basename(destPath),
-        finalPath: `DESFEITO: ${destPath} (origem preservada)`,
-        executedBy: config?.domainUser || 'SYSTEM',
-        status: 'TRANSFER_UNDONE_ROLLBACK',
-        durationSeconds: 1,
-      });
+        saveHistoryEntry({
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+          timestamp: new Date().toLocaleString('pt-BR'),
+          company,
+          folderName: path.basename(destPath),
+          finalPath: `DESFEITO: ${destPath} (origem preservada)`,
+          executedBy: config?.domainUser || 'SYSTEM',
+          status: 'TRANSFER_UNDONE_ROLLBACK',
+          durationSeconds,
+        });
+      }
     } catch (e: any) {
       const err = `Erro ao desfazer pasta no destino '${destPath}': ${e.message}`;
       appendLog(`[ERRO DESFAZER] ${err}`);
@@ -1984,6 +2069,7 @@ ipcMain.handle('undo-transfer', async (_, { company, foldersToUndo, items }: { c
 // Folder Renaming Functionality
 // -------------------------------------------------------------
 ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { targetPath: string; newName: string; company?: string }) => {
+  const startTime = Date.now();
   try {
     if (!targetPath || typeof targetPath !== 'string') {
       return { success: false, error: 'Nenhum caminho de pasta informado.' };
@@ -2061,7 +2147,8 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
       fs.renameSync(cleanTarget, newFullPath);
     }
 
-    appendLog(`[SUCESSO RENOMEAR] Pasta renomeada com sucesso: '${oldName}' -> '${cleanNewName}'`);
+    const durationSeconds = Math.max(1, Math.round((Date.now() - startTime) / 1000));
+    appendLog(`[SUCESSO RENOMEAR] Pasta renomeada com sucesso em ${durationSeconds}s: '${oldName}' -> '${cleanNewName}'`);
 
     if (mainWindow) {
       mainWindow.webContents.send('folders-updated', { company: compName, oldName, newName: cleanNewName, action: 'renamed' });
@@ -2075,10 +2162,10 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
       finalPath: `RENOMEADO: ${oldName} -> ${cleanNewName} (${newFullPath})`,
       executedBy: compConfig?.domainUser || 'Operador',
       status: 'FOLDER_RENAMED',
-      durationSeconds: 1,
+      durationSeconds,
     });
 
-    return { success: true, newPath: newFullPath, oldName, newName: cleanNewName };
+    return { success: true, newPath: newFullPath, oldName, newName: cleanNewName, durationSeconds };
   } catch (err: any) {
     const errStr = `Falha ao renomear pasta: ${err.message}`;
     appendLog(`[ERRO RENOMEAR] ${errStr}`);
@@ -2189,7 +2276,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
         exitCode = typeof error.code === 'number' ? error.code : 16;
       }
 
-      const durationSec = Math.round((Date.now() - startTime) / 1000);
+      const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
 
       // ExecuteAsUser.exe traduz Robocopy exit code < 8 para 0 (sucesso absoluto)
       if (exitCode === 0) {
@@ -2210,7 +2297,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
           durationSeconds: durationSec,
         });
 
-        resolve({ success: true });
+        resolve({ success: true, folderName: trimmedName, finalPath, durationSeconds: durationSec });
       } else {
         const failMsg = `A autenticação ou cópia sob o usuário '${adUser}' falhou (Código de saída: ${exitCode}).\nOperação cancelada para impedir o uso da conta logada na máquina.`;
         appendLog(`[ERRO CRÍTICO IMPERSONAÇÃO] ${failMsg}`);
@@ -2227,7 +2314,7 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
           error: failMsg,
         });
 
-        resolve({ success: false, error: failMsg });
+        resolve({ success: false, error: failMsg, durationSeconds: durationSec });
       }
     });
   });

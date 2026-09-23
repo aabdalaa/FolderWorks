@@ -345,7 +345,7 @@ export const HistoryView: React.FC = () => {
                   <th className="p-3">Empresa</th>
                   <th className="p-3">Ação</th>
                   <th className="p-3">Pasta / Detalhes</th>
-                  <th className="p-3">Duração</th>
+                  <th className="p-3">Duração & Versão</th>
                   <th className="p-3 pr-6">Status</th>
                 </tr>
               </thead>
@@ -422,11 +422,14 @@ export const HistoryView: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Duração */}
+                      {/* Duração & Versão */}
                       <td className="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
                           <Clock className="w-3 h-3 text-slate-400" />
-                          <span>{item.durationSeconds}s</span>
+                          <span>{item.durationSeconds || 1}s</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                          {item.appVersion || 'v2.9.7'}
                         </div>
                       </td>
 

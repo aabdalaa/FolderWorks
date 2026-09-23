@@ -12,8 +12,9 @@ import {
   Folder,
   CheckSquare,
   Square,
-  ShieldAlert,
+  ShieldAlert
 } from 'lucide-react';
+import { ToastData } from '../layout/ToastNotification';
 
 interface FolderItem {
   name: string;
@@ -22,10 +23,11 @@ interface FolderItem {
 }
 
 interface FolderRenameViewProps {
-  onRenameFolder?: (payload: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; error?: string }>;
+  onRenameFolder?: (payload: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; durationSeconds?: number; error?: string }>;
+  onShowToast?: (data: ToastData) => void;
 }
 
-export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFolder }) => {
+export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFolder, onShowToast }) => {
   const [company, setCompany] = useState<string>('RTO');
   const [config, setConfig] = useState<any>(null);
   const [currentSourceDir, setCurrentSourceDir] = useState<string>('');
@@ -302,6 +304,47 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
             return next;
           });
           loadSubdirectories(currentSourceDir, company);
+        }
+
+        // Dispara o Toast animado de 10s no canto da tela com opção de Desfazer
+        if (onShowToast) {
+          const originalPath = selectedPath;
+          const originalName = currentFolderName;
+          const renamedPath = result.newPath;
+          const renamedName = trimmedNewName;
+
+          onShowToast({
+            id: `toast_rename_${Date.now()}`,
+            type: 'rename',
+            title: 'Pasta Renomeada com Sucesso!',
+            folderName: renamedName,
+            folderPath: renamedPath,
+            durationSeconds: result.durationSeconds || 1,
+            company,
+            undoOrRedoLabel: 'Desfazer',
+            onUndoOrRedo: async () => {
+              // Executa a reversão imediata da renomeação
+              if (window.electronAPI?.renameFolder) {
+                const rollbackRes = await window.electronAPI.renameFolder({
+                  targetPath: renamedPath,
+                  newName: originalName,
+                  company,
+                });
+                if (rollbackRes.success) {
+                  setSelectedPath(rollbackRes.newPath || originalPath);
+                  setCurrentFolderName(originalName);
+                  setNewFolderName(originalName);
+                  setStatusMessage({
+                    type: 'success',
+                    message: `Renomeação desfeita: nome restaurado para '${originalName}'.`,
+                  });
+                  if (currentSourceDir) {
+                    loadSubdirectories(currentSourceDir, company);
+                  }
+                }
+              }
+            },
+          });
         }
       } else {
         setStatusMessage({

@@ -1,5 +1,36 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.7 (23/09/2026) - **Auditoria Enriquecida, Buffer FIFO de 500 Linhas, Clean Slate, Toast com Desfazer (10s), Modal de Perímetro e Atalhos do Usuário**
+- **Enriquecimento Granular de Auditoria Corporativa**:
+  - Captura real do usuário da máquina física (`os.userInfo().username` ou `process.env.USERNAME`), distinguindo com precisão a pessoa física do operador da conta de serviço `pasta.paralegal`.
+  - Registro detalhado do nome do computador (`os.hostname()`), empresa manipulada (RTO, RELIQUIA, etc.), ação executada, nome da pasta criada ou alterada, data e hora exatas da operação e versão do aplicativo (`v2.9.7`).
+  - Duração real medida em segundos com alta precisão (`durationSeconds`) em operações de criação, renomeação, transferência segura e rollback.
+  - Status explícito (sucesso/falha) com mensagens de erro contextualizadas.
+- **Limpeza de Logs Anteriores (Clean Slate)**:
+  - Inicialização sem resquícios de testes anteriores nas máquinas dos usuários: o aplicativo na v2.9.7 utiliza o marcador de sistema `.v297_clean_slate` para limpar logs locais obsoletos e passar a ler estritamente os eventos a partir da nova versão e do arquivo limpo corporativo na rede.
+- **Buffer Circular de 500 Registros (FIFO Rolling Buffer)**:
+  - Limite inteligente de 500 registros para os arquivos de auditoria centralizados em rede GPO (`folderworks_audit.json`, `.txt`, `.md`).
+  - Poda automática dos eventos mais antigos ao atingir o teto de 500 linhas, mantendo o arquivo leve, rápido para carregar via SMB e sem saturação de rede.
+- **Notificação Toast Estilo Windows (10s) com Desfazer/Refazer e Abrir no Explorer**:
+  - Pop-up moderno no canto inferior direito pós-criação e pós-renomeação de pasta com animação suave e barra decrescente de 10 segundos.
+  - Botão direto "Abrir Pasta" no Windows Explorer via `shell.openPath`.
+  - Ação contextual de "Refazer" (recriação com dados anteriores) ou "Desfazer" (reversão automática de renomeação de pasta com restauração do nome original).
+- **Modal de Perímetro Corporativo Customizado**:
+  - Substituição de caixas de diálogo nativas do Windows (`dialog.showMessageBoxSync`) por uma janela elegante dentro do aplicativo, seguindo as diretrizes visuais Fluent Design / Microsoft Teams da ENTROPY.
+  - Explicação clara dos limites de diretório autorizados pelo TI e orientações ao usuário.
+- **Auto-bloqueio das Configurações de TI na Troca de Módulos**:
+  - Ao sair da aba de Configurações ou navegar para qualquer outro módulo (Criação, Renomear, Transferência, Histórico ou Sobre), a sessão administrativa do TI é imediatamente bloqueada (`isTIAuthenticated = false`), garantindo máxima segurança contra acessos não autorizados.
+- **Personalização de Cores dos Ícones pelo Usuário**:
+  - Paleta com 7 opções de cores de destaque (Azul Corporativo, Índigo Profundo, Violeta, Esmeralda, Âmbar, Rosa/Magenta e Ciano) acessível diretamente para os usuários nas Configurações e salva no `localStorage`.
+- **Atalhos Rápidos Liberados para o Usuário com Validação de Perímetro**:
+  - Usuários comuns podem gerenciar seus atalhos rápidos favoritos de forma autônoma, contando com validação imediata em tempo de execução para garantir que qualquer atalho inserido esteja dentro da pasta permitida pelo TI da respectiva empresa.
+- **Armazenamento Duplo Preservado**:
+  - Logs mantidos simultaneamente na estação local (`history.json` e `app.log`) e no diretório GPO de rede.
+- **Novo Pacote Oficial MSI v2.9.7**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para `01 - Instalador/Internal/` e Área de Trabalho.
+
+---
+
 ## Versão 2.9.6 (23/09/2026) - **Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas de Rede e Armazenamento Duplo**
 - **Auditoria Corporativa Centralizada por Empresa em Pastas GPO (`logDirectory`)**:
   - Padrão RTO configurado em: `\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`.

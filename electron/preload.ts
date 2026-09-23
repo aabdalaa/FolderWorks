@@ -50,6 +50,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('history-updated', handler);
     return () => ipcRenderer.removeListener('history-updated', handler);
   },
+  openFolderInExplorer: (targetPath: string) => ipcRenderer.invoke('open-folder-in-explorer', targetPath),
+  onPerimeterBlocked: (callback: (data: { chosenPath: string; allowedBasePath: string; company?: string }) => void) => {
+    const handler = (_: any, data: any) => callback(data);
+    ipcRenderer.on('perimeter-blocked', handler);
+    return () => ipcRenderer.removeListener('perimeter-blocked', handler);
+  },
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),

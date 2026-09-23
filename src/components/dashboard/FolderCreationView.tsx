@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, FolderPlus, CheckCircle2, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 
+import { ToastData } from '../layout/ToastNotification';
+
 interface FolderCreationViewProps {
-  onCreateFolder: (company: string, folderName: string) => Promise<{ success: boolean; error?: string }>;
+  onCreateFolder: (company: string, folderName: string) => Promise<{ success: boolean; folderName?: string; finalPath?: string; durationSeconds?: number; error?: string }>;
+  onShowToast?: (data: ToastData) => void;
 }
 
-export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreateFolder }) => {
+export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreateFolder, onShowToast }) => {
   const [selectedCompany, setSelectedCompany] = useState<string>('RTO');
   const [companies, setCompanies] = useState<Record<string, any>>({});
   const [folderName, setFolderName] = useState('');
@@ -43,13 +46,14 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!folderName.trim() || isProcessing) return;
+    const currentName = folderName.trim();
+    if (!currentName || isProcessing) return;
 
     setIsProcessing(true);
     setLastResult(null);
 
     const compDisplay = companies[selectedCompany]?.companyName || selectedCompany;
-    const res = await onCreateFolder(selectedCompany, folderName);
+    const res = await onCreateFolder(selectedCompany, currentName);
     setIsProcessing(false);
 
     if (res.success) {
@@ -59,8 +63,27 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
 
-      setLastResult({ success: true, message: `Pasta '${folderName}' criada com sucesso na rede da ${compDisplay}!` });
+      setLastResult({ success: true, message: `Pasta '${currentName}' criada com sucesso na rede da ${compDisplay}!` });
       setFolderName('');
+
+      // Dispara o Toast animado de 10s no canto da tela
+      if (onShowToast) {
+        const destParent = companies[selectedCompany]?.destSharePath || companies[selectedCompany]?.destinationParentPath || '';
+        const fullCreatedPath = res.finalPath || (destParent ? `${destParent}\\${currentName}` : undefined);
+        onShowToast({
+          id: `toast_create_${Date.now()}`,
+          type: 'creation',
+          title: 'Pasta Criada com Sucesso!',
+          folderName: currentName,
+          folderPath: fullCreatedPath,
+          durationSeconds: res.durationSeconds || 1,
+          company: compDisplay,
+          undoOrRedoLabel: 'Recriar',
+          onUndoOrRedo: () => {
+            setFolderName(currentName);
+          },
+        });
+      }
     } else {
       setLastResult({ success: false, message: res.error || 'Falha ao criar pasta de rede.' });
     }

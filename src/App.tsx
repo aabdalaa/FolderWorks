@@ -11,6 +11,8 @@ import { UserGuideView } from './components/manual/UserGuideView';
 import { AboutView } from './components/about/AboutView';
 import { TIAccessModal } from './components/logs/TIAccessModal';
 import { ActivityLogModal } from './components/logs/ActivityLogModal';
+import { SecurityBoundaryModal } from './components/layout/SecurityBoundaryModal';
+import { ToastNotification, ToastData } from './components/layout/ToastNotification';
 import { Terminal, Shield } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
 
@@ -21,6 +23,8 @@ export const App: React.FC = () => {
   const [isTIAccessModalOpen, setIsTIAccessModalOpen] = useState(false);
   const [isActivityLogModalOpen, setIsActivityLogModalOpen] = useState(false);
   const [isTIAuthenticated, setIsTIAuthenticated] = useState(false);
+  const [perimeterBlockedData, setPerimeterBlockedData] = useState<{ chosenPath: string; allowedBasePath: string; company?: string } | null>(null);
+  const [toastData, setToastData] = useState<ToastData | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
   const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
@@ -28,6 +32,10 @@ export const App: React.FC = () => {
   const { theme, setTheme } = useTheme();
 
   const handleSelectTab = (tab: AppTab) => {
+    // Auto-bloqueio estrito de TI ao navegar para outro módulo
+    if (isTIAuthenticated) {
+      setIsTIAuthenticated(false);
+    }
     if (activeTab !== 'about') {
       setPreviousTab(activeTab);
     }
@@ -35,6 +43,9 @@ export const App: React.FC = () => {
   };
 
   const handleToggleAbout = () => {
+    if (isTIAuthenticated) {
+      setIsTIAuthenticated(false);
+    }
     if (activeTab === 'about') {
       setActiveTab(previousTab);
     } else {
@@ -74,9 +85,14 @@ export const App: React.FC = () => {
       testAllServers(cfg);
     });
 
+    const unsubPerimeter = window.electronAPI?.onPerimeterBlocked?.((data) => {
+      setPerimeterBlockedData(data);
+    });
+
     return () => {
       if (unsubLog) unsubLog();
       if (unsubConfig) unsubConfig();
+      if (unsubPerimeter) unsubPerimeter();
     };
   }, []);
 
@@ -192,11 +208,14 @@ export const App: React.FC = () => {
               />
             )}
             {activeTab === 'rename' && (
-              <FolderRenameView />
+              <FolderRenameView
+                onShowToast={(data) => setToastData(data)}
+              />
             )}
             {activeTab === 'dashboard' && (
               <FolderCreationView
                 onCreateFolder={handleCreateFolder}
+                onShowToast={(data) => setToastData(data)}
               />
             )}
             {activeTab === 'settings' && (
@@ -246,6 +265,21 @@ export const App: React.FC = () => {
         onClose={() => setIsActivityLogModalOpen(false)}
         onClearLogs={handleClearLogs}
         onLockSession={handleLockTISession}
+      />
+
+      {/* 6. Modal de Bloqueio de Perímetro de TI Estilizado (Fluent Design) */}
+      <SecurityBoundaryModal
+        isOpen={!!perimeterBlockedData}
+        onClose={() => setPerimeterBlockedData(null)}
+        chosenPath={perimeterBlockedData?.chosenPath || ''}
+        allowedBasePath={perimeterBlockedData?.allowedBasePath || ''}
+        company={perimeterBlockedData?.company}
+      />
+
+      {/* 7. Pop-up Toast Estilo Windows (10s Countdown com Ações) */}
+      <ToastNotification
+        toast={toastData}
+        onClose={() => setToastData(null)}
       />
     </div>
   );
