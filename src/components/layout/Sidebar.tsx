@@ -73,7 +73,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="space-y-1.5 text-[11px]">
           {serverStatuses && Object.keys(serverStatuses).length > 0 ? (
-            Object.entries(serverStatuses).map(([compName, status]) => (
+            Object.entries(serverStatuses)
+              .filter(([k]) => k !== 'sharedLogFilePath' && k !== 'isLockedByMSI' && k !== 'tiLogsPassword')
+              .map(([compName, status]) => (
               <div key={compName} className="flex items-center justify-between">
                 <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[160px]">{compName}</span>
                 <span

@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectLogFile: (mode?: 'open' | 'save') => ipcRenderer.invoke('select-log-file', mode),
   testLogFile: (filePath: string) => ipcRenderer.invoke('test-log-file', filePath),
   openSharedLogFile: (filePath?: string) => ipcRenderer.invoke('open-shared-log-file', filePath),
+  detectCompanyLogFiles: (companyKey: string) => ipcRenderer.invoke('detect-company-log-files', companyKey),
+  selectCompanyLogFile: (companyKey: string, filePath: string) => ipcRenderer.invoke('select-company-log-file', { companyKey, filePath }),
+  createCompanyLogFile: (companyKey: string, format?: string) => ipcRenderer.invoke('create-company-log-file', { companyKey, format }),
   onLog: (callback: (log: string) => void) => {
     const handler = (_: any, data: string) => callback(data);
     ipcRenderer.on('log-entry', handler);

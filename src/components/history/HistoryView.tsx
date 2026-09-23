@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { SharedAuditEvent } from '../../types/electron';
+import { TIAccessModal } from '../logs/TIAccessModal';
 
 export const HistoryView: React.FC = () => {
   const [history, setHistory] = useState<SharedAuditEvent[]>([]);
@@ -29,6 +30,7 @@ export const HistoryView: React.FC = () => {
   const [selectedOperator, setSelectedOperator] = useState<string>('ALL');
   const [currentOperator, setCurrentOperator] = useState<{ username: string; computerName: string } | null>(null);
   const [sharedLogFilePath, setSharedLogFilePath] = useState<string>('');
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   const fetchHistory = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
@@ -73,7 +75,12 @@ export const HistoryView: React.FC = () => {
     };
   }, [fetchHistory]);
 
-  const handleClear = async () => {
+  const handleRequestClear = () => {
+    setIsClearModalOpen(true);
+  };
+
+  const handleConfirmClear = async () => {
+    setIsClearModalOpen(false);
     if (window.electronAPI) {
       const updated = await window.electronAPI.clearHistory();
       setHistory(updated || []);
@@ -185,8 +192,8 @@ export const HistoryView: React.FC = () => {
                   Histórico de Operações & Auditoria em Rede
                 </h3>
                 <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <Network className="w-3 h-3 animate-pulse" />
-                  <span>Rede P2P UDP Ativa (Porta 48899)</span>
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  <span>Auditoria Centralizada</span>
                 </span>
                 {sharedLogFilePath && (
                   <span
@@ -199,7 +206,7 @@ export const HistoryView: React.FC = () => {
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Auditoria colaborativa descentralizada compartilhada silenciosamente entre todas as estações da equipe
+                Auditoria corporativa centralizada compartilhada entre as estações da equipe
               </p>
             </div>
           </div>
@@ -241,9 +248,9 @@ export const HistoryView: React.FC = () => {
             {/* Botão Limpar Visualização */}
             {history.length > 0 && (
               <button
-                onClick={handleClear}
+                onClick={handleRequestClear}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold transition-colors cursor-pointer"
-                title="Limpar registros locais"
+                title="Limpar registros locais (Requer senha de TI)"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Limpar Local</span>
@@ -445,6 +452,15 @@ export const HistoryView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Confirmação de TI para Limpeza de Histórico Local */}
+      <TIAccessModal
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onSuccess={handleConfirmClear}
+        title="Excluir Histórico Local"
+        description="Confirme a credencial de segurança do TI para limpar os registros armazenados nesta estação."
+      />
     </div>
   );
 };

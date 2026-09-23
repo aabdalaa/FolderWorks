@@ -42,6 +42,8 @@ async function buildMSI() {
       destSharePath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
       allowedBasePath: '\\\\192.168.50.102\\rto\\CLIENTES',
       defaultSourceFolder: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
+      logDirectory: '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\LOGS',
+      selectedLogFile: '',
       presetDestinations: [
         { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES' },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
@@ -58,6 +60,8 @@ async function buildMSI() {
       destSharePath: env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
       allowedBasePath: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES',
       defaultSourceFolder: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
+      logDirectory: '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\LOGS',
+      selectedLogFile: '',
       presetDestinations: [
         { name: '00 - EX CLIENTES', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\00 - EX CLIENTES' },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
@@ -66,24 +70,7 @@ async function buildMSI() {
       domainUser: env.RELIQUIA_AD_USER || 'RELIQUIA\\pasta.paralegal',
       adPass: env.RELIQUIA_AD_PASS || 'Mestre@300'
     },
-    RTO: {
-      name: env.RTO_NAME || 'RTO',
-      companyName: 'RTO',
-      sourcePath: env.RTO_SOURCE_PATH || '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\MODELO',
-      destinationParentPath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      destSharePath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      allowedBasePath: '\\\\192.168.50.102\\rto\\CLIENTES',
-      defaultSourceFolder: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES' },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
-      ],
-      adServerIp: env.RTO_AD_IP || '192.168.50.102',
-      domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
-      adPass: env.RTO_AD_PASS || 'Mestre@300'
-    },
-    tiLogsPassword: env.TI_LOGS_PASSWORD || 'mestre@300',
-    sharedLogFilePath: env.SHARED_LOG_FILE_PATH || ''
+    tiLogsPassword: env.TI_LOGS_PASSWORD || 'mestre@300'
   };
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
@@ -147,7 +134,7 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.9.5',
+    version: '2.9.6',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {
@@ -157,7 +144,7 @@ async function buildMSI() {
 
   await msiCreator.create();
 
-  // Injetar encerramento forçado e automático de instâncias em execução e liberação de porta no Firewall
+  // Injetar encerramento forçado e automático de instâncias em execução
   const wxsFilePath = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.wxs');
   if (fs.existsSync(wxsFilePath)) {
     let wxsContent = fs.readFileSync(wxsFilePath, 'utf-8');
@@ -165,10 +152,6 @@ async function buildMSI() {
     <!-- Encerramento Automático de Instâncias Anteriores do FolderWorks (Evita Files in Use) -->
     <CustomAction Id="SetKillAppCmd" Property="QtExecCmdLine" Value="&quot;[SystemFolder]taskkill.exe&quot; /F /IM FolderWorks.exe /T" Execute="immediate" />
     <CustomAction Id="KillRunningApp" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="immediate" Return="ignore" />
-
-    <!-- Liberação Automática no Windows Defender Firewall (UDP 48899 P2P de Logs e Auditoria) -->
-    <CustomAction Id="AddFwInboundUdp" Directory="TARGETDIR" ExeCommand="&quot;[SystemFolder]netsh.exe&quot; advfirewall firewall add rule name=&quot;FolderWorks UDP P2P (Port 48899)&quot; dir=in action=allow protocol=UDP localport=48899 profile=any enable=yes" Execute="deferred" Return="ignore" Impersonate="no" />
-    <CustomAction Id="AddFwOutboundUdp" Directory="TARGETDIR" ExeCommand="&quot;[SystemFolder]netsh.exe&quot; advfirewall firewall add rule name=&quot;FolderWorks UDP Outbound&quot; dir=out action=allow protocol=UDP localport=48899 profile=any enable=yes" Execute="deferred" Return="ignore" Impersonate="no" />
     
     <util:CloseApplication Id="CloseFolderWorks" Target="FolderWorks.exe" CloseMessage="no" Description="Fechando FolderWorks em execução..." TerminateProcess="1" Timeout="3" RebootPrompt="no" />
 
@@ -179,21 +162,25 @@ async function buildMSI() {
     <InstallExecuteSequence>
       <Custom Action="SetKillAppCmd" Before="KillRunningApp">1</Custom>
       <Custom Action="KillRunningApp" Before="InstallValidate">1</Custom>
-      <Custom Action="AddFwInboundUdp" After="InstallFiles">NOT Installed OR REINSTALL</Custom>
-      <Custom Action="AddFwOutboundUdp" After="AddFwInboundUdp">NOT Installed OR REINSTALL</Custom>
     </InstallExecuteSequence>
 `;
     wxsContent = wxsContent.replace('</Product>', killAppSnippet + '\n</Product>');
     fs.writeFileSync(wxsFilePath, wxsContent, 'utf-8');
-    console.log('✓ Injetado encerramento forçado de instâncias ativas e liberação de regras de firewall no FolderWorks.wxs');
+    console.log('✓ Injetado encerramento forçado de instâncias ativas no FolderWorks.wxs');
   }
 
   await msiCreator.compile();
 
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');
   const desktopMsi = path.join(desktopPath, 'FolderWorks.msi');
+  const installerDir = path.join(projectRoot, '..', '01 - Instalador', 'Internal');
+  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v2.9.6-win-x64.msi');
+  const internalLatestMsi = path.join(installerDir, 'FolderWorks.msi');
 
   if (fs.existsSync(sourceMsi)) {
+    if (!fs.existsSync(installerDir)) fs.mkdirSync(installerDir, { recursive: true });
+    try { fs.copyFileSync(sourceMsi, internalVersionMsi); } catch (e) {}
+    try { fs.copyFileSync(sourceMsi, internalLatestMsi); } catch (e) {}
     try {
       if (fs.existsSync(desktopMsi)) {
         try { fs.unlinkSync(desktopMsi); } catch (eUnlink) {}
@@ -208,6 +195,7 @@ async function buildMSI() {
   console.log('=========================================================');
   console.log(' SUCESSO! PACOTE FOLDERWORKS .MSI PRÉ-CONFIGURADO GERADO EM:');
   console.log(` -> ${sourceMsi}`);
+  console.log(` -> ${internalVersionMsi}`);
   console.log(` -> ${desktopMsi} (Área de Trabalho)`);
   console.log('=========================================================');
 }

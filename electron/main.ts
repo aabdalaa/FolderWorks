@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import dgram from 'dgram';
 import { exec, execFile, execSync } from 'child_process';
 
 let mainWindow: BrowserWindow | null = null;
@@ -24,6 +23,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     destSharePath: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
     allowedBasePath: String.raw`\\192.168.50.102\rto\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
+    logDirectory: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`,
+    selectedLogFile: '',
     presetDestinations: [
       { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES` },
       { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS` }
@@ -38,6 +39,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     destSharePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
     allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
+    logDirectory: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`,
+    selectedLogFile: '',
     presetDestinations: [
       { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES` },
       { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS` }
@@ -89,6 +92,8 @@ function sanitizeConfig(cfg: any): any {
         destinationParentPath: dest,
         allowedBasePath: raw.allowedBasePath || def.allowedBasePath || dest,
         defaultSourceFolder: raw.defaultSourceFolder || def.defaultSourceFolder || dest,
+        logDirectory: raw.logDirectory || def.logDirectory || (comp === 'RTO' ? String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS` : comp === 'RELIQUIA' ? String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS` : ''),
+        selectedLogFile: raw.selectedLogFile || def.selectedLogFile || '',
         presetDestinations: Array.isArray(raw.presetDestinations)
           ? raw.presetDestinations
           : (def.presetDestinations || []),
@@ -256,168 +261,145 @@ export interface SharedAuditEvent {
 const memoryAuditCache = new Map<string, SharedAuditEvent>();
 
 // -------------------------------------------------------------
-// Motor P2P UDP Broadcast (Porta 48899)
+// Motor de Resolução e Detecção de Arquivos de Log por Empresa (GPO / Rede)
 // -------------------------------------------------------------
-const UDP_P2P_PORT = 48899;
-let udpSocket: dgram.Socket | null = null;
+const VALID_LOG_EXTENSIONS = ['.json', '.ndjson', '.txt', '.md', '.yaml', '.yml'];
 
-function ensureWindowsFirewallRule() {
-  if (process.platform !== 'win32') return;
-  try {
-    const { exec } = require('child_process');
-    exec('netsh advfirewall firewall show rule name="FolderWorks UDP P2P (Port 48899)"', (err: any) => {
-      if (err) {
-        exec('netsh advfirewall firewall add rule name="FolderWorks UDP P2P (Port 48899)" dir=in action=allow protocol=UDP localport=48899 profile=any enable=yes', (addErr: any) => {
-          if (!addErr) {
-            appendLog('[FIREWALL] Regra de entrada UDP 48899 registrada com sucesso no Windows Firewall.');
-          }
-        });
-        exec('netsh advfirewall firewall add rule name="FolderWorks UDP Outbound" dir=out action=allow protocol=UDP localport=48899 profile=any enable=yes');
-      }
-    });
-  } catch {}
+interface DetectedLogFileInfo {
+  name: string;
+  fullPath: string;
+  size: number;
+  mtime: string;
+  mtimeMs: number;
+  format: string;
 }
 
-function getBroadcastAddresses(): string[] {
-  const broadcasts = ['255.255.255.255'];
+function getCompanyLogDirectory(companyKey?: string): string {
+  const comp = companyKey || 'RTO';
+  const compCfg = getCompanyConfig(comp);
+  if (compCfg && compCfg.logDirectory && String(compCfg.logDirectory).trim()) {
+    return String(compCfg.logDirectory).trim();
+  }
+  const normKey = String(comp).toUpperCase();
+  if (normKey === 'RTO') {
+    return String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`;
+  }
+  if (normKey === 'RELIQUIA') {
+    return String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`;
+  }
+  return '';
+}
+
+function scanLogDirectory(dirPath: string): DetectedLogFileInfo[] {
+  if (!dirPath || !fs.existsSync(dirPath)) return [];
   try {
-    const ifaces = os.networkInterfaces();
-    for (const name of Object.keys(ifaces)) {
-      for (const iface of ifaces[name] || []) {
-        if (iface.family === 'IPv4' && !iface.internal && iface.netmask) {
-          const ipParts = iface.address.split('.').map(Number);
-          const maskParts = iface.netmask.split('.').map(Number);
-          const bcast = ipParts.map((part, i) => (part | (~maskParts[i] & 255))).join('.');
-          broadcasts.push(bcast);
+    const files = fs.readdirSync(dirPath);
+    const candidates: DetectedLogFileInfo[] = [];
+    for (const f of files) {
+      const full = path.join(dirPath, f);
+      try {
+        const stat = fs.statSync(full);
+        if (stat.isFile()) {
+          const ext = path.extname(f).toLowerCase();
+          if (VALID_LOG_EXTENSIONS.includes(ext)) {
+            candidates.push({
+              name: f,
+              fullPath: full,
+              size: stat.size,
+              mtime: stat.mtime.toLocaleString('pt-BR'),
+              mtimeMs: stat.mtimeMs,
+              format: ext.replace('.', '').toUpperCase(),
+            });
+          }
         }
-      }
+      } catch {}
     }
-  } catch {}
-  // Sub-redes físicas dos escritórios e servidores
-  broadcasts.push('192.168.80.255'); // Sub-rede local das estações de trabalho
-  broadcasts.push('192.168.50.255'); // Sub-rede RTO
-  broadcasts.push('192.168.1.255');  // Sub-rede RELIQUIA
-  broadcasts.push('192.168.0.255');
-  broadcasts.push('10.0.0.255');
-  return Array.from(new Set(broadcasts));
-}
-
-function requestHistorySyncFromPeers() {
-  if (!udpSocket) return;
-  try {
-    const myOp = getLocalOperatorInfo();
-    const payload = Buffer.from(JSON.stringify({
-      type: 'FOLDERWORKS_SYNC_REQUEST',
-      version: '2.9.4',
-      requester: myOp,
-    }), 'utf-8');
-
-    const targets = getBroadcastAddresses();
-    targets.forEach((addr) => {
-      try {
-        udpSocket?.send(payload, 0, payload.length, UDP_P2P_PORT, addr, () => {});
-      } catch {}
-    });
-  } catch {}
-}
-
-function initUdpP2P() {
-  try {
-    ensureWindowsFirewallRule();
-    udpSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-
-    udpSocket.on('error', (err) => {
-      appendLog(`[P2P REDE AVISO] Erro no socket UDP: ${err.message}`);
-    });
-
-    udpSocket.on('message', (msg, rinfo) => {
-      try {
-        const payload = JSON.parse(msg.toString('utf-8'));
-        if (!payload) return;
-
-        // 1. Evento de Auditoria de Operação Realizada
-        if (payload.type === 'FOLDERWORKS_AUDIT_EVENT' && payload.id && payload.record) {
-          const op = payload.record.operator;
-          const myOp = getLocalOperatorInfo();
-          // Ignorar se foi enviado pela própria máquina (já inserido localmente)
-          if (op && op.computerName === myOp.computerName && op.username === myOp.username) {
-            return;
-          }
-          if (!memoryAuditCache.has(payload.id)) {
-            memoryAuditCache.set(payload.id, payload.record);
-            appendLog(`[P2P REDE RECEBIDO] Ação de ${op?.username || 'Operador'} (${op?.computerName || rinfo.address}): ${payload.record.actionLabel || payload.record.action} - '${payload.record.folderName}'`);
-            if (mainWindow) {
-              mainWindow.webContents.send('history-updated', payload.record);
-            }
-          }
-        }
-        // 2. Pedido de sincronização de histórico recebido de outra máquina recém-aberta
-        else if (payload.type === 'FOLDERWORKS_SYNC_REQUEST') {
-          const myOp = getLocalOperatorInfo();
-          if (payload.requester && payload.requester.computerName === myOp.computerName && payload.requester.username === myOp.username) {
-            return;
-          }
-          const allEvts = Array.from(memoryAuditCache.values()).slice(0, 50);
-          if (allEvts.length > 0 && udpSocket) {
-            const respPayload = Buffer.from(JSON.stringify({
-              type: 'FOLDERWORKS_SYNC_RESPONSE',
-              version: '2.9.5',
-              events: allEvts,
-              responder: myOp,
-            }), 'utf-8');
-            try {
-              udpSocket.send(respPayload, 0, respPayload.length, UDP_P2P_PORT, rinfo.address, () => {});
-            } catch {}
-          }
-        }
-        // 3. Resposta com histórico recebida de outro nó da rede
-        else if (payload.type === 'FOLDERWORKS_SYNC_RESPONSE' && Array.isArray(payload.events)) {
-          let newItemsCount = 0;
-          for (const ev of payload.events) {
-            if (ev && ev.id && !memoryAuditCache.has(ev.id)) {
-              memoryAuditCache.set(ev.id, ev);
-              newItemsCount++;
-            }
-          }
-          if (newItemsCount > 0) {
-            appendLog(`[P2P REDE SINCRONIZADO] Recebidos ${newItemsCount} eventos históricos de ${payload.responder?.username || rinfo.address}.`);
-            if (mainWindow) {
-              mainWindow.webContents.send('history-updated', null);
-            }
-          }
-        }
-      } catch {}
-    });
-
-    udpSocket.bind(UDP_P2P_PORT, '0.0.0.0', () => {
-      try {
-        udpSocket?.setBroadcast(true);
-        appendLog(`[P2P REDE INICIALIZADO] Escutando eventos descentralizados via UDP Broadcast na porta ${UDP_P2P_PORT} (0.0.0.0)`);
-        requestHistorySyncFromPeers();
-      } catch {}
-    });
+    // Ordenar do mais recentemente modificado para o mais antigo
+    candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    return candidates;
   } catch (err: any) {
-    appendLog(`[P2P REDE FALHA] Falha ao vincular socket UDP: ${err.message}`);
+    appendLog(`[SCAN LOG DIR] Erro ao listar diretório '${dirPath}': ${err.message}`);
+    return [];
   }
 }
 
-function broadcastUdpEvent(record: SharedAuditEvent) {
-  if (!udpSocket) return;
+function updateCompanySelectedLogFile(companyKey: string, filePath: string) {
   try {
-    const payload = Buffer.from(JSON.stringify({
-      type: 'FOLDERWORKS_AUDIT_EVENT',
-      version: '2.9.5',
-      id: record.id,
-      record,
-    }), 'utf-8');
-
-    const targets = getBroadcastAddresses();
-    targets.forEach((addr) => {
-      try {
-        udpSocket?.send(payload, 0, payload.length, UDP_P2P_PORT, addr, () => {});
-      } catch {}
-    });
+    const all = loadConfig();
+    if (all && all[companyKey]) {
+      all[companyKey].selectedLogFile = filePath;
+      fs.writeFileSync(configPath, JSON.stringify(all, null, 2), 'utf-8');
+    }
   } catch {}
+}
+
+function resolveCompanyLogFile(companyKey?: string): string | null {
+  const comp = companyKey || 'RTO';
+  const compCfg = getCompanyConfig(comp);
+
+  // 1. Se TI já selecionou expressamente um arquivo válido existente
+  if (compCfg && compCfg.selectedLogFile && fs.existsSync(compCfg.selectedLogFile)) {
+    return compCfg.selectedLogFile;
+  }
+
+  // 2. Diretório padrão ou configurado para a empresa
+  const logDir = getCompanyLogDirectory(comp);
+  if (!logDir) {
+    const cfg = loadConfig();
+    if (cfg?.sharedLogFilePath && fs.existsSync(cfg.sharedLogFilePath)) {
+      return cfg.sharedLogFilePath;
+    }
+    return null;
+  }
+
+  // Garantir existência da pasta de logs
+  if (!fs.existsSync(logDir)) {
+    try {
+      fs.mkdirSync(logDir, { recursive: true });
+      appendLog(`[PASTA LOGS] Diretório de logs criado com sucesso: '${logDir}'.`);
+    } catch (err: any) {
+      appendLog(`[AVISO PASTA LOGS] Falha ao criar diretório '${logDir}': ${err.message}`);
+    }
+  }
+
+  // 3. Escanear arquivos existentes
+  const candidates = scanLogDirectory(logDir);
+
+  // Caso 0: Nenhum arquivo de log existe na pasta
+  if (candidates.length === 0) {
+    // Cria automaticamente o melhor formato: folderworks_audit.json (NDJSON)
+    const newBestFile = path.join(logDir, 'folderworks_audit.json');
+    try {
+      if (!fs.existsSync(newBestFile)) {
+        fs.writeFileSync(newBestFile, '', 'utf-8');
+        appendLog(`[LOGS AUTO-CRIADO] Nenhum log existente na pasta. Criado formato ideal: '${newBestFile}'.`);
+      }
+      updateCompanySelectedLogFile(comp, newBestFile);
+      return newBestFile;
+    } catch (err: any) {
+      appendLog(`[ERRO AUTO-CRIADO] Falha ao criar '${newBestFile}': ${err.message}`);
+      return null;
+    }
+  }
+
+  // Caso 1: Exatamente 1 arquivo de log existente -> usa diretamente, NÃO recria
+  if (candidates.length === 1) {
+    const singleFile = candidates[0].fullPath;
+    updateCompanySelectedLogFile(comp, singleFile);
+    return singleFile;
+  }
+
+  // Caso > 1: Múltiplos arquivos detectados
+  // Se o selecionado anteriormente é um dos candidatos, usa ele
+  if (compCfg?.selectedLogFile) {
+    const found = candidates.find((c) => c.fullPath.toLowerCase() === String(compCfg.selectedLogFile).toLowerCase());
+    if (found) return found.fullPath;
+  }
+
+  // Fallback seguro: usa o candidato mais recentemente modificado (primeiro da lista)
+  const defaultCandidate = candidates[0].fullPath;
+  updateCompanySelectedLogFile(comp, defaultCandidate);
+  return defaultCandidate;
 }
 
 function loadLocalHistoryIntoMemory() {
@@ -466,7 +448,7 @@ function formatSharedLogEntry(record: SharedAuditEvent, ext: string, isNewFile: 
     if (record.sourcePath) lines.push(`  sourcePath: "${record.sourcePath.replace(/\\/g, '\\\\')}"`);
     if (targetStr) lines.push(`  targetPath: "${targetStr.replace(/\\/g, '\\\\')}"`);
     if (record.details) lines.push(`  details: "${record.details.replace(/"/g, '\\"')}"`);
-    lines.push(`  appVersion: "${record.appVersion || '2.9.5'}"`);
+    lines.push(`  appVersion: "${record.appVersion || '2.9.6'}"`);
     return lines.join('\n') + '\n';
   }
 
@@ -493,10 +475,19 @@ function formatSharedLogEntry(record: SharedAuditEvent, ext: string, isNewFile: 
   return line;
 }
 
-function appendSharedLogEntry(record: SharedAuditEvent) {
+function appendSharedLogEntry(record: SharedAuditEvent, targetPath?: string) {
   try {
-    const cfg = loadConfig();
-    const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
+    let sharedPath = targetPath;
+    if (!sharedPath) {
+      sharedPath = resolveCompanyLogFile(record.company) || undefined;
+    }
+    // Fallback legado se configurado globalmente
+    if (!sharedPath) {
+      const cfg = loadConfig();
+      if (cfg?.sharedLogFilePath) {
+        sharedPath = String(cfg.sharedLogFilePath).trim();
+      }
+    }
     if (!sharedPath) return;
 
     const ext = path.extname(sharedPath).toLowerCase() || '.txt';
@@ -582,7 +573,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
               status: statusMatch ? statusMatch[1] : 'SUCCESS',
               durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
               details: detMatch ? detMatch[1] : undefined,
-              appVersion: '2.9.5',
+              appVersion: '2.9.6',
             });
           }
         } catch {}
@@ -621,7 +612,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             executedBy: opRaw,
             status: status.includes('SUCESSO') || status.includes('SUCCESS') ? 'SUCCESS' : status,
             durationSeconds: durRaw,
-            appVersion: '2.9.5',
+            appVersion: '2.9.6',
           });
         }
       }
@@ -667,7 +658,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             status: statusMatch ? statusMatch[1] : 'SUCCESS',
             durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
             details: detMatch ? detMatch[1] : undefined,
-            appVersion: '2.9.5',
+            appVersion: '2.9.6',
           });
         }
       }
@@ -734,7 +725,7 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.5',
+    appVersion: '2.9.6',
   };
 
   // 1. Guardar no cache de memória local
@@ -755,13 +746,10 @@ function saveHistoryEntry(input: any) {
     appendLog(`[AUDITORIA LOCAL ERRO] ${e.message}`);
   }
 
-  // 3. Gravação em tempo real no arquivo compartilhado na rede (.txt, .md, .json, .yaml)
+  // 3. Gravação em tempo real no arquivo compartilhado na rede corporativa (.json, .txt, .md, .yaml)
   appendSharedLogEntry(record);
 
-  // 4. Transmissão em tempo real pura via UDP Broadcast
-  broadcastUdpEvent(record);
-
-  // 5. Notificar a interface do operador local
+  // 4. Notificar a interface do operador local
   if (mainWindow) {
     mainWindow.webContents.send('history-updated', record);
   }
@@ -864,7 +852,6 @@ if (!gotTheLock) {
     createWindow();
     try {
       loadLocalHistoryIntoMemory();
-      initUdpP2P();
     } catch {}
   });
 }
@@ -1046,8 +1033,27 @@ ipcMain.handle('open-external', async (_, url: string) => {
 
 ipcMain.handle('get-history', () => {
   const cfg = loadConfig();
-  const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
+  const companyKeys = Object.keys(cfg).filter(
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && cfg[k] && typeof cfg[k] === 'object'
+  );
 
+  // Lê os registros de log de rede de cada empresa (RTO, RELIQUIA, etc.)
+  for (const compKey of companyKeys) {
+    try {
+      const logFile = resolveCompanyLogFile(compKey);
+      if (logFile && fs.existsSync(logFile)) {
+        const fileEvents = readSharedLogEntries(logFile);
+        for (const ev of fileEvents) {
+          if (ev && ev.id && !memoryAuditCache.has(ev.id)) {
+            memoryAuditCache.set(ev.id, ev);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Fallback se houver caminho global configurado
+  const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
   if (sharedPath && fs.existsSync(sharedPath)) {
     try {
       const fileEvents = readSharedLogEntries(sharedPath);
@@ -1059,11 +1065,10 @@ ipcMain.handle('get-history', () => {
     } catch (err: any) {
       appendLog(`[ERRO SINCRONIZAR HISTÓRICO COMPARTILHADO] ${err.message}`);
     }
-  } else {
-    try {
-      requestHistorySyncFromPeers();
-    } catch {}
   }
+
+  // Certificar-se de carregar também o histórico local
+  loadLocalHistoryIntoMemory();
 
   const all = Array.from(memoryAuditCache.values());
   // Ordenar decrescente por data/hora
@@ -1087,12 +1092,21 @@ ipcMain.handle('clear-history', () => {
 
 ipcMain.handle('get-network-logs', () => {
   const cfg = loadConfig();
-  const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
-  if (sharedPath && fs.existsSync(sharedPath)) {
+  const companyKeys = Object.keys(cfg).filter(
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && cfg[k] && typeof cfg[k] === 'object'
+  );
+
+  for (const compKey of companyKeys) {
     try {
-      const raw = fs.readFileSync(sharedPath, 'utf-8');
-      const lines = raw.split('\n').filter(Boolean);
-      return lines.slice(-300);
+      const logFile = resolveCompanyLogFile(compKey);
+      if (logFile && fs.existsSync(logFile)) {
+        const fileEvents = readSharedLogEntries(logFile);
+        for (const ev of fileEvents) {
+          if (ev && ev.id && !memoryAuditCache.has(ev.id)) {
+            memoryAuditCache.set(ev.id, ev);
+          }
+        }
+      }
     } catch {}
   }
 
@@ -1110,6 +1124,99 @@ ipcMain.handle('get-network-logs', () => {
     return `[${evt.timestamp}] [${host}\\${op}] ${action}: "${folder}" (${evt.company}) - Status: ${evt.status}`;
   });
   return lines.slice(-200);
+});
+
+// Detecção, listagem e seleção de arquivos de log por empresa
+ipcMain.handle('detect-company-log-files', async (_, companyKey: string) => {
+  const comp = companyKey || 'RTO';
+  const compCfg = getCompanyConfig(comp);
+  const logDir = getCompanyLogDirectory(comp);
+
+  if (!logDir) {
+    return {
+      logDirectory: '',
+      files: [],
+      selectedFile: '',
+      status: 'DIR_NOT_FOUND',
+      message: 'Nenhum diretório de log configurado para esta empresa.',
+    };
+  }
+
+  if (!fs.existsSync(logDir)) {
+    try {
+      fs.mkdirSync(logDir, { recursive: true });
+    } catch (err: any) {
+      return {
+        logDirectory: logDir,
+        files: [],
+        selectedFile: '',
+        status: 'DIR_NOT_FOUND',
+        message: `Diretório '${logDir}' inacessível ou sem permissão na rede: ${err.message}`,
+      };
+    }
+  }
+
+  const files = scanLogDirectory(logDir);
+  const currentSelected = compCfg?.selectedLogFile || '';
+
+  let status: 'EMPTY' | 'SINGLE' | 'MULTIPLE' = 'EMPTY';
+  let activeFile = currentSelected;
+
+  if (files.length === 0) {
+    status = 'EMPTY';
+    activeFile = '';
+  } else if (files.length === 1) {
+    status = 'SINGLE';
+    activeFile = files[0].fullPath;
+    if (activeFile !== currentSelected) {
+      updateCompanySelectedLogFile(comp, activeFile);
+    }
+  } else {
+    status = 'MULTIPLE';
+    if (!currentSelected || !files.some((f) => f.fullPath.toLowerCase() === currentSelected.toLowerCase())) {
+      activeFile = files[0].fullPath;
+      updateCompanySelectedLogFile(comp, activeFile);
+    }
+  }
+
+  return {
+    logDirectory: logDir,
+    files,
+    selectedFile: activeFile,
+    status,
+    message: files.length === 0
+      ? 'Nenhum arquivo de log na pasta. O sistema criará automaticamente ao validar.'
+      : `${files.length} arquivo(s) de log detectado(s).`,
+  };
+});
+
+ipcMain.handle('select-company-log-file', async (_, { companyKey, filePath }: { companyKey: string; filePath: string }) => {
+  updateCompanySelectedLogFile(companyKey, filePath);
+  appendLog(`[LOGS TI] Arquivo de log selecionado para ${companyKey}: '${filePath}'`);
+  return { success: true, selectedFile: filePath };
+});
+
+ipcMain.handle('create-company-log-file', async (_, { companyKey, format }: { companyKey: string; format?: string }) => {
+  const comp = companyKey || 'RTO';
+  const logDir = getCompanyLogDirectory(comp);
+  if (!logDir) throw new Error('Diretório de logs não configurado.');
+
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+
+  const fmt = (format || 'json').toLowerCase();
+  const ext = fmt.startsWith('.') ? fmt : `.${fmt}`;
+  const fileName = `folderworks_audit${ext}`;
+  const fullPath = path.join(logDir, fileName);
+
+  if (!fs.existsSync(fullPath)) {
+    fs.writeFileSync(fullPath, '', 'utf-8');
+    appendLog(`[LOGS TI] Novo arquivo de log criado para ${comp}: '${fullPath}'.`);
+  }
+
+  updateCompanySelectedLogFile(comp, fullPath);
+  return { success: true, createdFile: fullPath };
 });
 
 ipcMain.handle('get-operator-info', () => {

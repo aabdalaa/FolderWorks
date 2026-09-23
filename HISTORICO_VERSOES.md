@@ -1,5 +1,31 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.6 (23/09/2026) - **Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas de Rede e Armazenamento Duplo**
+- **Auditoria Corporativa Centralizada por Empresa em Pastas GPO (`logDirectory`)**:
+  - Padrão RTO configurado em: `\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`.
+  - Padrão RELIQUIA configurado em: `\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`.
+  - Cada filial corporativa possui sua própria trilha de auditoria isolada e centralizada nas pastas GPO oficiais de infraestrutura.
+- **Detecção Inteligente de Formato de Log, Autocriação e Preservação Absoluta**:
+  - **Pasta Vazia**: Se nenhum arquivo for detectado na pasta GPO, o sistema autocria o arquivo ideal de auditoria no formato NDJSON (`folderworks_audit.json`), garantindo alta escalabilidade e concorrência SMB multiusuário sem corrupção.
+  - **Arquivo Único Existente**: Se o log já existir na pasta (em formato `.json`, `.txt`, `.md` ou `.yaml`), o sistema preserva 100% o arquivo original e o utiliza diretamente, sem jamais recriar ou sobrescrever os dados históricos.
+  - **Múltiplos Arquivos de Log**: Se forem identificados 2 ou mais arquivos candidatos a log no diretório, o sistema lista os arquivos detalhando formato, tamanho e data para que o administrador TI selecione visualmente qual arquivo ativo deve ser adotado pelo aplicativo.
+- **Erradicação Total da Porta 48899 e Zero Portas de Rede Abertas**:
+  - Remoção 100% de qualquer código UDP, sockets de escuta (`dgram`), broadcast de pacotes e badges de rede da porta 48899 em todo o front-end e back-end.
+  - Excluídas as CustomActions do instalador WiX (`AddFwInboundUdp` e `AddFwOutboundUdp`) e comandos de liberação de firewall via `netsh`.
+  - O aplicativo não abre nenhuma porta local na máquina do usuário, eliminando qualquer risco ou apontamento de segurança de rede. A auditoria opera exclusivamente por leitura/escrita SMB nas pastas já autorizadas do domínio.
+- **Ocultação de Parâmetros de Log para Usuários Não-Administradores**:
+  - O diretório de auditoria corporativa e arquivos selecionados ficam integrados à aba protegida de cada empresa nas Configurações, sob máscara visual de privacidade (blur) e bloqueio contra edição. Apenas administradores TI munidos de credencial têm acesso aos caminhos de log e controles de formatação.
+- **Proteção da Exclusão de Histórico Local com Modal e Botão de Saída 'X'**:
+  - O botão de limpeza do histórico local foi protegido contra cliques acidentais: agora invoca modal estrito com exigência da senha do TI, provido de botão 'X' de saída imediata e cancelamento seguro sem tocar nos dados.
+- **Armazenamento Duplo Ativo e Concomitante**:
+  - O sistema mantém simultaneamente a gravação do histórico local na estação de trabalho (`history.json` e `app.log`) e o envio centralizado para o arquivo de log compartilhado na rede corporativa.
+- **Sanitização de Status da Barra Lateral**:
+  - Removido `sharedLogFilePath` da lista de monitoramento de status das empresas na barra lateral (`Sidebar.tsx`), mantendo o indicador de status verde/vermelho estritamente para conexões válidas (`RTO` e `RELIQUIA`).
+- **Novo Pacote Oficial MSI v2.9.6**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para `01 - Instalador/Internal/` e Área de Trabalho.
+
+---
+
 ## Versão 2.9.5 (23/09/2026) - **Trilha de Auditoria e Logs em Arquivo Compartilhado Configurável (.TXT, .MD, .JSON, .YAML)**
 - **Arquivo de Log e Auditoria Compartilhado Configurável na Rede (`sharedLogFilePath`)**:
   - Nova configuração corporativa global acessível via painel de Configurações de TI, permitindo que a empresa defina livremente o local de armazenamento dos logs (ex.: `\\192.168.50.102\rto\LOGS\folderworks_audit.json`).

@@ -30,7 +30,7 @@ export interface ElectronAPI {
   createFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; error?: string }>;
   getRecentLogs: () => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
-  openLogFile: () => Promise<boolean>;
+  openLogFile: (filePath?: string) => Promise<boolean>;
   verifyTIPassword: (password: string) => Promise<boolean>;
   getHistory: () => Promise<SharedAuditEvent[]>;
   clearHistory: () => Promise<SharedAuditEvent[]>;
@@ -60,6 +60,15 @@ export interface ElectronAPI {
   selectLogFile: (mode?: 'open' | 'save') => Promise<string | null>;
   testLogFile: (filePath: string) => Promise<{ success: boolean; message: string }>;
   openSharedLogFile: (filePath?: string) => Promise<boolean>;
+  detectCompanyLogFiles: (companyKey: string) => Promise<{
+    logDirectory: string;
+    files: Array<{ name: string; fullPath: string; size: number; mtime: string; format: string }>;
+    selectedFile: string;
+    status: 'EMPTY' | 'SINGLE' | 'MULTIPLE' | 'DIR_NOT_FOUND';
+    message: string;
+  }>;
+  selectCompanyLogFile: (companyKey: string, filePath: string) => Promise<{ success: boolean; selectedFile: string }>;
+  createCompanyLogFile: (companyKey: string, format?: string) => Promise<{ success: boolean; createdFile: string }>;
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;
   onFoldersUpdated: (callback: (data: any) => void) => () => void;

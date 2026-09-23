@@ -245,8 +245,9 @@ export const UserGuideView: React.FC = () => {
             <ul className="list-disc list-inside space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400 pl-1 leading-relaxed">
               <li><strong>Telemetria em Tempo Real</strong>: Acompanhe as etapas de varredura, chamadas de sistema e taxa de transferência de arquivos.</li>
               <li><strong>Categorização por Cores</strong>: Mensagens de sucesso são destacadas em verde, avisos em amarelo e eventuais falhas em vermelho.</li>
-              <li><strong>Limpeza de Histórico</strong>: Botão para resetar o buffer de exibição da sessão de trabalho.</li>
-              <li><strong>Exportação em Arquivo (.txt)</strong>: Opção para abrir o relatório de eventos no editor padrão do Windows para anexar em chamados ou auditorias técnicas.</li>
+              <li><strong>Limpeza de Histórico Protegida</strong>: Confirmação protegida pela senha do TI para evitar exclusões acidentais da trilha local.</li>
+              <li><strong>Armazenamento Duplo e Centralização GPO</strong>: Gravação simultânea na estação local e no arquivo compartilhado corporativo nas pastas GPO (RTO e RELIQUIA), operando 100% via SMB sem necessidade de portas de rede abertas.</li>
+              <li><strong>Exportação em Arquivo</strong>: Opção para abrir o relatório de eventos e auditoria no editor padrão do Windows para anexar em chamados ou auditorias técnicas.</li>
               <li><strong>Bloqueio Imediato</strong>: Botão para fechar e travar a sessão de TI logo após a inspeção.</li>
             </ul>
           </div>
@@ -311,13 +312,83 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.8.7 */}
+            {/* v2.9.6 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.8.7</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.6</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas e Armazenamento Duplo</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Centralização de logs em pastas compartilhadas GPO da RTO (\\192.168.50.102\gpo\criarpastas_paralegal\LOGS) e RELIQUIA (\\192.168.1.242\gpo\criarpastas_paralegal\LOGS). Detecção inteligente com criação automática de arquivo no formato ideal (.JSON NDJSON) se vazio, preservação absoluta de arquivos de log existentes sem recriação e seletor para o TI em caso de múltiplos arquivos. Erradicação de 100% dos sockets e regras da porta 48899. Configurações de log ocultas para não-administradores, exclusão de histórico local protegida por senha com saída 'X' e manutenção do armazenamento duplo (local + rede).
+              </p>
+            </div>
+
+            {/* v2.9.5 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.5</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Trilha de Auditoria em Arquivo Compartilhado Configurável (.TXT, .MD, .JSON, .YAML)</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Suporte a armazenamento em arquivo compartilhado em 4 formatos estruturados com gravação atômica concorrente multiusuário via SMB, teste de acesso imediato e abertura com um clique.
+              </p>
+            </div>
+
+            {/* v2.9.4 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.4</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Erradicação Total do Mecanismo .trash e Sincronização P2P</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Eliminação definitiva de geração ou renomeação para pastas temporárias .~trash_*, purga via Robocopy /MIR síncrona diretamente no destino e sincronização de eventos entre estações.
+              </p>
+            </div>
+
+            {/* v2.9.3 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.3</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Aplicação Estrita do Perímetro de Segurança de TI em Todos os Módulos</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Algoritmo canônico de validação de limites corporativos em todas as operações de listagem, cópia, renomeação e seleção de pastas, impedindo desvios para áreas não autorizadas.
+              </p>
+            </div>
+
+            {/* v2.9.2 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.2</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração do Modelo Oficial GPO RTO e Otimização Win32</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Retorno ao caminho de modelo oficial da GPO (MODELO) com replicação das permissões departamentais oficiais e disparo direto para o binário Win32 ExecuteAsUser.exe.
+              </p>
+            </div>
+
+            {/* v2.9.1 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.1</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Buffer Circular de Logs e Eliminação de Spam de Listagem</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Remoção de logs periódicos de polling da interface e implementação de rotação automática circular com limite de 120 KB para preservação de disco.
+              </p>
+            </div>
+
+            {/* v2.9.0 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.0</span>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Auditoria Descentralizada, Rastreamento de Operadores e Correção Gramatical</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Captura e identificação do colaborador responsável por cada ação, histórico corporativo unificado com filtros instantâneos e correção gramatical da interface.
+              </p>
+            </div>
+
+            {/* v2.8.7 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.7</span>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Correção de Permissões RTO, Limpeza Visual e Auto-Refresh Silencioso (5s)</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Redirecionamento definitivo da origem de modelos da RTO para o template oficial em produção ('EM USO\MODELO 2026'), garantindo 100% de integridade das DACLs departamentais restritas (RH, Paralegal, Fiscal, Contábil, TI) sem vazamento do grupo Todos. Remoção do bloco redundante de confirmação da tela de transferência e implementação de auto-refresh em background a cada 5 segundos nas abas de Mover e Renomear com invalidação automática de cache na criação de novas pastas.

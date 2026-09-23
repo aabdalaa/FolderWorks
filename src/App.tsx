@@ -54,7 +54,9 @@ export const App: React.FC = () => {
 
     const testAllServers = (cfg: any) => {
       if (!cfg) return;
-      const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+      const keys = Object.keys(cfg).filter(
+        (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && cfg[k] && typeof cfg[k] === 'object'
+      );
       keys.forEach((comp) => {
         window.electronAPI?.testServerConnection(comp).then((res) => {
           setServerStatuses((prev) => ({ ...prev, [comp]: res.success }));
