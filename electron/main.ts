@@ -56,12 +56,20 @@ function sanitizeConfig(cfg: any): any {
     sanitized.tiLogsPassword = String(cfg.tiLogsPassword).trim();
   }
 
+  if (cfg.sharedLogFilePath !== undefined) {
+    sanitized.sharedLogFilePath = String(cfg.sharedLogFilePath || '').trim();
+  }
+
   const companyKeys = Object.keys(cfg).filter(
-    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword'
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath'
   );
 
   if (companyKeys.length === 0) {
-    return { ...defaultCompanyConfigs, ...(cfg.tiLogsPassword ? { tiLogsPassword: cfg.tiLogsPassword } : {}) };
+    return {
+      ...defaultCompanyConfigs,
+      ...(cfg.tiLogsPassword ? { tiLogsPassword: cfg.tiLogsPassword } : {}),
+      ...(cfg.sharedLogFilePath !== undefined ? { sharedLogFilePath: String(cfg.sharedLogFilePath || '').trim() } : {}),
+    };
   }
 
   for (const comp of companyKeys) {
@@ -98,6 +106,7 @@ function loadConfig(): any {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       const sanitized = sanitizeConfig(parsed);
       if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+      if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
       return sanitized;
     } catch (e) {
       appendLog(`[CONFIG] Falha ao ler config.json do userData: ${e}`);
@@ -110,6 +119,7 @@ function loadConfig(): any {
       const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
       const sanitized = sanitizeConfig(parsed);
       if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+      if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
       return sanitized;
     } catch (e) {}
   }
@@ -351,7 +361,7 @@ function initUdpP2P() {
           if (allEvts.length > 0 && udpSocket) {
             const respPayload = Buffer.from(JSON.stringify({
               type: 'FOLDERWORKS_SYNC_RESPONSE',
-              version: '2.9.4',
+              version: '2.9.5',
               events: allEvts,
               responder: myOp,
             }), 'utf-8');
@@ -396,7 +406,7 @@ function broadcastUdpEvent(record: SharedAuditEvent) {
   try {
     const payload = Buffer.from(JSON.stringify({
       type: 'FOLDERWORKS_AUDIT_EVENT',
-      version: '2.9.4',
+      version: '2.9.5',
       id: record.id,
       record,
     }), 'utf-8');
@@ -423,6 +433,249 @@ function loadLocalHistoryIntoMemory() {
       }
     } catch {}
   }
+}
+
+// -------------------------------------------------------------
+// Motor de Formatação, Leitura e Escrita em Arquivo Compartilhado (.txt, .md, .json, .yaml)
+// -------------------------------------------------------------
+function formatSharedLogEntry(record: SharedAuditEvent, ext: string, isNewFile: boolean): string {
+  const normExt = ext.toLowerCase();
+  const operatorStr = `${record.operator.computerName}\\${record.operator.username}`;
+  const targetStr = record.finalPath || record.targetPath || '';
+  const durationStr = `${record.durationSeconds || 1}s`;
+
+  if (normExt === '.json') {
+    // JSON Lines (NDJSON) — 1 registro JSON atômico por linha
+    return JSON.stringify(record) + '\n';
+  }
+
+  if (normExt === '.yaml' || normExt === '.yml') {
+    // Formato de lista estruturada YAML (- id: ...)
+    const lines = [
+      `- id: "${record.id}"`,
+      `  timestamp: "${record.timestamp}"`,
+      `  isoTimestamp: "${record.isoTimestamp}"`,
+      `  operator: "${operatorStr}"`,
+      `  company: "${record.company}"`,
+      `  action: "${record.action}"`,
+      `  actionLabel: "${record.actionLabel || record.action}"`,
+      `  folderName: "${record.folderName}"`,
+      `  status: "${record.status}"`,
+      `  durationSeconds: ${record.durationSeconds || 1}`,
+    ];
+    if (record.sourcePath) lines.push(`  sourcePath: "${record.sourcePath.replace(/\\/g, '\\\\')}"`);
+    if (targetStr) lines.push(`  targetPath: "${targetStr.replace(/\\/g, '\\\\')}"`);
+    if (record.details) lines.push(`  details: "${record.details.replace(/"/g, '\\"')}"`);
+    lines.push(`  appVersion: "${record.appVersion || '2.9.5'}"`);
+    return lines.join('\n') + '\n';
+  }
+
+  if (normExt === '.md') {
+    // Formato Tabela Markdown com cabeçalho automático se novo arquivo
+    let result = '';
+    if (isNewFile) {
+      result += '# Registro de Auditoria e Atividades - FolderWorks\n\n';
+      result += '| Data / Hora | Operador | Empresa | Ação | Pasta / Item | Destino / Detalhes | Status | Duração |\n';
+      result += '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n';
+    }
+    const cleanDetails = (record.details || targetStr || '-').replace(/\|/g, '/');
+    const cleanFolder = (record.folderName || '-').replace(/\|/g, '/');
+    result += `| ${record.timestamp} | \`${operatorStr}\` | ${record.company} | **${record.actionLabel || record.action}** | \`${cleanFolder}\` | \`${cleanDetails}\` | ${record.status} | ${durationStr} |\n`;
+    return result;
+  }
+
+  // Padrão: .txt (Texto puro delimitado)
+  let line = `[${record.timestamp}] [OPERADOR: ${operatorStr}] [EMPRESA: ${record.company}] [AÇÃO: ${record.actionLabel || record.action}] [PASTA: ${record.folderName}] [STATUS: ${record.status}]`;
+  if (record.sourcePath) line += ` [ORIGEM: ${record.sourcePath}]`;
+  if (targetStr) line += ` [DESTINO: ${targetStr}]`;
+  if (record.details) line += ` [DETALHES: ${record.details}]`;
+  line += ` [DURAÇÃO: ${durationStr}]\n`;
+  return line;
+}
+
+function appendSharedLogEntry(record: SharedAuditEvent) {
+  try {
+    const cfg = loadConfig();
+    const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
+    if (!sharedPath) return;
+
+    const ext = path.extname(sharedPath).toLowerCase() || '.txt';
+    const dir = path.dirname(sharedPath);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {}
+    }
+
+    const isNew = !fs.existsSync(sharedPath) || fs.statSync(sharedPath).size === 0;
+    const content = formatSharedLogEntry(record, ext, isNew);
+    fs.appendFileSync(sharedPath, content, 'utf-8');
+    appendLog(`[LOG COMPARTILHADO] Evento anexado com sucesso no arquivo '${sharedPath}' (${ext}).`);
+  } catch (err: any) {
+    appendLog(`[AVISO LOG COMPARTILHADO] Falha ao gravar no arquivo configurado: ${err.message}`);
+  }
+}
+
+function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
+  if (!sharedPath || !fs.existsSync(sharedPath)) return [];
+  const results: SharedAuditEvent[] = [];
+  try {
+    const ext = path.extname(sharedPath).toLowerCase() || '.txt';
+    const raw = fs.readFileSync(sharedPath, 'utf-8');
+
+    if (ext === '.json') {
+      const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        try {
+          if (line.startsWith('{') && line.endsWith('}')) {
+            const ev = JSON.parse(line);
+            if (ev && ev.id) results.push(ev);
+          }
+        } catch {}
+      }
+      if (results.length === 0 && raw.trim().startsWith('[')) {
+        try {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) {
+            arr.forEach((item) => { if (item && item.id) results.push(item); });
+          }
+        } catch {}
+      }
+    } else if (ext === '.yaml' || ext === '.yml') {
+      const blocks = raw.split(/\n(?=-\s+id:|- id:)/g).filter(Boolean);
+      for (const b of blocks) {
+        try {
+          const idMatch = b.match(/id:\s*"?(.*?)"?$/m);
+          const timeMatch = b.match(/timestamp:\s*"?(.*?)"?$/m);
+          const isoMatch = b.match(/isoTimestamp:\s*"?(.*?)"?$/m);
+          const opMatch = b.match(/operator:\s*"?(.*?)"?$/m);
+          const compMatch = b.match(/company:\s*"?(.*?)"?$/m);
+          const actMatch = b.match(/action:\s*"?(.*?)"?$/m);
+          const actLblMatch = b.match(/actionLabel:\s*"?(.*?)"?$/m);
+          const fldMatch = b.match(/folderName:\s*"?(.*?)"?$/m);
+          const statusMatch = b.match(/status:\s*"?(.*?)"?$/m);
+          const durMatch = b.match(/durationSeconds:\s*(\d+)/m);
+          const targetMatch = b.match(/targetPath:\s*"?(.*?)"?$/m);
+          const srcMatch = b.match(/sourcePath:\s*"?(.*?)"?$/m);
+          const detMatch = b.match(/details:\s*"?(.*?)"?$/m);
+
+          if (idMatch || fldMatch || actMatch) {
+            const opRaw = opMatch ? opMatch[1] : '';
+            const opParts = opRaw.split('\\');
+            results.push({
+              id: idMatch ? idMatch[1] : `yaml_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              timestamp: timeMatch ? timeMatch[1] : new Date().toLocaleString('pt-BR'),
+              isoTimestamp: isoMatch ? isoMatch[1] : new Date().toISOString(),
+              company: compMatch ? compMatch[1] : 'CORPORATIVO',
+              action: actMatch ? actMatch[1] : 'OPERACAO',
+              actionLabel: actLblMatch ? actLblMatch[1] : (actMatch ? actMatch[1] : 'Operação'),
+              folderName: fldMatch ? fldMatch[1] : 'Pasta',
+              sourcePath: srcMatch ? srcMatch[1].replace(/\\\\/g, '\\') : undefined,
+              targetPath: targetMatch ? targetMatch[1].replace(/\\\\/g, '\\') : undefined,
+              finalPath: targetMatch ? targetMatch[1].replace(/\\\\/g, '\\') : undefined,
+              operator: {
+                username: opParts[1] || opParts[0] || 'Operador',
+                computerName: opParts.length > 1 ? opParts[0] : 'REDE',
+                userDomain: '',
+              },
+              executedBy: opRaw,
+              status: statusMatch ? statusMatch[1] : 'SUCCESS',
+              durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
+              details: detMatch ? detMatch[1] : undefined,
+              appVersion: '2.9.5',
+            });
+          }
+        } catch {}
+      }
+    } else if (ext === '.md') {
+      const lines = raw.split('\n').filter((l) => l.trim().startsWith('|'));
+      for (const line of lines) {
+        if (line.includes('---') || line.toLowerCase().includes('data / hora')) continue;
+        const cols = line.split('|').map((c) => c.trim()).filter(Boolean);
+        if (cols.length >= 6) {
+          const timestamp = cols[0];
+          const opRaw = cols[1].replace(/`/g, '');
+          const company = cols[2];
+          const actionLabel = cols[3].replace(/\*\*/g, '');
+          const folderName = cols[4].replace(/`/g, '');
+          const detailsOrDest = cols[5].replace(/`/g, '');
+          const status = cols[6] || 'SUCCESS';
+          const durRaw = cols[7] ? parseInt(cols[7], 10) || 1 : 1;
+          const opParts = opRaw.split('\\');
+
+          results.push({
+            id: `md_${timestamp.replace(/\W/g, '')}_${folderName.replace(/\W/g, '')}`,
+            timestamp,
+            isoTimestamp: new Date().toISOString(),
+            company,
+            action: actionLabel.toUpperCase().replace(/\s+/g, '_'),
+            actionLabel,
+            folderName,
+            finalPath: detailsOrDest !== '-' ? detailsOrDest : undefined,
+            targetPath: detailsOrDest !== '-' ? detailsOrDest : undefined,
+            operator: {
+              username: opParts[1] || opParts[0] || 'Operador',
+              computerName: opParts.length > 1 ? opParts[0] : 'REDE',
+              userDomain: '',
+            },
+            executedBy: opRaw,
+            status: status.includes('SUCESSO') || status.includes('SUCCESS') ? 'SUCCESS' : status,
+            durationSeconds: durRaw,
+            appVersion: '2.9.5',
+          });
+        }
+      }
+    } else {
+      // .txt (Texto delimitado entre colchetes)
+      const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.startsWith('#')) continue;
+        const timeMatch = line.match(/^\[(.*?)\]/);
+        const opMatch = line.match(/\[OPERADOR:\s*(.*?)\]/i);
+        const compMatch = line.match(/\[EMPRESA:\s*(.*?)\]/i);
+        const actMatch = line.match(/\[AÇÃO:\s*(.*?)\]/i) || line.match(/\[ACAO:\s*(.*?)\]/i);
+        const fldMatch = line.match(/\[PASTA:\s*(.*?)\]/i);
+        const statusMatch = line.match(/\[STATUS:\s*(.*?)\]/i);
+        const destMatch = line.match(/\[DESTINO:\s*(.*?)\]/i);
+        const srcMatch = line.match(/\[ORIGEM:\s*(.*?)\]/i);
+        const detMatch = line.match(/\[DETALHES:\s*(.*?)\]/i);
+        const durMatch = line.match(/\[DURAÇÃO:\s*(\d+)s?\]/i) || line.match(/\[DURACAO:\s*(\d+)s?\]/i);
+
+        if (timeMatch && (fldMatch || actMatch)) {
+          const timestamp = timeMatch[1];
+          const opRaw = opMatch ? opMatch[1] : '';
+          const opParts = opRaw.split('\\');
+          const folderName = fldMatch ? fldMatch[1] : 'Pasta';
+          const actionLabel = actMatch ? actMatch[1] : 'Operação';
+          results.push({
+            id: `txt_${timestamp.replace(/\W/g, '')}_${folderName.replace(/\W/g, '')}`,
+            timestamp,
+            isoTimestamp: new Date().toISOString(),
+            company: compMatch ? compMatch[1] : 'CORPORATIVO',
+            action: actionLabel.toUpperCase().replace(/\s+/g, '_'),
+            actionLabel,
+            folderName,
+            sourcePath: srcMatch ? srcMatch[1] : undefined,
+            finalPath: destMatch ? destMatch[1] : undefined,
+            targetPath: destMatch ? destMatch[1] : undefined,
+            operator: {
+              username: opParts[1] || opParts[0] || 'Operador',
+              computerName: opParts.length > 1 ? opParts[0] : 'REDE',
+              userDomain: '',
+            },
+            executedBy: opRaw,
+            status: statusMatch ? statusMatch[1] : 'SUCCESS',
+            durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
+            details: detMatch ? detMatch[1] : undefined,
+            appVersion: '2.9.5',
+          });
+        }
+      }
+    }
+  } catch (err: any) {
+    appendLog(`[ERRO LEITURA LOG COMPARTILHADO] ${err.message}`);
+  }
+  return results;
 }
 
 function saveHistoryEntry(input: any) {
@@ -481,7 +734,7 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.4',
+    appVersion: '2.9.5',
   };
 
   // 1. Guardar no cache de memória local
@@ -502,10 +755,13 @@ function saveHistoryEntry(input: any) {
     appendLog(`[AUDITORIA LOCAL ERRO] ${e.message}`);
   }
 
-  // 3. Transmissão em tempo real pura via UDP Broadcast (zero arquivos nos servidores de rede)
+  // 3. Gravação em tempo real no arquivo compartilhado na rede (.txt, .md, .json, .yaml)
+  appendSharedLogEntry(record);
+
+  // 4. Transmissão em tempo real pura via UDP Broadcast
   broadcastUdpEvent(record);
 
-  // 4. Notificar a interface do operador local
+  // 5. Notificar a interface do operador local
   if (mainWindow) {
     mainWindow.webContents.send('history-updated', record);
   }
@@ -670,6 +926,103 @@ ipcMain.handle('open-log-file', async () => {
   return false;
 });
 
+ipcMain.handle('select-log-file', async (_, mode?: 'open' | 'save') => {
+  if (!mainWindow) return null;
+  const filters = [
+    { name: 'Arquivos de Log (*.txt, *.md, *.json, *.yaml)', extensions: ['txt', 'md', 'json', 'yaml', 'yml'] },
+    { name: 'Texto Simples (*.txt)', extensions: ['txt'] },
+    { name: 'Markdown (*.md)', extensions: ['md'] },
+    { name: 'JSON Lines (*.json)', extensions: ['json'] },
+    { name: 'YAML (*.yaml, *.yml)', extensions: ['yaml', 'yml'] },
+    { name: 'Todos os Arquivos (*.*)', extensions: ['*'] },
+  ];
+
+  if (mode === 'save') {
+    const res = await dialog.showSaveDialog(mainWindow, {
+      title: 'Criar ou Definir Arquivo de Log Compartilhado',
+      defaultPath: 'auditoria_folderworks.txt',
+      filters,
+    });
+    if (res.canceled || !res.filePath) return null;
+    return res.filePath;
+  } else {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Selecionar Arquivo de Log Compartilhado na Rede',
+      properties: ['openFile'],
+      filters,
+    });
+    if (res.canceled || !res.filePaths || res.filePaths.length === 0) return null;
+    return res.filePaths[0];
+  }
+});
+
+ipcMain.handle('test-log-file', async (_, filePath: string) => {
+  const target = filePath ? filePath.trim() : '';
+  if (!target) {
+    return { success: false, message: 'Nenhum caminho de arquivo foi especificado.' };
+  }
+  try {
+    const ext = path.extname(target).toLowerCase();
+    const validExts = ['.txt', '.md', '.json', '.yaml', '.yml'];
+    if (!validExts.includes(ext)) {
+      return {
+        success: false,
+        message: `Extensão '${ext || '(sem extensão)'}' não suportada. Escolha um arquivo .txt, .md, .json ou .yaml`,
+      };
+    }
+
+    const dir = path.dirname(target);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Diretório pai inacessível ou sem permissão na rede: ${dir} (${err.message})`,
+        };
+      }
+    }
+
+    if (fs.existsSync(target)) {
+      fs.accessSync(target, fs.constants.R_OK | fs.constants.W_OK);
+      const stat = fs.statSync(target);
+      return {
+        success: true,
+        message: `Arquivo existente acessível com permissões de Leitura e Escrita (${(stat.size / 1024).toFixed(1)} KB).`,
+      };
+    } else {
+      const testTemp = path.join(dir, `.__perm_test_${Date.now()}.tmp`);
+      fs.writeFileSync(testTemp, 'ok', 'utf-8');
+      fs.unlinkSync(testTemp);
+      return {
+        success: true,
+        message: `Diretório '${dir}' acessível e pronto para criação do arquivo '${path.basename(target)}'.`,
+      };
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      message: `Falha no acesso ao arquivo: ${err.message}`,
+    };
+  }
+});
+
+ipcMain.handle('open-shared-log-file', async (_, customPath?: string) => {
+  const cfg = loadConfig();
+  const target = customPath || (cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '');
+  if (!target) return false;
+  if (fs.existsSync(target)) {
+    await shell.openPath(target);
+    return true;
+  }
+  const dir = path.dirname(target);
+  if (fs.existsSync(dir)) {
+    await shell.openPath(dir);
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle('verify-ti-password', async (_event, passwordInput: string) => {
   const correct = getTIPassword();
   const trimmedInput = typeof passwordInput === 'string' ? passwordInput.trim() : '';
@@ -692,9 +1045,26 @@ ipcMain.handle('open-external', async (_, url: string) => {
 });
 
 ipcMain.handle('get-history', () => {
-  try {
-    requestHistorySyncFromPeers();
-  } catch {}
+  const cfg = loadConfig();
+  const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
+
+  if (sharedPath && fs.existsSync(sharedPath)) {
+    try {
+      const fileEvents = readSharedLogEntries(sharedPath);
+      for (const ev of fileEvents) {
+        if (ev && ev.id && !memoryAuditCache.has(ev.id)) {
+          memoryAuditCache.set(ev.id, ev);
+        }
+      }
+    } catch (err: any) {
+      appendLog(`[ERRO SINCRONIZAR HISTÓRICO COMPARTILHADO] ${err.message}`);
+    }
+  } else {
+    try {
+      requestHistorySyncFromPeers();
+    } catch {}
+  }
+
   const all = Array.from(memoryAuditCache.values());
   // Ordenar decrescente por data/hora
   all.sort((a, b) => {
@@ -716,6 +1086,16 @@ ipcMain.handle('clear-history', () => {
 });
 
 ipcMain.handle('get-network-logs', () => {
+  const cfg = loadConfig();
+  const sharedPath = cfg?.sharedLogFilePath ? String(cfg.sharedLogFilePath).trim() : '';
+  if (sharedPath && fs.existsSync(sharedPath)) {
+    try {
+      const raw = fs.readFileSync(sharedPath, 'utf-8');
+      const lines = raw.split('\n').filter(Boolean);
+      return lines.slice(-300);
+    } catch {}
+  }
+
   const all = Array.from(memoryAuditCache.values());
   all.sort((a, b) => {
     const tA = a.isoTimestamp ? new Date(a.isoTimestamp).getTime() : (parseInt(String(a.id).replace(/\D/g, '')) || 0);

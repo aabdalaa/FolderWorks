@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => ipcRenderer.invoke('delete-source-folders', req),
   undoTransfer: (req: { company: string; foldersToUndo?: string[]; items?: Array<{ sourcePath: string; destPath: string; method?: string }> }) => ipcRenderer.invoke('undo-transfer', req),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  selectLogFile: (mode?: 'open' | 'save') => ipcRenderer.invoke('select-log-file', mode),
+  testLogFile: (filePath: string) => ipcRenderer.invoke('test-log-file', filePath),
+  openSharedLogFile: (filePath?: string) => ipcRenderer.invoke('open-shared-log-file', filePath),
   onLog: (callback: (log: string) => void) => {
     const handler = (_: any, data: string) => callback(data);
     ipcRenderer.on('log-entry', handler);

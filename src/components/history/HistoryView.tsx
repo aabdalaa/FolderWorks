@@ -14,7 +14,9 @@ import {
   FolderOutput,
   FolderEdit,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { SharedAuditEvent } from '../../types/electron';
 
@@ -26,17 +28,20 @@ export const HistoryView: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [selectedOperator, setSelectedOperator] = useState<string>('ALL');
   const [currentOperator, setCurrentOperator] = useState<{ username: string; computerName: string } | null>(null);
+  const [sharedLogFilePath, setSharedLogFilePath] = useState<string>('');
 
   const fetchHistory = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
     try {
       if (window.electronAPI) {
-        const [records, opInfo] = await Promise.all([
+        const [records, opInfo, cfg] = await Promise.all([
           window.electronAPI.getHistory(),
           window.electronAPI.getOperatorInfo?.() || Promise.resolve(null),
+          window.electronAPI.getConfig?.() || Promise.resolve(null),
         ]);
         setHistory(records || []);
         if (opInfo) setCurrentOperator(opInfo);
+        if (cfg && cfg.sharedLogFilePath) setSharedLogFilePath(cfg.sharedLogFilePath);
       }
     } catch (err) {
       console.error('Falha ao carregar histórico compartilhado:', err);
@@ -183,6 +188,15 @@ export const HistoryView: React.FC = () => {
                   <Network className="w-3 h-3 animate-pulse" />
                   <span>Rede P2P UDP Ativa (Porta 48899)</span>
                 </span>
+                {sharedLogFilePath && (
+                  <span
+                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 max-w-xs truncate"
+                    title={`Arquivo Compartilhado: ${sharedLogFilePath}`}
+                  >
+                    <FileText className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Arquivo: {sharedLogFilePath.split(/[\\/]/).pop()}</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Auditoria colaborativa descentralizada compartilhada silenciosamente entre todas as estações da equipe
@@ -190,7 +204,19 @@ export const HistoryView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-center">
+          <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+            {/* Botão Abrir Arquivo Compartilhado */}
+            {sharedLogFilePath && (
+              <button
+                onClick={() => window.electronAPI?.openSharedLogFile(sharedLogFilePath)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 text-xs font-semibold transition-colors cursor-pointer"
+                title={`Abrir arquivo ${sharedLogFilePath}`}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Abrir Log na Rede</span>
+              </button>
+            )}
+
             {/* Indicador da máquina atual */}
             {currentOperator && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-xs text-slate-600 dark:text-slate-300">

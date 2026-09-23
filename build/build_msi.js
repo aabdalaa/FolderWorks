@@ -82,7 +82,8 @@ async function buildMSI() {
       domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
       adPass: env.RTO_AD_PASS || 'Mestre@300'
     },
-    tiLogsPassword: env.TI_LOGS_PASSWORD || 'mestre@300'
+    tiLogsPassword: env.TI_LOGS_PASSWORD || 'mestre@300',
+    sharedLogFilePath: env.SHARED_LOG_FILE_PATH || ''
   };
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
@@ -146,7 +147,7 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.9.4',
+    version: '2.9.5',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {

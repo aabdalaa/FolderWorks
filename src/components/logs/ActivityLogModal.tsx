@@ -72,6 +72,13 @@ export const ActivityLogModal: React.FC<ActivityLogModalProps> = ({
   if (!isOpen) return null;
 
   const handleOpenTxt = async () => {
+    if (logTab === 'network') {
+      const cfg = await window.electronAPI?.getConfig?.();
+      if (cfg?.sharedLogFilePath) {
+        await window.electronAPI?.openSharedLogFile(cfg.sharedLogFilePath);
+        return;
+      }
+    }
     await window.electronAPI?.openLogFile();
   };
 

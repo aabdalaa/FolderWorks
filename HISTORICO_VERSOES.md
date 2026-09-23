@@ -1,5 +1,24 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.5 (23/09/2026) - **Trilha de Auditoria e Logs em Arquivo Compartilhado Configurável (.TXT, .MD, .JSON, .YAML)**
+- **Arquivo de Log e Auditoria Compartilhado Configurável na Rede (`sharedLogFilePath`)**:
+  - Nova configuração corporativa global acessível via painel de Configurações de TI, permitindo que a empresa defina livremente o local de armazenamento dos logs (ex.: `\\192.168.50.102\rto\LOGS\folderworks_audit.json`).
+  - Suporte completo a 4 formatos estruturados:
+    - `.json`: Gravação atômica em JSON Lines (NDJSON), onde cada evento representa uma linha JSON independente, permitindo dezenas de acessos concorrentes via rede SMB sem corrupção de arquivo.
+    - `.yaml` / `.yml`: Gravação contínua no formato de lista hierárquica YAML (`- id: ...`).
+    - `.md`: Gravação contínua em tabela Markdown formatada, gerando cabeçalhos de coluna na inicialização.
+    - `.txt`: Gravação em formato tradicional de log de servidor com delimitadores de bloco estruturados `[TIMESTAMP] [OPERADOR] [STATUS] ...`.
+- **Interface e Ferramentas de Gerenciamento do Arquivo de Log**:
+  - Seletor nativo do Windows integrado para seleção de arquivos existentes ou criação de novos arquivos na rede.
+  - Ferramenta de teste de acesso imediato (`testLogFile`), verificando latência e permissão de leitura/escrita com retorno visual claro.
+  - Acesso direto com um clique para abrir o arquivo compartilhado no editor padrão do Windows através das interfaces de Histórico, Auditoria e Configurações.
+- **Leitura e Agregação Multiusuário Instantânea**:
+  - O visualizador de Histórico e Auditoria passa a ler e analisar as linhas gravadas no arquivo compartilhado da rede em tempo real, combinando os eventos de todas as máquinas da empresa em uma trilha de auditoria centralizada.
+- **Novo Pacote Oficial MSI v2.9.5**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído.
+
+---
+
 ## Versão 2.9.4 (22/09/2026) - **Erradicação Total do Mecanismo .trash, Liberação Automática de Firewall UDP 48899 e Sincronização P2P Bidirecional**
 - **Erradicação Definitiva do Mecanismo de Arquivos e Pastas `.trash`**:
   - Eliminado 100% qualquer geração ou renomeação para pastas temporárias `.~trash_*` no motor nativo `ExecuteAsUser.cs` durante operações de exclusão ou movimentação de diretórios.

@@ -18,6 +18,8 @@ import {
   FolderTree,
   FolderOutput,
   ShieldCheck,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
 
@@ -50,6 +52,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Active Company Tab in Settings
   const [activeCompanyTab, setActiveCompanyTab] = useState<string>('RTO');
 
+  // Shared Log File State
+  const [sharedLogFilePath, setSharedLogFilePath] = useState<string>('');
+  const [testingLogFile, setTestingLogFile] = useState<boolean>(false);
+  const [testLogFileResult, setTestLogFileResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // UI Feedback States
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,7 +71,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Helper to extract company keys
   const getCompanyKeys = (cfg: any): string[] => {
     if (!cfg || typeof cfg !== 'object') return [];
-    return Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+    return Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath');
   };
 
   // Sync external TI authentication state
@@ -78,6 +85,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     window.electronAPI?.getConfig().then((cfg) => {
       setConfig(cfg);
+      setSharedLogFilePath(cfg?.sharedLogFilePath || '');
       const keys = getCompanyKeys(cfg);
       if (keys.length > 0 && !activeCompanyTab) {
         setActiveCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
@@ -86,6 +94,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const unsub = window.electronAPI?.onConfigUpdated?.((updatedCfg) => {
       setConfig(updatedCfg);
+      setSharedLogFilePath(updatedCfg?.sharedLogFilePath || '');
     });
     return () => {
       if (unsub) unsub();
@@ -211,7 +220,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     delete updated[companyToDelete];
     setConfig(updated);
 
-    const remainingKeys = Object.keys(updated).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+    const remainingKeys = Object.keys(updated).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath');
     if (remainingKeys.length > 0) {
       setActiveCompanyTab(remainingKeys[0]);
     }
@@ -246,6 +255,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const res = await window.electronAPI?.resetConfig();
       if (res?.config) {
         setConfig(res.config);
+        setSharedLogFilePath(res.config.sharedLogFilePath || '');
         const keys = getCompanyKeys(res.config);
         if (keys.length > 0) setActiveCompanyTab(keys[0]);
       }
@@ -263,6 +273,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSharedLogPathChange = (val: string) => {
+    if (!isTIUnlocked) return;
+    setSharedLogFilePath(val);
+    setConfig((prev: any) => ({
+      ...prev,
+      sharedLogFilePath: val,
+    }));
+    setTestLogFileResult(null);
+  };
+
+  const handleBrowseLogFile = async (mode: 'open' | 'save') => {
+    if (!isTIUnlocked) return;
+    const selected = await window.electronAPI?.selectLogFile(mode);
+    if (selected) {
+      handleSharedLogPathChange(selected);
+    }
+  };
+
+  const handleTestLogFile = async () => {
+    if (!sharedLogFilePath) {
+      setTestLogFileResult({ success: false, message: 'Digite ou selecione o caminho de um arquivo primeiro.' });
+      return;
+    }
+    setTestingLogFile(true);
+    setTestLogFileResult(null);
+    try {
+      const res = await window.electronAPI?.testLogFile(sharedLogFilePath);
+      setTestLogFileResult(res || { success: false, message: 'Sem resposta do sistema.' });
+    } catch (err: any) {
+      setTestLogFileResult({ success: false, message: err.message || 'Erro inesperado ao testar arquivo.' });
+    } finally {
+      setTestingLogFile(false);
+    }
+  };
+
+  const handleOpenSharedLogFile = async () => {
+    if (!sharedLogFilePath) return;
+    await window.electronAPI?.openSharedLogFile(sharedLogFilePath);
+  };
+
+  const handleClearSharedLogFile = () => {
+    if (!isTIUnlocked) return;
+    handleSharedLogPathChange('');
   };
 
   const handleUnlockSuccess = () => {
@@ -402,7 +457,170 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* 2. Main Company Box */}
+      {/* 2. Seção de Log e Auditoria Compartilhado na Rede (.txt, .md, .json, .yaml) */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-neutral-700 pb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Arquivo de Log e Auditoria Compartilhado (Rede / Local)
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-400">
+                  Global
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Centralize os registros de todas as máquinas em um único arquivo (.txt, .md, .json ou .yaml) na rede corporativa.
+              </p>
+            </div>
+          </div>
+
+          {/* Badges de Formatos Suportados */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300" title="Texto simples com delimitadores entre colchetes">
+              .TXT
+            </span>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300" title="Tabela formatada em Markdown">
+              .MD
+            </span>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300" title="JSON Lines (1 registro atômico por linha)">
+              .JSON
+            </span>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300" title="Lista estruturada YAML">
+              .YAML
+            </span>
+          </div>
+        </div>
+
+        {/* Input e Botões */}
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Caminho do Arquivo de Log Compartilhado na Rede
+          </label>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                readOnly={!isTIUnlocked}
+                value={sharedLogFilePath}
+                onChange={(e) => handleSharedLogPathChange(e.target.value)}
+                placeholder="Ex: \\192.168.50.102\rto\LOGS\auditoria_equipe.txt"
+                className={`w-full p-2.5 rounded-lg font-mono text-xs ${
+                  isTIUnlocked
+                    ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:ring-2 focus:ring-teams-500/20 focus:border-teams-600'
+                    : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-600 dark:text-slate-400 cursor-not-allowed'
+                }`}
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isTIUnlocked) {
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  handleBrowseLogFile('open');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  isTIUnlocked
+                    ? 'bg-white dark:bg-neutral-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-600 shadow-2xs'
+                    : 'bg-slate-100/60 dark:bg-neutral-800/60 text-slate-400 dark:text-slate-500 border-slate-200/60 dark:border-neutral-700/60'
+                }`}
+                title={isTIUnlocked ? 'Selecionar arquivo existente na rede ou disco local' : 'Desbloqueie com a senha do TI'}
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+                <span>Procurar...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isTIUnlocked) {
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  handleBrowseLogFile('save');
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  isTIUnlocked
+                    ? 'bg-white dark:bg-neutral-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-600 shadow-2xs'
+                    : 'bg-slate-100/60 dark:bg-neutral-800/60 text-slate-400 dark:text-slate-500 border-slate-200/60 dark:border-neutral-700/60'
+                }`}
+                title={isTIUnlocked ? 'Definir novo arquivo para criação automática' : 'Desbloqueie com a senha do TI'}
+              >
+                <Plus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Criar Novo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTestLogFile}
+                disabled={testingLogFile || !sharedLogFilePath}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-teams-50 hover:bg-teams-100 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-neutral-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Testar permissões de leitura e gravação no local indicado"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${testingLogFile ? 'animate-spin' : ''}`} />
+                <span>Testar Acesso</span>
+              </button>
+
+              {sharedLogFilePath && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleOpenSharedLogFile}
+                    className="flex items-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer"
+                    title="Abrir o arquivo de log no editor padrão do Windows"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir</span>
+                  </button>
+
+                  {isTIUnlocked && (
+                    <button
+                      type="button"
+                      onClick={handleClearSharedLogFile}
+                      className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                      title="Limpar configuração (usar somente logs locais)"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Resultado do Teste de Acesso */}
+          {testLogFileResult && (
+            <div
+              className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${
+                testLogFileResult.success
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+              }`}
+            >
+              {testLogFileResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+              )}
+              <span>{testLogFileResult.message}</span>
+            </div>
+          )}
+
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+            * O FolderWorks lê o histórico existente deste arquivo ao abrir o sistema e anexa uma nova linha a cada ação executada. Se deixado em branco, o sistema utilizará o registro local padrão.
+          </p>
+        </div>
+      </div>
+
+      {/* 3. Main Company Box */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 shadow-xs">
         {/* Company Tabs Bar */}
         <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/60 px-4 pt-2 gap-2">

@@ -57,6 +57,9 @@ export interface ElectronAPI {
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => Promise<{ success: boolean; deleted: string[]; errors: string[] }>;
   undoTransfer: (req: { company: string; foldersToUndo?: string[]; items?: Array<{ sourcePath: string; destPath: string; method?: string }> }) => Promise<{ success: boolean; undone: string[]; errors: string[] }>;
   openExternal: (url: string) => Promise<boolean>;
+  selectLogFile: (mode?: 'open' | 'save') => Promise<string | null>;
+  testLogFile: (filePath: string) => Promise<{ success: boolean; message: string }>;
+  openSharedLogFile: (filePath?: string) => Promise<boolean>;
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;
   onFoldersUpdated: (callback: (data: any) => void) => () => void;
