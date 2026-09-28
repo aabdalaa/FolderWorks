@@ -312,16 +312,28 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.9.8 */}
+            {/* v2.9.9 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.8</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.9</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
               </div>
-              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Tema Global Dinâmico em Todos os Botões (24 Cores) e Proteção de Atalhos do TI</h5>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Atalhos Rápidos Livres para o Usuário, Botão Direto na Transferência e Proteção Estrita do TI</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                Expansão da paleta de personalização de cores para 24 tonalidades corporativas completas, mapeadas diretamente nas variáveis CSS do tema Tailwind. A escolha de qualquer cor é propagada dinamicamente para todos os botões de ação ('Desbloquear TI', 'Salvar', 'Criar Pasta', 'Renomear', 'Transferir', etc.), abas e ícones. Gestão aprimorada de atalhos rápidos: atalhos pré-definidos pelo TI são identificados com tag 'TI' e bloqueados contra exclusão acidental (exigem senha de administrador para remoção), enquanto atalhos adicionados pelo usuário contam com total liberdade de edição e exclusão direta.
+                Desvinculação completa da configuração de atalhos rápidos do container com bloqueio e máscara de TI. Seção dedicada e 100% aberta para o usuário adicionar, editar e gerenciar seus próprios atalhos favoritos por empresa com validação imediata de perímetro corporativo. Atalhos criados pelo usuário contam com exclusão instantânea em 1 clique sem requisição de senha, enquanto atalhos definidos pelo TI ('00 - EX CLIENTES' e '01 - EMPRESAS ENCERRADAS') continuam estritamente protegidos por senha de administrador. Adicionado botão direto 'Salvar Destino como Atalho' no módulo Mover Pastas para salvar o destino atual em 1 clique.
+              </p>
+            </div>
+
+            {/* v2.9.8 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.8</span>
+              </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Criação Múltipla Paralela (+), Toast Escuro, Validação Manual na Transferência e Tema Dinâmico</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Criação de múltiplas pastas simultâneas via botão '+' com paralelismo concorrente Promise.all e Robocopy /MT:128 mantendo DACL oficial. Terceiro botão no modal de transferência para abertura e conferência manual no Explorer. Correção do toast nativo para tema escuro e propagação dinâmica da paleta de 24 cores em 100% dos botões.
               </p>
             </div>
 

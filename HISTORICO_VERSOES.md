@@ -1,5 +1,25 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.9 (28/09/2026) - **Atalhos Rápidos Totalmente Livres para o Usuário, Botão Direto na Transferência e Proteção Estrita dos Atalhos do TI**
+- **Atalhos Rápidos Desvinculados do Bloqueio de TI (Card Dedicado e 100% Aberto)**:
+  - Extraída a configuração de atalhos rápidos de dentro do formulário com privacidade blur e bloqueio administrativo do TI.
+  - Criado card dedicado e autônomo nas Configurações, imediatamente acessível para qualquer colaborador configurar seus destinos favoritos sem requerer senha do TI.
+  - Abas rápidas para alternar a configuração de atalhos entre filiais e empresas corporativas (`RTO`, `RELIQUIA`, etc.).
+- **Autonomia Total na Gestão de Atalhos do Usuário**:
+  - Botão `+ Adicionar Atalho` para criar atalhos personalizados.
+  - Botão `Procurar...` integrado ao Windows Explorer com validação automática de perímetro corporativo (`allowedBasePath`), garantindo zero vazamento para áreas externas ou desautorizadas da rede.
+  - **Exclusão Instantânea em 1 Clique**: atalhos criados pelo usuário contam com botão de lixeira vermelha que remove o atalho de forma imediata e definitiva, sem solicitar senha.
+- **Proteção Estrita e Absoluta dos Atalhos Padrão do TI**:
+  - Os atalhos pré-definidos de infraestrutura (`00 - EX CLIENTES` e `01 - EMPRESAS ENCERRADAS`) permanecem identificados com ícone de cadeado.
+  - Ao tentar excluir um atalho oficial do TI, o aplicativo abre o `TIAccessModal`, exigindo autenticação com a senha de administrador. Somente com credencial válida a exclusão de atalhos do TI é permitida.
+- **Botão Direto "+ Salvar Destino como Atalho" no Módulo Mover Pastas**:
+  - Adicionado botão interativo e discreto ao lado dos atalhos rápidos na tela de transferência de pastas.
+  - Permite ao operador salvar instantaneamente o caminho digitado ou selecionado como seu próprio atalho rápido com 1 clique, sem a necessidade de abrir a tela de configurações.
+- **Novo Pacote Oficial MSI v2.9.9**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para `01 - Instalador/Internal/` e Área de Trabalho (`FolderWorks.msi`).
+
+---
+
 ## Versão 2.9.8 (28/09/2026) - **Criação de Múltiplas Pastas Simultâneas (+), Toast em Dark Mode, Validação Manual na Transferência, Remoção de Badges e Tema Dinâmico em 100% dos Botões (24 Cores)**
 - **Criação de Múltiplas Pastas Simultâneas em Tarefas Paralelas (Botão `+`)**:
   - Adicionado botão **`+`** de alta precisão no final da barra de texto de nome da pasta no módulo *Criar Pasta*, permitindo ao usuário adicionar múltiplos campos de pastas para criação em lote.

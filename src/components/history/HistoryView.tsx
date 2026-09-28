@@ -155,7 +155,7 @@ export const HistoryView: React.FC = () => {
     }
     if (act.includes('DESFAZER')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teams-500/10 text-teams-600 dark:text-teams-400 border border-teams-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
           <RotateCcw className="w-3 h-3" />
           <span>{lbl}</span>
         </span>
@@ -197,7 +197,7 @@ export const HistoryView: React.FC = () => {
                 </span>
                 {sharedLogFilePath && (
                   <span
-                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teams-500/10 text-teams-600 dark:text-teams-400 border border-teams-500/20 max-w-xs truncate"
+                    className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 max-w-xs truncate"
                     title={`Arquivo Compartilhado: ${sharedLogFilePath}`}
                   >
                     <FileText className="w-3 h-3 shrink-0" />
@@ -216,7 +216,7 @@ export const HistoryView: React.FC = () => {
             {sharedLogFilePath && (
               <button
                 onClick={() => window.electronAPI?.openSharedLogFile(sharedLogFilePath)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teams-50 hover:bg-teams-100 dark:bg-teams-950/40 dark:hover:bg-teams-900/50 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-teams-800/60 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 text-xs font-semibold transition-colors cursor-pointer"
                 title={`Abrir arquivo ${sharedLogFilePath}`}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
