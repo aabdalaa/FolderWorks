@@ -417,6 +417,16 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     }
   };
 
+  const handleOpenTransferredFolder = async () => {
+    if (window.electronAPI?.openFolderInExplorer) {
+      if (transferResults.length === 1 && transferResults[0].finalDestPath) {
+        await window.electronAPI.openFolderInExplorer(transferResults[0].finalDestPath);
+      } else if (destDir) {
+        await window.electronAPI.openFolderInExplorer(destDir);
+      }
+    }
+  };
+
   const totalFilesCopied = transferResults.reduce((acc, cur) => acc + cur.fileCount, 0);
   const totalSizeCopiedMB = Number(transferResults.reduce((acc, cur) => acc + cur.totalSizeMB, 0).toFixed(2));
   const currentCompanyConfig = config?.[company];
@@ -893,7 +903,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                 </div>
 
                 {/* Decision Callout */}
-                <div className="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 flex items-start gap-3">
+                <div className="p-4 rounded-xl bg-teams-50/80 dark:bg-teams-950/30 border border-teams-200 dark:border-teams-800/50 flex items-start gap-3">
                   <FileCheck className="w-5 h-5 text-teams-600 dark:text-teams-400 shrink-0 mt-0.5" />
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -931,9 +941,20 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
               <div className="p-6 pt-0 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-slate-100 dark:border-neutral-800/80 bg-slate-50/50 dark:bg-neutral-900/50">
                 <button
                   type="button"
+                  onClick={handleOpenTransferredFolder}
+                  disabled={isProcessingDecision !== null}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-teams-50 dark:bg-teams-950/60 hover:bg-teams-100 dark:hover:bg-teams-900/60 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-teams-800 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 order-3 sm:order-1 cursor-pointer disabled:opacity-50"
+                  title="Abrir pasta no Windows Explorer para validar os arquivos manualmente antes de tomar uma decisão"
+                >
+                  <FolderOpen className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+                  <span>Abrir Pasta no Destino</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleConfirmSuccess}
                   disabled={isProcessingDecision !== null}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 order-1 cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 order-1 sm:order-2 cursor-pointer disabled:opacity-50"
                   title="Confirma que os arquivos estão corretos no destino e autoriza a exclusão da pasta de origem"
                 >
                   {isProcessingDecision === 'success' ? (
@@ -953,7 +974,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
                   type="button"
                   onClick={handleUndoTransfer}
                   disabled={isProcessingDecision !== null}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-slate-300 dark:border-neutral-700 hover:border-rose-300 dark:hover:border-rose-900 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-2 cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-white dark:bg-neutral-800 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-slate-300 dark:border-neutral-700 hover:border-rose-300 dark:hover:border-rose-900 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 order-2 sm:order-3 cursor-pointer disabled:opacity-50"
                   title="Desfaz a transferência imediatamente, removendo a cópia do destino e preservando a origem"
                 >
                   {isProcessingDecision === 'undo' ? (

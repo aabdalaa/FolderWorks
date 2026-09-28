@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-teams-50-rgb: 245 246 252;
+  --color-teams-100-rgb: 235 238 249;
+  --color-teams-200-rgb: 215 220 243;
+  --color-teams-300-rgb: 180 190 234;
+  --color-teams-400-rgb: 138 153 222;
+  --color-teams-500-rgb: 98 112 209;
+  --color-teams-600-rgb: 91 95 199;
+  --color-teams-700-rgb: 79 82 178;
+  --color-teams-800-rgb: 66 69 155;
+  --color-teams-900-rgb: 56 59 127;
+  --color-teams-950-rgb: 36 38 84;
+  --app-icon-accent: #5b5fc7;
+}
+
 @layer base {
   body {
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;

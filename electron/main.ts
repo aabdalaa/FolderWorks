@@ -26,8 +26,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     logDirectory: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`,
     selectedLogFile: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES` },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS` }
+      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   },
   RELIQUIA: {
@@ -42,8 +42,8 @@ const defaultCompanyConfigs: Record<string, any> = {
     logDirectory: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`,
     selectedLogFile: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES` },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS` }
+      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   }
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, FolderPlus, CheckCircle2, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { Building2, FolderPlus, CheckCircle2, AlertTriangle, Loader2, Sparkles, Plus, Trash2, Layers } from 'lucide-react';
 
 import { ToastData } from '../layout/ToastNotification';
 
@@ -11,7 +11,7 @@ interface FolderCreationViewProps {
 export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreateFolder, onShowToast }) => {
   const [selectedCompany, setSelectedCompany] = useState<string>('RTO');
   const [companies, setCompanies] = useState<Record<string, any>>({});
-  const [folderName, setFolderName] = useState('');
+  const [folderNames, setFolderNames] = useState<string[]>(['']);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResult, setLastResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -44,50 +44,115 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
     (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword'
   );
 
+  const handleAddFolderRow = () => {
+    setFolderNames((prev) => [...prev, '']);
+  };
+
+  const handleRemoveFolderRow = (index: number) => {
+    setFolderNames((prev) => {
+      if (prev.length <= 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleFolderNameChange = (index: number, val: string) => {
+    setFolderNames((prev) => {
+      const copy = [...prev];
+      copy[index] = val;
+      return copy;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const currentName = folderName.trim();
-    if (!currentName || isProcessing) return;
+    const validNames = folderNames.map((n) => n.trim()).filter(Boolean);
+    if (validNames.length === 0 || isProcessing) return;
+
+    // Verificar duplicatas no lote
+    const uniqueNames = Array.from(new Set(validNames));
+    if (uniqueNames.length !== validNames.length) {
+      setLastResult({
+        success: false,
+        message: 'Existem nomes duplicados na lista de criação. Cada pasta deve ter um nome único.',
+      });
+      return;
+    }
 
     setIsProcessing(true);
     setLastResult(null);
 
     const compDisplay = companies[selectedCompany]?.companyName || selectedCompany;
-    const res = await onCreateFolder(selectedCompany, currentName);
+
+    // Disparo concorrente / paralelo de todas as pastas simultaneamente via Promise.all
+    const results = await Promise.all(
+      validNames.map(async (name) => {
+        const res = await onCreateFolder(selectedCompany, name);
+        return { name, res };
+      })
+    );
+
     setIsProcessing(false);
 
-    if (res.success) {
+    const successful = results.filter((r) => r.res.success);
+    const failed = results.filter((r) => !r.res.success);
+
+    if (successful.length > 0) {
       // Invalida o cache local para que as abas Mover e Renomear atualizem imediatamente
       try {
         const keysToRemove = Object.keys(localStorage).filter((k) => k.startsWith('fw_folders_cache_'));
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
+    }
 
-      setLastResult({ success: true, message: `Pasta '${currentName}' criada com sucesso na rede da ${compDisplay}!` });
-      setFolderName('');
+    if (failed.length === 0) {
+      // Todas criadas com sucesso
+      const successMsg =
+        successful.length === 1
+          ? `Pasta '${successful[0].name}' criada com sucesso na rede da ${compDisplay}!`
+          : `${successful.length} pastas criadas com sucesso na rede da ${compDisplay} (criação paralela simultânea)!`;
+
+      setLastResult({ success: true, message: successMsg });
+      setFolderNames(['']);
 
       // Dispara o Toast animado de 10s no canto da tela
       if (onShowToast) {
         const destParent = companies[selectedCompany]?.destSharePath || companies[selectedCompany]?.destinationParentPath || '';
-        const fullCreatedPath = res.finalPath || (destParent ? `${destParent}\\${currentName}` : undefined);
+        const primary = successful[0];
+        const fullCreatedPath = primary.res.finalPath || (destParent ? `${destParent}\\${primary.name}` : undefined);
         onShowToast({
           id: `toast_create_${Date.now()}`,
           type: 'creation',
-          title: 'Pasta Criada com Sucesso!',
-          folderName: currentName,
+          title: successful.length === 1 ? 'Pasta Criada com Sucesso!' : `${successful.length} Pastas Criadas com Sucesso!`,
+          folderName: successful.length === 1 ? primary.name : `${primary.name} (+${successful.length - 1} pastas)`,
           folderPath: fullCreatedPath,
-          durationSeconds: res.durationSeconds || 1,
+          durationSeconds: primary.res.durationSeconds || 1,
           company: compDisplay,
           undoOrRedoLabel: 'Recriar',
           onUndoOrRedo: () => {
-            setFolderName(currentName);
+            setFolderNames(successful.map((s) => s.name));
           },
         });
       }
     } else {
-      setLastResult({ success: false, message: res.error || 'Falha ao criar pasta de rede.' });
+      // Algumas ou todas falharam
+      if (successful.length > 0) {
+        setLastResult({
+          success: false,
+          message: `${successful.length} pastas criadas com sucesso. Porém, ${failed.length} falharam: ${failed
+            .map((f) => `'${f.name}': ${f.res.error}`)
+            .join('; ')}`,
+        });
+        setFolderNames(failed.map((f) => f.name));
+      } else {
+        setLastResult({
+          success: false,
+          message: `Falha ao criar pastas: ${failed.map((f) => `'${f.name}': ${f.res.error}`).join('; ')}`,
+        });
+      }
     }
   };
+
+  const validCount = folderNames.filter((n) => n.trim()).length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto text-slate-800 dark:text-slate-100 transition-colors select-none">
@@ -160,24 +225,87 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
             </div>
           </div>
 
-          {/* Nome da Pasta */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
-              Nome da Pasta
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-                placeholder="Ex.: 0001 - CLIENTE EXEMPLO LTDA"
-                disabled={isProcessing}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-teams-500 text-sm font-medium transition-all"
-              />
+          {/* Nome da Pasta / Criação Múltipla Dinâmica */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                {folderNames.length > 1 ? `Nomes das Pastas (${folderNames.length})` : 'Nome da Pasta'}
+              </label>
+              {folderNames.length > 1 && (
+                <span className="text-[11px] font-semibold text-teams-600 dark:text-teams-400 flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Criação simultânea multitarefa</span>
+                </span>
+              )}
             </div>
+
+            <div className="space-y-2.5">
+              {folderNames.map((name, index) => {
+                const isLast = index === folderNames.length - 1;
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => handleFolderNameChange(index, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (isLast && name.trim()) {
+                              handleAddFolderRow();
+                            } else if (!isLast) {
+                              handleSubmit(e);
+                            }
+                          }
+                        }}
+                        placeholder={
+                          folderNames.length > 1
+                            ? `Pasta #${index + 1}: Ex.: 000${index + 1} - CLIENTE EXEMPLO LTDA`
+                            : 'Ex.: 0001 - CLIENTE EXEMPLO LTDA'
+                        }
+                        disabled={isProcessing}
+                        className="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-teams-500 text-sm font-medium transition-all"
+                      />
+
+                      {/* Botão de + no final da barra de texto */}
+                      {isLast && (
+                        <button
+                          type="button"
+                          onClick={handleAddFolderRow}
+                          disabled={isProcessing}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white shadow-xs transition-all flex items-center justify-center cursor-pointer"
+                          title="Adicionar mais uma pasta para criação simultânea (+)"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Botão de remover se houver mais de uma linha */}
+                    {folderNames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFolderRow(index)}
+                        disabled={isProcessing}
+                        className="p-3 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-neutral-800 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-neutral-700 transition-colors flex items-center justify-center cursor-pointer shrink-0"
+                        title="Remover esta pasta da lista"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-teams-500" />
-              <span>Digite o nome desejado para a pasta a ser criada.</span>
+              <span>
+                {folderNames.length > 1
+                  ? 'Todas as pastas acima serão criadas simultaneamente na rede em tarefas paralelas multithread.'
+                  : 'Digite o nome desejado. Use o botão + no final da barra para criar múltiplas pastas de uma vez.'}
+              </span>
             </p>
           </div>
 
@@ -202,18 +330,26 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
           {/* Botão de Criação */}
           <button
             type="submit"
-            disabled={!folderName.trim() || isProcessing}
+            disabled={validCount === 0 || isProcessing}
             className="w-full py-3 px-5 rounded-xl bg-teams-600 hover:bg-teams-700 active:bg-teams-800 disabled:opacity-50 text-white font-semibold text-sm shadow-md shadow-teams-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Criando estrutura de pastas...</span>
+                <span>
+                  {validCount > 1
+                    ? `Criando ${validCount} pastas simultaneamente na rede...`
+                    : 'Criando estrutura de pastas...'}
+                </span>
               </>
             ) : (
               <>
                 <FolderPlus className="w-4 h-4" />
-                <span>Criar Pasta</span>
+                <span>
+                  {validCount > 1
+                    ? `Criar ${validCount} Pastas Simultâneas`
+                    : 'Criar Pasta'}
+                </span>
               </>
             )}
           </button>
@@ -222,3 +358,4 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({ onCreate
     </div>
   );
 };
+

@@ -45,8 +45,8 @@ async function buildMSI() {
       logDirectory: '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\LOGS',
       selectedLogFile: '',
       presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES' },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
+        { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
       adServerIp: env.RTO_AD_IP || '192.168.50.102',
       domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
@@ -63,8 +63,8 @@ async function buildMSI() {
       logDirectory: '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\LOGS',
       selectedLogFile: '',
       presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\00 - EX CLIENTES' },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS' }
+        { name: '00 - EX CLIENTES', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
       adServerIp: env.RELIQUIA_AD_IP || '192.168.1.242',
       domainUser: env.RELIQUIA_AD_USER || 'RELIQUIA\\pasta.paralegal',
@@ -174,7 +174,7 @@ async function buildMSI() {
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');
   const desktopMsi = path.join(desktopPath, 'FolderWorks.msi');
   const installerDir = path.join(projectRoot, '..', '01 - Instalador', 'Internal');
-  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v2.9.7-win-x64.msi');
+  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v2.9.8-win-x64.msi');
   const internalLatestMsi = path.join(installerDir, 'FolderWorks.msi');
 
   if (fs.existsSync(sourceMsi)) {

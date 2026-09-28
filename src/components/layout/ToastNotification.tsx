@@ -80,9 +80,9 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="fixed bottom-6 right-6 z-50 w-96 bg-white dark:bg-neutral-850 rounded-2xl border border-slate-200/90 dark:border-neutral-700 shadow-2xl overflow-hidden transition-all animate-in slide-in-from-bottom-5 duration-300 select-none text-slate-800 dark:text-slate-100"
+      className="fixed bottom-6 right-6 z-50 w-96 bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200/90 dark:border-neutral-800 shadow-2xl overflow-hidden transition-all animate-in slide-in-from-bottom-5 duration-300 select-none text-slate-800 dark:text-slate-100"
       style={{
-        boxShadow: '0 20px 30px -10px rgba(0, 0, 0, 0.25), 0 0 15px rgba(79, 70, 229, 0.15)',
+        boxShadow: '0 20px 30px -10px rgba(0, 0, 0, 0.4), 0 0 18px rgb(var(--color-teams-600-rgb, 91 95 199) / 0.25)',
       }}
     >
       {/* Barra de Progresso Superior de 10s */}
@@ -106,7 +106,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
                   {toast.title}
                 </h4>
                 {toast.company && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-300">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-slate-300">
                     {toast.company}
                   </span>
                 )}
@@ -124,7 +124,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
 
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-750 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
             title="Fechar notificação"
           >
             <X className="w-3.5 h-3.5" />
@@ -132,7 +132,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
         </div>
 
         {/* Nome da Pasta em Destaque */}
-        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-neutral-900 border border-slate-200/70 dark:border-neutral-800 font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate mb-3 select-text">
+        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200/70 dark:border-neutral-800 font-mono text-[11px] text-slate-800 dark:text-slate-200 truncate mb-3 select-text">
           <span className="font-bold text-teams-600 dark:text-teams-400">Pasta: </span>
           {toast.folderName}
         </div>
@@ -142,7 +142,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
           {toast.folderPath && (
             <button
               onClick={handleOpenFolder}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-neutral-750 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-transparent dark:border-neutral-700/60"
               title="Abrir pasta no Windows Explorer"
             >
               <FolderOpen className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
@@ -153,7 +153,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
           {toast.onUndoOrRedo && (
             <button
               onClick={handleActionClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teams-600 hover:bg-teams-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
               title={toast.undoOrRedoLabel || 'Refazer ação'}
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -165,3 +165,4 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onC
     </div>
   );
 };
+

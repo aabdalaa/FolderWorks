@@ -15,8 +15,10 @@ import { SecurityBoundaryModal } from './components/layout/SecurityBoundaryModal
 import { ToastNotification, ToastData } from './components/layout/ToastNotification';
 import { Terminal, Shield } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
+import { useIconColor } from './hooks/useIconColor';
 
 export const App: React.FC = () => {
+  useIconColor(); // Initialize dynamic theme colors across all buttons and components
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [previousTab, setPreviousTab] = useState<AppTab>('dashboard');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);

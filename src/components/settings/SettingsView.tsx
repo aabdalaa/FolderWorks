@@ -35,6 +35,7 @@ interface SettingsViewProps {
 interface ShortcutItem {
   name: string;
   path: string;
+  isPredefined?: boolean;
 }
 
 interface CompanyLogDetectionState {
@@ -76,6 +77,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [newCompanyName, setNewCompanyName] = useState('');
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [pendingDeleteShortcut, setPendingDeleteShortcut] = useState<{ compKey: string; index: number } | null>(null);
+  const [isTIShortcutAuthModalOpen, setIsTIShortcutAuthModalOpen] = useState(false);
+
+  // Helper para identificar atalhos pré-definidos pelo TI
+  const isTIShortcut = (shortcut: ShortcutItem): boolean => {
+    if (shortcut.isPredefined) return true;
+    const normalized = (shortcut.name || '').trim().toUpperCase();
+    return normalized === '00 - EX CLIENTES' || normalized === '01 - EMPRESAS ENCERRADAS';
+  };
 
   // Helper to extract company keys
   const getCompanyKeys = (cfg: any): string[] => {
@@ -182,7 +192,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   // Icon Color Customization Hook
-  const { selectedColorId, availableColors, setIconColor } = useIconColor();
+  const { selectedColorId, availableColors, setIconColor, currentColor } = useIconColor();
 
   // Shortcuts status
   const [shortcutsStatus, setShortcutsStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -240,8 +250,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const newIndex = curShortcuts.length + 1;
     const basePath = config[compKey]?.allowedBasePath || config[compKey]?.destSharePath || '';
     curShortcuts.push({
-      name: `Atalho ${newIndex}`,
+      name: `Novo Atalho ${newIndex}`,
       path: basePath ? `${basePath}\\Pasta_${newIndex}` : '',
+      isPredefined: false,
     });
     setConfig((prev: any) => ({
       ...prev,
@@ -252,7 +263,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }));
   };
 
-  const handleRemoveShortcut = (compKey: string, index: number) => {
+  const executeRemoveShortcut = (compKey: string, index: number) => {
     const curShortcuts: ShortcutItem[] = [...(config[compKey]?.presetDestinations || [])];
     curShortcuts.splice(index, 1);
     setConfig((prev: any) => ({
@@ -262,6 +273,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         presetDestinations: curShortcuts,
       },
     }));
+  };
+
+  const handleRemoveShortcutClick = (compKey: string, index: number) => {
+    const curShortcuts: ShortcutItem[] = [...(config[compKey]?.presetDestinations || [])];
+    const target = curShortcuts[index];
+    if (!target) return;
+
+    if (isTIShortcut(target)) {
+      if (!isTIUnlocked) {
+        setPendingDeleteShortcut({ compKey, index });
+        setIsTIShortcutAuthModalOpen(true);
+        return;
+      }
+    }
+
+    executeRemoveShortcut(compKey, index);
+  };
+
+  const handleTIShortcutAuthSuccess = () => {
+    setIsTIShortcutAuthModalOpen(false);
+    if (pendingDeleteShortcut) {
+      executeRemoveShortcut(pendingDeleteShortcut.compKey, pendingDeleteShortcut.index);
+      setPendingDeleteShortcut(null);
+    }
   };
 
   const handleSaveShortcuts = async (compKey: string) => {
@@ -457,20 +492,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {isTIUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  {isTIUnlocked ? 'Configurações de TI Liberadas' : 'Configurações do Sistema'}
-                </h3>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                    isTIUnlocked
-                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  {isTIUnlocked ? 'Edição Ativa' : 'Somente Leitura'}
-                </span>
-              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {isTIUnlocked ? 'Configurações de TI Liberadas' : 'Configurações do Sistema'}
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isTIUnlocked
                   ? 'Gerencie empresas, caminhos de rede, perímetro de segurança e atalhos rápidos.'
@@ -512,7 +536,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-teams-600/20 cursor-pointer"
                 >
                   <Save className={`w-3.5 h-3.5 ${isSaving ? 'animate-spin' : ''}`} />
                   <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
@@ -549,28 +573,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* 2. Cores dos Ícones do Sistema (Livre para o Usuário) */}
+      {/* 2. Cores do Sistema e Tema Global (Livre para o Usuário - 24 Opções) */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0">
-              <Palette className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Cores dos Ícones do Sistema</h3>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  Livre para o Usuário
-                </span>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0">
+                <Palette className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Escolha a tonalidade de destaque dos ícones da aplicação. A escolha é salva automaticamente.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Personalização de Tema e Cores</h3>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    24 Cores Disponíveis
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Escolha a cor de destaque principal da aplicação. Todos os botões, abas, destaques e ícones adotarão a cor escolhida instantaneamente.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 text-xs font-semibold text-teams-700 dark:text-teams-300 shrink-0">
+              <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: currentColor.hex }} />
+              <span>Tema Ativo: {currentColor.name}</span>
             </div>
           </div>
 
-          {/* Seletor de Cores */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Grid com as 24 Opções de Cores */}
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2 pt-1">
             {availableColors.map((color) => {
               const isSelected = selectedColorId === color.id;
               return (
@@ -578,19 +609,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   key={color.id}
                   type="button"
                   onClick={() => setIconColor(color.id)}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                  className={`group relative flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer ${
                     isSelected
-                      ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-slate-900 dark:text-white ring-2 ring-teams-600/30 shadow-xs'
-                      : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-neutral-900/50'
+                      ? 'border-teams-600 bg-teams-50/70 dark:bg-teams-950/70 ring-2 ring-teams-600/40 shadow-xs scale-105'
+                      : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 bg-slate-50/40 dark:bg-neutral-900/40 hover:scale-102'
                   }`}
-                  title={`Selecionar ${color.name}`}
+                  title={`${color.name} (${color.category || ''})`}
                 >
-                  <span
-                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  <span className="text-[11px] truncate">{color.name.split(' ')[0]}</span>
-                  {isSelected && <CheckCircle2 className="w-3 h-3 text-teams-600 dark:text-teams-400 shrink-0" />}
+                  <div className="relative">
+                    <span
+                      className="w-5 h-5 rounded-full block shadow-xs transition-transform group-hover:scale-110"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                    {isSelected && (
+                      <span className="absolute inset-0 flex items-center justify-center text-white drop-shadow-xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 mt-1 truncate max-w-full text-center">
+                    {color.name.split(' ')[0]}
+                  </span>
                 </button>
               );
             })}
@@ -1019,7 +1058,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <hr className="border-slate-100 dark:border-neutral-700" />
 
-          {/* Atalhos Rápidos de Destino (Liberado para Usuários com Validação de Perímetro) */}
+          {/* Atalhos Rápidos de Destino (Liberado para Usuários com Validação de Perímetro e Proteção de TI) */}
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
@@ -1028,7 +1067,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span>Atalhos Rápidos de Destino</span>
                 </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Adicione e organize atalhos rápidos. Todos os caminhos devem estar dentro do perímetro autorizado.
+                  Adicione e configure atalhos rápidos. Os atalhos padrão do TI são protegidos e exigem senha para exclusão.
                 </p>
               </div>
 
@@ -1046,7 +1085,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="button"
                   onClick={() => handleSaveShortcuts(activeCompanyTab)}
                   disabled={shortcutsSaving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-teams-600/20 cursor-pointer"
                   title="Salvar alterações nos atalhos"
                 >
                   <Save className={`w-3.5 h-3.5 ${shortcutsSaving ? 'animate-spin' : ''}`} />
@@ -1079,45 +1118,87 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   Nenhum atalho rápido configurado para esta empresa. Clique em "Adicionar Atalho" acima.
                 </div>
               ) : (
-                currentShortcuts.map((shortcut, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-xs"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Nome do Atalho (ex: 00 - EX CLIENTES)"
-                      value={shortcut.name}
-                      onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'name', e.target.value)}
-                      className="sm:w-1/3 p-1.5 rounded-md font-semibold text-xs bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500"
-                    />
-                    <div className="flex-1 flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Caminho UNC na Rede"
-                        value={shortcut.path}
-                        onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'path', e.target.value)}
-                        className="flex-1 p-1.5 rounded-md font-mono text-[11px] bg-white dark:bg-neutral-800 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
-                        className="p-1.5 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
-                        title="Procurar pasta (Respeita o perímetro de TI)"
-                      >
-                        <FolderOpen className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveShortcut(activeCompanyTab, idx)}
-                        className="p-1.5 bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-md transition-colors cursor-pointer"
-                        title="Excluir atalho"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                currentShortcuts.map((shortcut, idx) => {
+                  const isPredefined = isTIShortcut(shortcut);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-700 text-xs"
+                    >
+                      <div className="sm:w-1/3 flex items-center gap-1.5">
+                        {isPredefined && (
+                          <span
+                            className="p-1 rounded bg-slate-100 dark:bg-neutral-800 text-slate-500 dark:text-slate-400 shrink-0 flex items-center"
+                            title="Atalho padrão definido pelo TI (protegido contra exclusão acidental)"
+                          >
+                            <Lock className="w-3 h-3" />
+                          </span>
+                        )}
+                        <input
+                          type="text"
+                          placeholder="Nome do Atalho (ex: 00 - EX CLIENTES)"
+                          value={shortcut.name}
+                          disabled={isPredefined && !isTIUnlocked}
+                          onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'name', e.target.value)}
+                          className={`flex-1 p-1.5 rounded-md font-semibold text-xs border text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500 ${
+                            isPredefined && !isTIUnlocked
+                              ? 'bg-slate-100 dark:bg-neutral-800/60 border-slate-200 dark:border-neutral-700 cursor-not-allowed opacity-90'
+                              : 'bg-white dark:bg-neutral-800 border-slate-300 dark:border-neutral-600'
+                          }`}
+                          title={isPredefined && !isTIUnlocked ? 'Nome fixo do TI (desbloqueie com a senha do TI para editar)' : ''}
+                        />
+                      </div>
+
+                      <div className="flex-1 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Caminho UNC na Rede"
+                          value={shortcut.path}
+                          disabled={isPredefined && !isTIUnlocked}
+                          onChange={(e) => handleShortcutChange(activeCompanyTab, idx, 'path', e.target.value)}
+                          className={`flex-1 p-1.5 rounded-md font-mono text-[11px] border text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-teams-500 ${
+                            isPredefined && !isTIUnlocked
+                              ? 'bg-slate-100 dark:bg-neutral-800/60 border-slate-200 dark:border-neutral-700 cursor-not-allowed opacity-90'
+                              : 'bg-white dark:bg-neutral-800 border-slate-300 dark:border-neutral-600'
+                          }`}
+                          title={isPredefined && !isTIUnlocked ? 'Caminho fixo do TI (desbloqueie com a senha do TI para editar)' : ''}
+                        />
+
+                        {(!isPredefined || isTIUnlocked) && (
+                          <button
+                            type="button"
+                            onClick={() => handleBrowseShortcut(activeCompanyTab, idx, shortcut.path)}
+                            className="p-1.5 bg-slate-200 dark:bg-neutral-700 hover:bg-slate-300 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-md transition-colors cursor-pointer"
+                            title="Procurar pasta (Respeita o perímetro de TI)"
+                          >
+                            <FolderOpen className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveShortcutClick(activeCompanyTab, idx)}
+                          className={`p-1.5 rounded-md transition-colors cursor-pointer flex items-center justify-center ${
+                            isPredefined && !isTIUnlocked
+                              ? 'bg-slate-200 dark:bg-neutral-800 hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-500 hover:text-rose-600'
+                              : 'bg-rose-100 dark:bg-rose-950/50 hover:bg-rose-200 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400'
+                          }`}
+                          title={
+                            isPredefined && !isTIUnlocked
+                              ? 'Atalho padrão do TI (requer senha de administrador para excluir)'
+                              : 'Excluir atalho'
+                          }
+                        >
+                          {isPredefined && !isTIUnlocked ? (
+                            <Lock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -1247,6 +1328,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         onSuccess={handleUnlockSuccess}
         title="Desbloquear Configurações"
         description="Digite a senha de administrador para liberar a edição de empresas e parâmetros."
+      />
+
+      {/* Modal: Autenticação para Exclusão de Atalho Padrão do TI */}
+      <TIAccessModal
+        isOpen={isTIShortcutAuthModalOpen}
+        onClose={() => {
+          setIsTIShortcutAuthModalOpen(false);
+          setPendingDeleteShortcut(null);
+        }}
+        onSuccess={handleTIShortcutAuthSuccess}
+        title="Excluir Atalho Padrão do TI"
+        description="Este atalho foi pré-definido pelo TI da empresa. Digite a senha de administrador para autorizar a sua exclusão."
       />
 
       {/* Modal: Adicionar Nova Empresa */}

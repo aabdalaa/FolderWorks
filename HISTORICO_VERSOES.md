@@ -1,5 +1,27 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 2.9.8 (28/09/2026) - **Criação de Múltiplas Pastas Simultâneas (+), Toast em Dark Mode, Validação Manual na Transferência, Remoção de Badges e Tema Dinâmico em 100% dos Botões (24 Cores)**
+- **Criação de Múltiplas Pastas Simultâneas em Tarefas Paralelas (Botão `+`)**:
+  - Adicionado botão **`+`** de alta precisão no final da barra de texto de nome da pasta no módulo *Criar Pasta*, permitindo ao usuário adicionar múltiplos campos de pastas para criação em lote.
+  - Botão de remoção individual (**`X`**) para cada linha adicional criada.
+  - **Execução Paralela Concorrente (`Promise.all`)**: Todas as pastas informadas são enviadas e processadas simultaneamente na rede corporativa, acionando instâncias paralelas do motor nativo com Robocopy multithread `/MT:128`, eliminando a lentidão de criação individual sequencial.
+  - Preservação estrita das permissões de segurança NTFS (DACL/SACL) herdadas dos diretórios MODELO corporativos.
+- **Diagnóstico e Otimização de Desempenho da Relíquia**:
+  - Identificada a causa fundamental de latência na Relíquia: a pasta MODELO da Relíquia possui **4.413 subdiretórios** (contra 509 da RTO). A criação paralela em lote permite criar múltiplos clientes de forma simultânea, contornando a latência de round-trips do SMB sem alterar as permissões de segurança.
+- **Notificação Toast Homogênea em Modo Escuro**:
+  - Correção das classes de estilo do pop-up toast no canto inferior direito para classes escuras padrão (`dark:bg-neutral-900`, `dark:border-neutral-800`), eliminando o fundo branco indesejado em ambientes de tema escuro e integrando sombra e barra de progresso à cor do tema ativo.
+- **Botão "Abrir Pasta no Destino" na Validação do Operador (Módulo Transferência)**:
+  - Adicionado terceiro botão de ação no modal pós-cópia de transferência, permitindo ao operador abrir diretamente o Windows Explorer no diretório de destino para checagem e validação manual dos arquivos antes de confirmar a exclusão da origem ou desfazer a operação.
+- **Remoção de Badges Indicativos ("Somente Leitura" e "Livre para o Usuário")**:
+  - Removido o badge de status "Somente Leitura" / "Edição Ativa" no topo das Configurações e qualquer selo indicativo de "Livre para o Usuário", tornando o layout mais limpo, minimalista e corporativo.
+- **Tema Global Dinâmico Aplicado em 100% dos Botões da Aplicação (24 Cores Corporativas)**:
+  - Todas as classes de botões primários e ações do aplicativo utilizam variáveis CSS dinâmicas calculadas matematicamente a partir da cor de destaque selecionada pelo usuário (ex: Laranja Solar, Azul Safira, Verde Esmeralda, etc.).
+  - Ao alterar o tema nas Configurações, 100% dos botões ("Desbloquear com Senha do TI", "Salvar", "Salvar Atalhos", "Criar Pasta", "Renomear", "Transferir" e abas) adotam a nova tonalidade instantaneamente em tempo real.
+- **Novo Pacote Oficial MSI v2.9.8**:
+  - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para `01 - Instalador/Internal/` e Área de Trabalho.
+
+---
+
 ## Versão 2.9.7 (23/09/2026) - **Auditoria Enriquecida, Buffer FIFO de 500 Linhas, Clean Slate, Toast com Desfazer (10s), Modal de Perímetro e Atalhos do Usuário**
 - **Enriquecimento Granular de Auditoria Corporativa**:
   - Captura real do usuário da máquina física (`os.userInfo().username` ou `process.env.USERNAME`), distinguindo com precisão a pessoa física do operador da conta de serviço `pasta.paralegal`.

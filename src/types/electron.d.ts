@@ -27,7 +27,7 @@ export interface ElectronAPI {
   getConfig: () => Promise<any>;
   saveConfig: (cfg: any) => Promise<any>;
   resetConfig: () => Promise<any>;
-  createFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; folderName?: string; finalPath?: string; durationSeconds?: number; error?: string }>;
+  createFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; durationSeconds?: number; error?: string }>;
   getRecentLogs: () => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
   openLogFile: (filePath?: string) => Promise<boolean>;
@@ -57,7 +57,6 @@ export interface ElectronAPI {
   deleteSourceFolders: (req: { company: string; foldersToDelete: string[] }) => Promise<{ success: boolean; deleted: string[]; errors: string[] }>;
   undoTransfer: (req: { company: string; foldersToUndo?: string[]; items?: Array<{ sourcePath: string; destPath: string; method?: string }> }) => Promise<{ success: boolean; undone: string[]; errors: string[] }>;
   openExternal: (url: string) => Promise<boolean>;
-  openFolderInExplorer: (targetPath: string) => Promise<boolean>;
   selectLogFile: (mode?: 'open' | 'save') => Promise<string | null>;
   testLogFile: (filePath: string) => Promise<{ success: boolean; message: string }>;
   openSharedLogFile: (filePath?: string) => Promise<boolean>;
@@ -70,11 +69,12 @@ export interface ElectronAPI {
   }>;
   selectCompanyLogFile: (companyKey: string, filePath: string) => Promise<{ success: boolean; selectedFile: string }>;
   createCompanyLogFile: (companyKey: string, format?: string) => Promise<{ success: boolean; createdFile: string }>;
+  openFolderInExplorer: (targetPath: string) => Promise<boolean>;
+  onPerimeterBlocked: (callback: (data: { chosenPath: string; allowedBasePath: string; company?: string }) => void) => () => void;
   onLog: (callback: (log: string) => void) => () => void;
   onConfigUpdated: (callback: (cfg: any) => void) => () => void;
   onFoldersUpdated: (callback: (data: any) => void) => () => void;
   onHistoryUpdated: (callback: (data: any) => void) => () => void;
-  onPerimeterBlocked: (callback: (data: { chosenPath: string; allowedBasePath: string; company?: string }) => void) => () => void;
   minimize: () => void;
   maximize: () => void;
   close: () => void;
