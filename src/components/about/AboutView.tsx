@@ -11,6 +11,8 @@ import {
   Sparkles,
   UserCheck,
   ArrowLeft,
+  Globe,
+  DownloadCloud,
 } from 'lucide-react';
 
 interface AboutViewProps {
@@ -118,6 +120,64 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Portal de Configuração do TI & Atualizações */}
+        <div className="pt-6 border-t border-slate-100 dark:border-neutral-800 mt-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+            Portal Oficial & Atualizações do App
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Card 1: Portal Web */}
+            <div className="p-4 rounded-xl border border-teams-200 dark:border-teams-800/80 bg-gradient-to-br from-teams-50/70 to-indigo-50/30 dark:from-teams-950/40 dark:to-neutral-900/60 flex flex-col justify-between gap-3 shadow-xs">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-teams-600 text-white shadow-xs">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Site do FolderWorks</h4>
+                    <span className="text-[10px] text-teams-600 dark:text-teams-400 font-semibold">Configurador Web do TI</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                  Acesse o site oficial para configurar variáveis corporativas, personalizar o logotipo da sua empresa e gerar novos instaladores MSI.
+                </p>
+              </div>
+              <button
+                onClick={() => handleOpenLink('https://aabdalaa.github.io/FolderWorks/')}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-teams-600 hover:bg-teams-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer group"
+              >
+                <span>Acessar Site do FolderWorks</span>
+                <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+
+            {/* Card 2: GitHub Releases & Atualização */}
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-neutral-800 bg-slate-50/70 dark:bg-neutral-800/40 flex flex-col justify-between gap-3 shadow-xs">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs">
+                    <DownloadCloud className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">Verificar Atualizações</h4>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">v3.0.0 instalada</span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                  Consulte notas de versão, novas melhorias de sistema e baixe atualizações oficiais diretamente pelo repositório GitHub.
+                </p>
+              </div>
+              <button
+                onClick={() => handleOpenLink('https://github.com/aabdalaa/FolderWorks')}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-slate-300 dark:border-neutral-700 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer group"
+              >
+                <span>Repositório & Atualizações</span>
+                <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
