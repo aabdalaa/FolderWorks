@@ -1,4 +1,4 @@
-name: 🚀 Compilador de MSI Personalizado (FolderWorks)
+name: "Compilador de MSI Personalizado"
 
 on:
   workflow_dispatch:
@@ -41,36 +41,36 @@ permissions:
 
 jobs:
   build-msi:
-    name: Compilar FolderWorks MSI
+    name: "Compilar FolderWorks MSI"
     runs-on: windows-latest
 
     steps:
-      - name: 📥 Clonar Repositório
+      - name: "Clonar Repositório"
         uses: actions/checkout@v4
 
-      - name: ⚙️ Configurar Node.js
+      - name: "Configurar Node.js"
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: 📦 Instalar Dependências
+      - name: "Instalar Dependências"
         run: npm install --legacy-peer-deps
 
-      - name: 🎨 Processar Logotipo Customizado (se fornecido)
+      - name: "Processar Logotipo Customizado"
         shell: pwsh
         run: |
           $logoUrl = "${{ github.event.inputs.custom_logo_url }}"
           if ($logoUrl -and $logoUrl.Trim() -ne "") {
-            Write-Host "Baixando logotipo customizado de: $logoUrl"
+            Write-Host "Baixando logotipo de: $logoUrl"
             try {
               Invoke-WebRequest -Uri $logoUrl -OutFile "src/assets/logo.png"
-              Write-Host "✓ Logotipo customizado aplicado em src/assets/logo.png"
+              Write-Host "Logotipo customizado aplicado com sucesso"
             } catch {
-              Write-Warning "Aviso: Falha ao baixar logotipo da URL informada: $_"
+              Write-Warning "Falha ao baixar logotipo da URL informada: $_"
             }
           }
 
-      - name: 🛠️ Injetar Configurações Corporativas do TI
+      - name: "Injetar Configurações Corporativas do TI"
         shell: pwsh
         run: |
           $compName = "${{ github.event.inputs.company_name }}"
@@ -105,35 +105,24 @@ jobs:
 
           $cfgJson = $cfg | ConvertTo-Json -Depth 5
           Set-Content -Path "custom_config.json" -Value $cfgJson -Encoding UTF8
-          Write-Host "✓ custom_config.json gerado com sucesso para a empresa: $compName"
+          Write-Host "custom_config.json gerado com sucesso para: $compName"
 
-      - name: 🔨 Compilar Frontend e Pacote MSI
+      - name: "Compilar Frontend e Pacote MSI"
         shell: pwsh
         run: |
           $compName = "${{ github.event.inputs.company_name }}"
           $cleanSafeName = ($compName -replace '[^a-zA-Z0-9_-]', '_')
           $targetMsi = "FolderWorks-$cleanSafeName-v3.0.0.msi"
+          node build/build_ci_msi.js custom_config.json $targetMsi
 
-          node -e @"
-          const { compileCustomMSI } = require('./build/build_custom_msi.js');
-          const fs = require('fs');
-          const cfg = JSON.parse(fs.readFileSync('custom_config.json', 'utf-8'));
-          compileCustomMSI(cfg, '$targetMsi').then(res => {
-            console.log('✓ MSI compilado com sucesso:', res);
-          }).catch(err => {
-            console.error('Falha na compilação do MSI:', err);
-            process.exit(1);
-          });
-          "@
-
-      - name: 📤 Publicar Artefato do Instalador (.MSI)
+      - name: "Publicar Artefato do Instalador"
         uses: actions/upload-artifact@v4
         with:
           name: FolderWorks-Instalador-MSI
           path: dist/output/*.msi
           if-no-files-found: error
 
-      - name: 🏷️ Criar Release Oficial de Download
+      - name: "Criar Release Oficial de Download"
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
