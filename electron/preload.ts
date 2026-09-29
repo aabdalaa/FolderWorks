@@ -31,6 +31,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   detectCompanyLogFiles: (companyKey: string) => ipcRenderer.invoke('detect-company-log-files', companyKey),
   selectCompanyLogFile: (companyKey: string, filePath: string) => ipcRenderer.invoke('select-company-log-file', { companyKey, filePath }),
   createCompanyLogFile: (companyKey: string, format?: string) => ipcRenderer.invoke('create-company-log-file', { companyKey, format }),
+  setWindowIcon: (dataUrl: string | null) => ipcRenderer.invoke('set-window-icon', dataUrl),
+  getSharedConfigInfo: () => ipcRenderer.invoke('get-shared-config-info'),
+  setSharedConfigFile: (filePath: string) => ipcRenderer.invoke('set-shared-config-file', filePath),
+  createSharedConfigFile: (filePath: string, initialConfig?: any) => ipcRenderer.invoke('create-shared-config-file', { filePath, initialConfig }),
+  selectConfigFile: (mode?: 'open' | 'save') => ipcRenderer.invoke('select-config-file', mode),
+  reloadConfig: () => ipcRenderer.invoke('reload-config'),
   onLog: (callback: (log: string) => void) => {
     const handler = (_: any, data: string) => callback(data);
     ipcRenderer.on('log-entry', handler);

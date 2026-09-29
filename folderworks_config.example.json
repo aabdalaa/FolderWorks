@@ -1,0 +1,30 @@
+{
+  "isLockedByMSI": false,
+  "Empresa Modelo": {
+    "name": "Empresa Modelo",
+    "companyName": "Empresa Modelo",
+    "sourcePath": "C:\\FolderWorks\\MODELO",
+    "destinationParentPath": "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+    "destSharePath": "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+    "allowedBasePath": "C:\\FolderWorks\\CLIENTES",
+    "defaultSourceFolder": "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+    "logDirectory": "C:\\FolderWorks\\LOGS",
+    "selectedLogFile": "",
+    "presetDestinations": [
+      {
+        "name": "00 - EX CLIENTES",
+        "path": "C:\\FolderWorks\\CLIENTES\\00 - EX CLIENTES",
+        "isPredefined": true
+      },
+      {
+        "name": "01 - EMPRESAS ENCERRADAS",
+        "path": "C:\\FolderWorks\\CLIENTES\\01 - EMPRESAS ENCERRADAS",
+        "isPredefined": true
+      }
+    ],
+    "adServerIp": "",
+    "domainUser": "",
+    "adPass": ""
+  },
+  "tiLogsPassword": ""
+}

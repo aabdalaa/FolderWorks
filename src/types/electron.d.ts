@@ -70,6 +70,12 @@ export interface ElectronAPI {
   }>;
   selectCompanyLogFile: (companyKey: string, filePath: string) => Promise<{ success: boolean; selectedFile: string }>;
   createCompanyLogFile: (companyKey: string, format?: string) => Promise<{ success: boolean; createdFile: string }>;
+  setWindowIcon: (dataUrl: string | null) => Promise<boolean>;
+  getSharedConfigInfo: () => Promise<{ isConfigured: boolean; sharedFilePath: string; isConnected: boolean; isOfflineCache: boolean; lastModified: string | null; size?: number; error: string | null }>;
+  setSharedConfigFile: (filePath: string) => Promise<{ success: boolean; config?: any; error?: string; message?: string }>;
+  createSharedConfigFile: (filePath: string, initialConfig?: any) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+  selectConfigFile: (mode?: 'open' | 'save') => Promise<string | null>;
+  reloadConfig: () => Promise<{ success: boolean; config: any }>;
   openFolderInExplorer: (targetPath: string) => Promise<boolean>;
   onPerimeterBlocked: (callback: (data: { chosenPath: string; allowedBasePath: string; company?: string }) => void) => () => void;
   onLog: (callback: (log: string) => void) => () => void;

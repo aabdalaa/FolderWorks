@@ -23,6 +23,9 @@ import {
   Palette,
   Upload,
   Image as ImageIcon,
+  Network,
+  Share2,
+  Unlink,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
 import { useIconColor } from '../../hooks/useIconColor';
@@ -61,6 +64,102 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const logoInputRef = React.useRef<HTMLInputElement>(null);
 
+  const [config, setConfig] = useState<any>(null);
+  const [sharedConfigInfo, setSharedConfigInfo] = useState<{
+    isConfigured: boolean;
+    sharedFilePath: string;
+    isConnected: boolean;
+    isOfflineCache: boolean;
+    lastModified: string | null;
+    size?: number;
+    error: string | null;
+  }>({
+    isConfigured: false,
+    sharedFilePath: '',
+    isConnected: false,
+    isOfflineCache: false,
+    lastModified: null,
+    error: null,
+  });
+  const [isLoadingSharedConfig, setIsLoadingSharedConfig] = useState(false);
+
+  const loadSharedConfigInfo = async () => {
+    if (window.electronAPI?.getSharedConfigInfo) {
+      const info = await window.electronAPI.getSharedConfigInfo();
+      setSharedConfigInfo(info);
+    }
+  };
+
+  const handleSelectSharedConfigFile = async () => {
+    const selected = await window.electronAPI?.selectConfigFile('open');
+    if (!selected) return;
+    setIsLoadingSharedConfig(true);
+    const res = await window.electronAPI?.setSharedConfigFile(selected);
+    setIsLoadingSharedConfig(false);
+    if (res?.success) {
+      const updated = res.config || (await window.electronAPI?.getConfig());
+      setConfig(updated);
+      await loadSharedConfigInfo();
+      setSaveStatus({ type: 'success', message: `Aplicativo vinculado com sucesso ao arquivo de rede: ${selected}` });
+    } else {
+      setSaveStatus({ type: 'error', message: res?.error || 'Falha ao vincular arquivo de configuração da rede.' });
+    }
+  };
+
+  const [manualSharedPath, setManualSharedPath] = useState('');
+
+  const handleConnectManualPath = async () => {
+    const trimmed = manualSharedPath.trim();
+    if (!trimmed) return;
+    setIsLoadingSharedConfig(true);
+    const res = await window.electronAPI?.setSharedConfigFile(trimmed);
+    setIsLoadingSharedConfig(false);
+    if (res?.success) {
+      const updated = res.config || (await window.electronAPI?.getConfig());
+      setConfig(updated);
+      await loadSharedConfigInfo();
+      setSaveStatus({ type: 'success', message: `Aplicativo vinculado com sucesso ao arquivo de rede: ${trimmed}` });
+      setManualSharedPath('');
+    } else {
+      setSaveStatus({ type: 'error', message: res?.error || 'Falha ao vincular arquivo de configuração da rede.' });
+    }
+  };
+
+  const handleCreateSharedConfigFile = async () => {
+    const targetPath = await window.electronAPI?.selectConfigFile('save');
+    if (!targetPath) return;
+    setIsLoadingSharedConfig(true);
+    const res = await window.electronAPI?.createSharedConfigFile(targetPath, config);
+    setIsLoadingSharedConfig(false);
+    if (res?.success) {
+      await loadSharedConfigInfo();
+      setSaveStatus({ type: 'success', message: `Arquivo de configuração criado na rede com sucesso em: ${targetPath}` });
+    } else {
+      setSaveStatus({ type: 'error', message: res?.error || 'Falha ao criar arquivo de configuração na rede.' });
+    }
+  };
+
+  const handleDisconnectSharedConfig = async () => {
+    setIsLoadingSharedConfig(true);
+    await window.electronAPI?.setSharedConfigFile('');
+    setIsLoadingSharedConfig(false);
+    await loadSharedConfigInfo();
+    const localCfg = await window.electronAPI?.getConfig();
+    setConfig(localCfg);
+    setSaveStatus({ type: 'success', message: 'Desvinculado da rede. O aplicativo agora opera com as configurações locais.' });
+  };
+
+  const handleReloadSharedConfig = async () => {
+    setIsLoadingSharedConfig(true);
+    const res = await window.electronAPI?.reloadConfig();
+    setIsLoadingSharedConfig(false);
+    if (res?.success) {
+      setConfig(res.config);
+      await loadSharedConfigInfo();
+      setSaveStatus({ type: 'success', message: 'Configurações recarregadas da rede com sucesso!' });
+    }
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -71,23 +170,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const result = event.target?.result as string;
-      if (result && onUpdateCustomLogo) {
-        onUpdateCustomLogo(result);
+      if (result) {
+        if (onUpdateCustomLogo) onUpdateCustomLogo(result);
+        const updatedConfig = { ...config, customLogo: result };
+        setConfig(updatedConfig);
+        try {
+          await window.electronAPI?.saveConfig(updatedConfig);
+          await window.electronAPI?.setWindowIcon(result);
+        } catch {}
       }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
 
-  const handleResetLogo = () => {
+  const handleResetLogo = async () => {
     if (onUpdateCustomLogo) {
       onUpdateCustomLogo(null);
     }
+    const updatedConfig = { ...config };
+    delete updatedConfig.customLogo;
+    setConfig(updatedConfig);
+    try {
+      await window.electronAPI?.saveConfig(updatedConfig);
+      await window.electronAPI?.setWindowIcon(null);
+    } catch {}
   };
-
-  const [config, setConfig] = useState<any>(null);
   const [testResults, setTestResults] = useState<{ [key: string]: { success: boolean; message: string } }>({});
   const [testing, setTesting] = useState<{ [key: string]: boolean }>({});
 
@@ -96,10 +206,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Active Company Tab in Settings
-  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('');
+  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('RTO');
 
   // Active Company Tab for Shortcuts (Livre para o Usuário)
-  const [shortcutCompanyTab, setShortcutCompanyTab] = useState<string>('');
+  const [shortcutCompanyTab, setShortcutCompanyTab] = useState<string>('RTO');
 
   // Company Log State
   const [companyLogState, setCompanyLogState] = useState<{ [compKey: string]: CompanyLogDetectionState }>({});
@@ -139,21 +249,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Load config on mount and listen to updates
   useEffect(() => {
+    loadSharedConfigInfo();
     window.electronAPI?.getConfig().then((cfg) => {
       setConfig(cfg);
       const keys = getCompanyKeys(cfg);
       if (keys.length > 0) {
         if (!activeCompanyTab) {
-          setActiveCompanyTab(keys[0]);
+          setActiveCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
         }
         if (!shortcutCompanyTab) {
-          setShortcutCompanyTab(keys[0]);
+          setShortcutCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
         }
       }
     });
 
     const unsub = window.electronAPI?.onConfigUpdated?.((updatedCfg) => {
       setConfig(updatedCfg);
+      loadSharedConfigInfo();
     });
     return () => {
       if (unsub) unsub();
@@ -166,10 +278,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     if (companyKeys.length > 0) {
       if (!activeCompanyTab || !companyKeys.includes(activeCompanyTab)) {
-        setActiveCompanyTab(companyKeys[0]);
+        setActiveCompanyTab(companyKeys.includes('RTO') ? 'RTO' : companyKeys[0]);
       }
       if (!shortcutCompanyTab || !companyKeys.includes(shortcutCompanyTab)) {
-        setShortcutCompanyTab(companyKeys[0]);
+        setShortcutCompanyTab(companyKeys.includes('RTO') ? 'RTO' : companyKeys[0]);
       }
     }
   }, [companyKeys, activeCompanyTab, shortcutCompanyTab]);
@@ -692,6 +804,123 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      {/* 2.0 Arquivo de Configuração Compartilhado na Rede (Centralizado) */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-xl bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0 shadow-xs">
+              <Network className="w-6 h-6 text-teams-600 dark:text-teams-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Configuração Centralizada na Rede Corporativa
+                </h3>
+                {sharedConfigInfo.isConfigured ? (
+                  sharedConfigInfo.isConnected ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Conectado à Rede
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {sharedConfigInfo.isOfflineCache ? 'Cache Offline (Rede Inacessível)' : 'Desconectado'}
+                    </span>
+                  )
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-neutral-600">
+                    Modo Local (Estação Isolada)
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Vincule o FolderWorks a um arquivo <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-neutral-900 text-teams-600 dark:text-teams-400 font-mono text-[11px]">folderworks_config.json</code> no servidor para que todas as estações compartilhem instantaneamente as empresas, permissões, caminhos e o logotipo.
+              </p>
+              {!sharedConfigInfo.isConfigured && (
+                <div className="mt-3 flex items-center gap-2 max-w-2xl">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={manualSharedPath}
+                      onChange={(e) => setManualSharedPath(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConnectManualPath()}
+                      placeholder="Cole ou digite o caminho UNC: \\servidor\compartilhamento\folderworks_config.json"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-slate-800 dark:text-slate-100 font-mono focus:ring-1 focus:ring-teams-500 outline-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConnectManualPath}
+                    disabled={!manualSharedPath.trim() || isLoadingSharedConfig}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teams-600 hover:bg-teams-700 text-white disabled:opacity-50 cursor-pointer shrink-0 transition-colors shadow-xs"
+                  >
+                    <span>Conectar</span>
+                  </button>
+                </div>
+              )}
+              {sharedConfigInfo.isConfigured && (
+                <div className="mt-2 text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-neutral-900/60 p-2 rounded-lg border border-slate-200/80 dark:border-neutral-800 break-all flex items-center justify-between gap-2">
+                  <span>📁 {sharedConfigInfo.sharedFilePath}</span>
+                  {sharedConfigInfo.lastModified && (
+                    <span className="text-[10px] text-slate-400 shrink-0">Modificado: {sharedConfigInfo.lastModified}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={handleSelectSharedConfigFile}
+              disabled={isLoadingSharedConfig}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teams-600 hover:bg-teams-500 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Localizar arquivo .json de configuração no servidor ou disco"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span>{sharedConfigInfo.isConfigured ? 'Trocar Arquivo na Rede' : 'Vincular Arquivo na Rede'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCreateSharedConfigFile}
+              disabled={isLoadingSharedConfig}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer disabled:opacity-50"
+              title="Exportar a configuração atual para um novo arquivo no servidor compartilhado"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Criar na Rede</span>
+            </button>
+
+            {sharedConfigInfo.isConfigured && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleReloadSharedConfig}
+                  disabled={isLoadingSharedConfig}
+                  className="p-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer"
+                  title="Recarregar dados do arquivo da rede agora"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSharedConfig ? 'animate-spin' : ''}`} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDisconnectSharedConfig}
+                  disabled={isLoadingSharedConfig}
+                  className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900 transition-colors cursor-pointer"
+                  title="Desvincular e usar armazenamento local desta máquina"
+                >
+                  <Unlink className="w-3.5 h-3.5" />
+                  <span>Desvincular</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1247,7 +1476,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onChange={(e) => {
                     handleFieldChange(activeCompanyTab, 'logDirectory', e.target.value);
                   }}
-                  placeholder="Ex: \\servidor\compartilhamento\LOGS"
+                  placeholder="Ex: \\192.168.50.102\gpo\criarpastas_paralegal\LOGS"
                   className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
@@ -1389,7 +1618,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   readOnly={!isTIUnlocked}
                   value={activeComp.adServerIp || ''}
                   onChange={(e) => handleFieldChange(activeCompanyTab, 'adServerIp', e.target.value)}
-                  placeholder="Ex: 10.0.0.10 ou dc.empresa.local"
+                  placeholder="Ex: 192.168.1.10"
                   className={`w-full p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'

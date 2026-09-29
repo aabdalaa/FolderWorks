@@ -3,14 +3,21 @@ import { Minus, Square, X, FolderSync } from 'lucide-react';
 
 interface TitleBarProps {
   isLocked?: boolean;
+  customLogo?: string | null;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ isLocked = false }) => {
+export const TitleBar: React.FC<TitleBarProps> = ({ isLocked = false, customLogo }) => {
   return (
     <div className={`h-9 bg-slate-100 dark:bg-neutral-950 border-b border-slate-200 dark:border-neutral-800 flex items-center justify-between px-3 select-none text-xs text-slate-500 dark:text-slate-400 transition-colors ${isLocked ? 'pointer-events-none' : 'app-drag'}`}>
       <div className="flex items-center gap-2.5 font-medium">
-        <div className="w-5 h-5 rounded bg-teams-600 flex items-center justify-center text-white shadow-xs">
-          <FolderSync className="w-3 h-3" />
+        <div className="w-5 h-5 rounded overflow-hidden flex items-center justify-center shrink-0">
+          {customLogo ? (
+            <img src={customLogo} alt="Logo" className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full rounded bg-teams-600 flex items-center justify-center text-white shadow-xs">
+              <FolderSync className="w-3 h-3" />
+            </div>
+          )}
         </div>
         <span className="font-bold text-xs tracking-tight text-slate-800 dark:text-white">Entropy FolderWorks</span>
         <span className="text-[10px] px-2 py-0.5 rounded-md bg-teams-50 dark:bg-teams-950 text-teams-700 dark:text-teams-300 border border-teams-200 dark:border-teams-800 font-mono font-bold">

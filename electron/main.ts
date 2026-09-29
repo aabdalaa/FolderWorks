@@ -1,14 +1,23 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { exec, execFile, execSync } from 'child_process';
+
+// =========================================================================
+// DESATIVAÇÃO UNIVERSAL DE ACELERAÇÃO GPU
+// Impede deadlocks de renderização e tela preta em janelas frameless no Windows
+// =========================================================================
+app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
 
 // Persistent Logs & History Path
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, 'config.json');
+const sharedConfigPointerPath = path.join(userDataPath, 'shared_config_pointer.json');
+const configCachePath = path.join(userDataPath, 'config_cache.json');
+const customIconPath = path.join(userDataPath, 'custom_icon.png');
 const historyPath = path.join(userDataPath, 'history.json');
 const logsPath = path.join(userDataPath, 'app.log');
 
@@ -63,8 +72,12 @@ function sanitizeConfig(cfg: any): any {
     sanitized.sharedLogFilePath = String(cfg.sharedLogFilePath || '').trim();
   }
 
+  if (cfg.customLogo !== undefined) {
+    sanitized.customLogo = cfg.customLogo;
+  }
+
   const companyKeys = Object.keys(cfg).filter(
-    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath'
+    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && k !== 'customLogo' && !k.startsWith('_')
   );
 
   if (companyKeys.length === 0) {
@@ -72,6 +85,7 @@ function sanitizeConfig(cfg: any): any {
       ...defaultCompanyConfigs,
       ...(cfg.tiLogsPassword ? { tiLogsPassword: cfg.tiLogsPassword } : {}),
       ...(cfg.sharedLogFilePath !== undefined ? { sharedLogFilePath: String(cfg.sharedLogFilePath || '').trim() } : {}),
+      ...(cfg.customLogo !== undefined ? { customLogo: cfg.customLogo } : {}),
     };
   }
 
@@ -104,33 +118,128 @@ function sanitizeConfig(cfg: any): any {
   return sanitized;
 }
 
+function getSharedConfigPointer(): string | null {
+  if (fs.existsSync(sharedConfigPointerPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(sharedConfigPointerPath, 'utf-8'));
+      if (data && data.sharedConfigFilePath && typeof data.sharedConfigFilePath === 'string') {
+        return data.sharedConfigFilePath.trim();
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function setSharedConfigPointer(filePath: string | null) {
+  if (filePath) {
+    fs.writeFileSync(sharedConfigPointerPath, JSON.stringify({ sharedConfigFilePath: filePath }, null, 2), 'utf-8');
+  } else {
+    if (fs.existsSync(sharedConfigPointerPath)) {
+      try { fs.unlinkSync(sharedConfigPointerPath); } catch {}
+    }
+  }
+}
+
 function loadConfig(): any {
-  // 1. Prioridade absoluta: Configurações personalizadas e salvas pelo TI em userData
+  // 1. Prioridade Máxima: Arquivo de configuração compartilhado na rede (SMB / UNC / Disco)
+  const sharedFilePath = getSharedConfigPointer();
+  if (sharedFilePath) {
+    try {
+      if (fs.existsSync(sharedFilePath)) {
+        const raw = fs.readFileSync(sharedFilePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        const sanitized = sanitizeConfig(parsed);
+        if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+        if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
+        if (parsed.customLogo !== undefined) sanitized.customLogo = parsed.customLogo;
+        sanitized._isSharedNetworkConfig = true;
+        sanitized._sharedConfigFilePath = sharedFilePath;
+
+        // Atualiza cache local para contingência caso a rede oscile
+        try {
+          fs.writeFileSync(configCachePath, raw, 'utf-8');
+        } catch {}
+
+        return sanitized;
+      } else {
+        appendLog(`[CONFIG REDE AVISO] Arquivo compartilhado '${sharedFilePath}' não está acessível no momento. Buscando cache local...`);
+      }
+    } catch (e: any) {
+      appendLog(`[CONFIG REDE ERRO] Falha ao ler configuração da rede: ${e.message}`);
+    }
+
+    // Fallback: Cache local do arquivo compartilhado da rede
+    if (fs.existsSync(configCachePath)) {
+      try {
+        const raw = fs.readFileSync(configCachePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        const sanitized = sanitizeConfig(parsed);
+        if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
+        if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
+        if (parsed.customLogo !== undefined) sanitized.customLogo = parsed.customLogo;
+        sanitized._isSharedNetworkConfig = true;
+        sanitized._sharedConfigFilePath = sharedFilePath;
+        sanitized._isOfflineCache = true;
+        return sanitized;
+      } catch {}
+    }
+  }
+
+  // 2. Configurações personalizadas salvas localmente no computador
   if (fs.existsSync(configPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       const sanitized = sanitizeConfig(parsed);
       if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
       if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
+      if (parsed.customLogo !== undefined) sanitized.customLogo = parsed.customLogo;
       return sanitized;
     } catch (e) {
       appendLog(`[CONFIG] Falha ao ler config.json do userData: ${e}`);
     }
   }
 
-  // 2. Configurações corporativas pré-embutidas no instalador MSI
+  // 3. Configurações corporativas pré-embutidas no instalador MSI
   if (fs.existsSync(bundledConfigPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(bundledConfigPath, 'utf-8'));
       const sanitized = sanitizeConfig(parsed);
       if (parsed.tiLogsPassword) sanitized.tiLogsPassword = parsed.tiLogsPassword;
       if (parsed.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = parsed.sharedLogFilePath;
+      if (parsed.customLogo !== undefined) sanitized.customLogo = parsed.customLogo;
       return sanitized;
     } catch (e) {}
   }
 
-  // 3. Fallback de fábrica do código-fonte
+  // 4. Fallback de fábrica do código-fonte
   return sanitizeConfig({ ...defaultCompanyConfigs });
+}
+
+function saveConfigData(cfg: any) {
+  const sanitized = sanitizeConfig(cfg);
+  if (cfg.tiLogsPassword) sanitized.tiLogsPassword = cfg.tiLogsPassword;
+  if (cfg.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = cfg.sharedLogFilePath;
+  if (cfg.customLogo !== undefined) sanitized.customLogo = cfg.customLogo;
+
+  const sharedFilePath = getSharedConfigPointer();
+  if (sharedFilePath) {
+    try {
+      const dir = path.dirname(sharedFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(sharedFilePath, JSON.stringify(sanitized, null, 2), 'utf-8');
+      fs.writeFileSync(configCachePath, JSON.stringify(sanitized, null, 2), 'utf-8');
+      appendLog(`[CONFIG REDE] Configurações salvas no arquivo compartilhado: '${sharedFilePath}'`);
+    } catch (err: any) {
+      appendLog(`[CONFIG REDE ERRO] Falha ao salvar no arquivo de rede '${sharedFilePath}': ${err.message}. Salvando localmente como fallback.`);
+      fs.writeFileSync(configPath, JSON.stringify(sanitized, null, 2), 'utf-8');
+    }
+  } else {
+    fs.writeFileSync(configPath, JSON.stringify(sanitized, null, 2), 'utf-8');
+  }
+
+  if (mainWindow) {
+    mainWindow.webContents.send('config-updated', loadConfig());
+  }
 }
 
 function getTIPassword(): string {
@@ -829,7 +938,26 @@ function getFolderMetrics(dirPath: string): { fileCount: number; dirCount: numbe
 
 let isTransferInProgress = false;
 
+function getAppIconPath(): string {
+  if (fs.existsSync(customIconPath)) {
+    return customIconPath;
+  }
+  const candidates = [
+    path.join(__dirname, '../src/assets/icon.ico'),
+    path.join(process.resourcesPath, 'icon.ico'),
+    path.join(process.resourcesPath, 'app.asar.unpacked/src/assets/icon.ico'),
+    path.join(app.getAppPath(), 'src/assets/icon.ico'),
+    path.join(__dirname, 'icon.ico'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return '';
+}
+
 function createWindow() {
+  const iconPath = getAppIconPath();
+
   mainWindow = new BrowserWindow({
     title: 'FolderWorks',
     width: 1280,
@@ -839,6 +967,8 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#0f172a',
+    show: false, // Inicia invisível para renderizar sem piscar nem tela preta
+    icon: iconPath || undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -846,7 +976,41 @@ function createWindow() {
     },
   });
 
-  mainWindow.maximize();
+  // Se houver logotipo customizado na configuração, aplicar dinamicamente ao ícone da janela
+  try {
+    const startupCfg = loadConfig();
+    if (startupCfg?.customLogo) {
+      const img = nativeImage.createFromDataURL(startupCfg.customLogo);
+      if (!img.isEmpty()) {
+        mainWindow.setIcon(img);
+        fs.writeFileSync(customIconPath, img.toPNG());
+      }
+    }
+  } catch {}
+
+  // Exibir a janela apenas quando a renderização estiver pronta
+  let isWindowRevealed = false;
+  const revealWindow = () => {
+    if (isWindowRevealed || !mainWindow) return;
+    isWindowRevealed = true;
+    mainWindow.show();
+    mainWindow.maximize();
+  };
+
+  mainWindow.once('ready-to-show', revealWindow);
+  // Timeout de contingência para evitar que a janela permaneça oculta
+  setTimeout(revealWindow, 1500);
+
+  // Captura e auditoria de erros do processo de renderização
+  mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
+    appendLog(`[RENDERER] ${message} (${sourceId}:${line})`);
+  });
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    appendLog(`[RENDERER ERRO DID-FAIL-LOAD] Código ${code} (${desc}) em ${url}`);
+  });
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    appendLog(`[RENDERER PROCESSO FINALIZADO] Razão: ${details.reason} (exitCode: ${details.exitCode})`);
+  });
 
   mainWindow.on('close', (e) => {
     if (isTransferInProgress) {
@@ -908,23 +1072,208 @@ app.on('window-all-closed', () => {
 
 // IPC Handlers
 ipcMain.handle('get-config', () => loadConfig());
+
 ipcMain.handle('save-config', (_, cfg) => {
-  saveConfig(cfg);
-  appendLog('[CONFIG] Configurações de rede atualizadas com sucesso pelo TI.');
+  saveConfigData(cfg);
+  appendLog('[CONFIG] Configurações salvas com sucesso pelo TI.');
   return { success: true };
 });
+
 ipcMain.handle('reset-config', () => {
+  setSharedConfigPointer(null);
   if (fs.existsSync(configPath)) {
-    try {
-      fs.unlinkSync(configPath);
-    } catch (e) {}
+    try { fs.unlinkSync(configPath); } catch (e) {}
+  }
+  if (fs.existsSync(configCachePath)) {
+    try { fs.unlinkSync(configCachePath); } catch (e) {}
   }
   const resetCfg = loadConfig();
   if (mainWindow) {
     mainWindow.webContents.send('config-updated', resetCfg);
   }
-  appendLog('[CONFIG] Configurações redefinidas para os padrões corporativos de fábrica pelo TI.');
+  appendLog('[CONFIG] Configurações redefinidas para os padrões de fábrica pelo TI.');
   return { success: true, config: resetCfg };
+});
+
+// Ícone Dinâmico da Janela e Barra de Tarefas
+ipcMain.handle('set-window-icon', async (_, dataUrl: string | null) => {
+  if (!mainWindow) return false;
+  try {
+    if (dataUrl) {
+      const img = nativeImage.createFromDataURL(dataUrl);
+      if (!img.isEmpty()) {
+        mainWindow.setIcon(img);
+        fs.writeFileSync(customIconPath, img.toPNG());
+        appendLog('[ÍCONE] Logotipo corporativo aplicado à janela e barra de tarefas do Windows.');
+        return true;
+      }
+    } else {
+      if (fs.existsSync(customIconPath)) {
+        try { fs.unlinkSync(customIconPath); } catch {}
+      }
+      const defaultIcon = getAppIconPath();
+      if (defaultIcon && fs.existsSync(defaultIcon)) {
+        mainWindow.setIcon(defaultIcon);
+      }
+      appendLog('[ÍCONE] Ícone da janela restaurado para o padrão corporativo.');
+      return true;
+    }
+  } catch (err: any) {
+    appendLog(`[ÍCONE ERRO] Falha ao definir ícone da janela: ${err.message}`);
+  }
+  return false;
+});
+
+// Configuração Compartilhada na Rede Corporativa (SMB / UNC / Disco)
+ipcMain.handle('get-shared-config-info', async () => {
+  const sharedFilePath = getSharedConfigPointer();
+  if (!sharedFilePath) {
+    return {
+      isConfigured: false,
+      sharedFilePath: '',
+      isConnected: false,
+      isOfflineCache: false,
+      lastModified: null,
+      error: null,
+    };
+  }
+
+  try {
+    if (fs.existsSync(sharedFilePath)) {
+      const stats = fs.statSync(sharedFilePath);
+      return {
+        isConfigured: true,
+        sharedFilePath,
+        isConnected: true,
+        isOfflineCache: false,
+        lastModified: stats.mtime.toLocaleString('pt-BR'),
+        size: stats.size,
+        error: null,
+      };
+    } else {
+      const hasCache = fs.existsSync(configCachePath);
+      return {
+        isConfigured: true,
+        sharedFilePath,
+        isConnected: false,
+        isOfflineCache: hasCache,
+        lastModified: null,
+        error: 'Arquivo compartilhado inacessível ou sem permissão na rede no momento.',
+      };
+    }
+  } catch (err: any) {
+    return {
+      isConfigured: true,
+      sharedFilePath,
+      isConnected: false,
+      isOfflineCache: fs.existsSync(configCachePath),
+      lastModified: null,
+      error: err.message,
+    };
+  }
+});
+
+ipcMain.handle('set-shared-config-file', async (_, targetFilePath: string) => {
+  const trimmedPath = (targetFilePath || '').trim();
+  if (!trimmedPath) {
+    setSharedConfigPointer(null);
+    const cfg = loadConfig();
+    if (mainWindow) mainWindow.webContents.send('config-updated', cfg);
+    appendLog('[CONFIG REDE] Desvinculado do arquivo de rede. Usando armazenamento local.');
+    return { success: true, message: 'Modo de configuração local ativado.' };
+  }
+
+  try {
+    if (!fs.existsSync(trimmedPath)) {
+      return { success: false, error: `O arquivo '${trimmedPath}' não foi encontrado ou está inacessível na rede.` };
+    }
+
+    const raw = fs.readFileSync(trimmedPath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const sanitized = sanitizeConfig(parsed);
+
+    setSharedConfigPointer(trimmedPath);
+    fs.writeFileSync(configCachePath, JSON.stringify(sanitized, null, 2), 'utf-8');
+
+    appendLog(`[CONFIG REDE] Aplicativo vinculado com sucesso ao arquivo de rede: '${trimmedPath}'`);
+    if (mainWindow) mainWindow.webContents.send('config-updated', loadConfig());
+
+    if (sanitized.customLogo) {
+      try {
+        const img = nativeImage.createFromDataURL(sanitized.customLogo);
+        if (!img.isEmpty() && mainWindow) {
+          mainWindow.setIcon(img);
+          fs.writeFileSync(customIconPath, img.toPNG());
+        }
+      } catch {}
+    }
+
+    return { success: true, config: loadConfig() };
+  } catch (err: any) {
+    appendLog(`[CONFIG REDE ERRO] Falha ao vincular arquivo '${trimmedPath}': ${err.message}`);
+    return { success: false, error: `Arquivo inválido ou inacessível: ${err.message}` };
+  }
+});
+
+ipcMain.handle('create-shared-config-file', async (_, { filePath, initialConfig }) => {
+  const trimmedPath = (filePath || '').trim();
+  if (!trimmedPath) return { success: false, error: 'Caminho de arquivo não especificado.' };
+
+  try {
+    const dir = path.dirname(trimmedPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    const cfgToSave = initialConfig || loadConfig();
+    const sanitized = sanitizeConfig(cfgToSave);
+    if (cfgToSave.tiLogsPassword) sanitized.tiLogsPassword = cfgToSave.tiLogsPassword;
+    if (cfgToSave.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = cfgToSave.sharedLogFilePath;
+    if (cfgToSave.customLogo !== undefined) sanitized.customLogo = cfgToSave.customLogo;
+
+    fs.writeFileSync(trimmedPath, JSON.stringify(sanitized, null, 2), 'utf-8');
+    setSharedConfigPointer(trimmedPath);
+    fs.writeFileSync(configCachePath, JSON.stringify(sanitized, null, 2), 'utf-8');
+
+    appendLog(`[CONFIG REDE] Novo arquivo compartilhado criado em: '${trimmedPath}'`);
+    if (mainWindow) mainWindow.webContents.send('config-updated', loadConfig());
+
+    return { success: true, filePath: trimmedPath };
+  } catch (err: any) {
+    appendLog(`[CONFIG REDE ERRO] Falha ao criar arquivo de configuração em '${trimmedPath}': ${err.message}`);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('select-config-file', async (_, mode?: 'open' | 'save') => {
+  if (!mainWindow) return null;
+  const filters = [
+    { name: 'Arquivo de Configuração FolderWorks (*.json)', extensions: ['json'] },
+    { name: 'Todos os Arquivos (*.*)', extensions: ['*'] }
+  ];
+
+  if (mode === 'save') {
+    const res = await dialog.showSaveDialog(mainWindow, {
+      title: 'Criar ou Exportar Arquivo de Configuração Compartilhado na Rede',
+      defaultPath: 'folderworks_config.json',
+      filters,
+    });
+    return res.canceled || !res.filePath ? null : res.filePath;
+  } else {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Selecionar Arquivo de Configuração Compartilhado na Rede',
+      properties: ['openFile'],
+      filters,
+    });
+    return res.canceled || !res.filePaths || res.filePaths.length === 0 ? null : res.filePaths[0];
+  }
+});
+
+ipcMain.handle('reload-config', async () => {
+  const cfg = loadConfig();
+  if (mainWindow) {
+    mainWindow.webContents.send('config-updated', cfg);
+  }
+  appendLog('[CONFIG] Configurações recarregadas sob demanda.');
+  return { success: true, config: cfg };
 });
 
 ipcMain.handle('get-logs', () => {

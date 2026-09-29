@@ -38,9 +38,11 @@ export const App: React.FC = () => {
     if (logo) {
       localStorage.setItem('folderworks_custom_logo', logo);
       setCustomLogo(logo);
+      window.electronAPI?.setWindowIcon(logo);
     } else {
       localStorage.removeItem('folderworks_custom_logo');
       setCustomLogo(null);
+      window.electronAPI?.setWindowIcon(null);
     }
   };
 
@@ -90,10 +92,23 @@ export const App: React.FC = () => {
 
     window.electronAPI?.getConfig().then((cfg) => {
       testAllServers(cfg);
+      if (cfg?.customLogo) {
+        setCustomLogo(cfg.customLogo);
+        window.electronAPI?.setWindowIcon(cfg.customLogo);
+      } else {
+        const localLogo = localStorage.getItem('folderworks_custom_logo');
+        if (localLogo) {
+          window.electronAPI?.setWindowIcon(localLogo);
+        }
+      }
     });
 
     const unsubConfig = window.electronAPI?.onConfigUpdated?.((cfg) => {
       testAllServers(cfg);
+      if (cfg?.customLogo) {
+        setCustomLogo(cfg.customLogo);
+        window.electronAPI?.setWindowIcon(cfg.customLogo);
+      }
     });
 
     const unsubPerimeter = window.electronAPI?.onPerimeterBlocked?.((data) => {
@@ -191,7 +206,7 @@ export const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors relative">
       {/* 1. Custom Frameless TitleBar */}
-      <TitleBar isLocked={isAnyModalOpen} />
+      <TitleBar isLocked={isAnyModalOpen} customLogo={customLogo} />
 
       {/* 2. Main Body with Sidebar Navigation */}
       <div className="flex flex-1 overflow-hidden">

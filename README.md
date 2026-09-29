@@ -12,15 +12,37 @@ O **Entropy FolderWorks** é a suíte corporativa desktop oficial do ecossistema
 
 ---
 
+## 📥 Download Oficial do Instalador
+
+Baixe a versão universal estável e autocontida para Windows x64:
+
+👉 **[Download FolderWorks v3.0.0 (Instalador .MSI)](https://github.com/aabdalaa/FolderWorks/releases/latest)**
+
+> [!TIP]
+> O instalador `.MSI` oficial vem pronto para uso corporativo universal ("cru"). Ele não requer configuração em código nem compilação separada para cada empresa: basta instalar e vincular ao arquivo de configuração compartilhado na rede (`folderworks_config.json`).
+
+---
+
 ## ✨ Principais Recursos
 
+- **Configuração Centralizada & Compartilhada na Rede (SMB / UNC)**: A equipe de TI disponibiliza o arquivo `folderworks_config.json` em uma pasta compartilhada no servidor. Todas as estações conectadas sincronizam instantaneamente empresas, diretórios de destino, permissões e o logotipo corporativo.
+- **Logotipo Corporativo Personalizado Dinâmico**: Altere a logomarca da sua empresa diretamente na tela de *Configurações*. O logotipo é aplicado dinamicamente dentro do app (TitleBar e Sidebar) e fora dele (janela nativa e barra de tarefas do Windows), propagando-se automaticamente para todos os usuários da rede.
 - **Criação Instantânea & Paralela com Multithreading**: Crie estruturas completas ou pastas vazias em lote com botão `+` concorrente via `Promise.all` e Robocopy `/MT:128`.
 - **Preservação Absoluta de Permissões DACL/NTFS**: Duplicação exata de herança e direitos de segurança departamentais das pastas modelos do Active Directory.
 - **Impersonação Nativa Win32 (C# / .NET 64-bit)**: Executa operações de rede estritamente sob o token da conta de serviço corporativa via `LogonUser` e `CreateProcessWithLogonW`.
 - **Governança de TI & Perímetro Restrito**: Barreira de proteção contra criação ou movimentação fora das raízes de rede autorizadas com alerta sonoro e telemetria de bloqueio.
 - **Validação de Transferência com Modo Seguro**: Inspeção direta no Windows Explorer, confirmação em duas etapas e função instantânea de Desfazer Transferência com auditoria.
-- **Personalização Dinâmica de Marca & Cores**: Catálogo com 24 paletas corporativas integradas dinamicamente ao DOM e suporte a modo Claro e Escuro.
-- **Instalador Oficial MSI Autocontido**: Pacote `.MSI` gerado com WiX Toolset v3.14 com suporte a atualizações in-place e encerramento automático de instâncias em uso.
+- **Personalização de Tema e Cores**: Catálogo com 24 paletas corporativas integradas dinamicamente ao DOM e suporte nativo a modo Claro e Escuro com detecção do sistema operacional.
+- **Instalador Oficial MSI Autocontido**: Pacote `.MSI` gerado com WiX Toolset com suporte a atualizações in-place e encerramento automático de instâncias em uso.
+
+---
+
+## 🌐 Como Funciona a Configuração Centralizada na Rede
+
+1. **Instale o MSI Oficial**: Baixe e instale o `FolderWorks-v3.0.0-win-x64.msi` nas estações de trabalho.
+2. **Crie ou Copie o Arquivo de Configuração**: Coloque o arquivo `folderworks_config.json` em um compartilhamento de rede acessível pelos usuários (Ex: `\\servidor\compartilhamento\folderworks_config.json`). Você pode usar o modelo fornecido em [`folderworks_config.example.json`](./folderworks_config.example.json) ou clicar em **"Criar na Rede"** dentro do próprio aplicativo.
+3. **Vincule a Estação**: No FolderWorks, acesse **Configurações** → **Configuração Centralizada na Rede Corporativa** e clique em **"Vincular Arquivo na Rede"** (ou cole o caminho UNC e clique em **"Conectar"**).
+4. **Sincronização em Tempo Real**: Sempre que o TI alterar uma empresa, caminho de rede ou o logotipo corporativo, todas as estações de trabalho conectadas atualizam simultaneamente!
 
 ---
 
@@ -33,7 +55,7 @@ O **Entropy FolderWorks** é a suíte corporativa desktop oficial do ecossistema
 
 ---
 
-## 🚀 Como Executar em Desenvolvimento
+## 🚀 Como Executar em Modo Desenvolvimento
 
 ### 1. Clonar o repositório
 ```bash
@@ -46,12 +68,10 @@ cd FolderWorks
 npm install
 ```
 
-### 3. Configurar ambiente
-Copie o template de ambiente:
+### 3. Configurar ambiente (opcional para testes locais)
 ```bash
 cp .env.example .env
 ```
-Preencha as variáveis corporativas de sua rede no arquivo `.env`.
 
 ### 4. Executar em modo desenvolvimento
 ```bash
@@ -62,11 +82,11 @@ npm run dev
 
 ## 📦 Como Compilar o Pacote Instalador (.MSI)
 
-Para compilar o pacote instalador completo com configurações e credenciais embutidas de forma segura:
+Para compilar o pacote instalador oficial universal:
 ```bash
 npm run build:msi
 ```
-O pacote será gerado em `dist/msi/FolderWorks.msi` pronto para distribuição via GPO ou instalação manual em máquinas corporativas.
+O pacote será gerado em `dist/msi/FolderWorks.msi` pronto para distribuição via GPO ou instalação manual em computadores corporativos.
 
 ---
 
