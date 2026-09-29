@@ -30,6 +30,20 @@ export const App: React.FC = () => {
   const [serverStatuses, setServerStatuses] = useState<Record<string, boolean | null>>({});
   const { theme, setTheme } = useTheme();
 
+  const [customLogo, setCustomLogo] = useState<string | null>(() => {
+    return localStorage.getItem('folderworks_custom_logo') || null;
+  });
+
+  const handleUpdateCustomLogo = (logo: string | null) => {
+    if (logo) {
+      localStorage.setItem('folderworks_custom_logo', logo);
+      setCustomLogo(logo);
+    } else {
+      localStorage.removeItem('folderworks_custom_logo');
+      setCustomLogo(null);
+    }
+  };
+
   const handleSelectTab = (tab: AppTab) => {
     // Auto-bloqueio estrito de TI ao navegar para outro módulo
     if (isTIAuthenticated) {
@@ -185,6 +199,7 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           onSelectTab={handleSelectTab}
           serverStatuses={serverStatuses}
+          customLogo={customLogo}
         />
 
         {/* Viewport Content */}
@@ -222,6 +237,8 @@ export const App: React.FC = () => {
                 isTIAuthenticated={isTIAuthenticated}
                 onUnlockTI={() => setIsTIAuthenticated(true)}
                 onLockTI={handleLockTISession}
+                customLogo={customLogo}
+                onUpdateCustomLogo={handleUpdateCustomLogo}
               />
             )}
             {activeTab === 'history' && <HistoryView />}

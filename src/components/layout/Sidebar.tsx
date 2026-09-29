@@ -7,12 +7,14 @@ interface SidebarProps {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
   serverStatuses?: Record<string, boolean | null>;
+  customLogo?: string | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   serverStatuses,
+  customLogo,
 }) => {
   const navItems = [
     { id: 'dashboard' as const, label: 'Criar Pasta', icon: LayoutDashboard },
@@ -28,8 +30,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="space-y-5">
         {/* Logo / Brand Header */}
         <div className="px-2 pt-1 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-teams-600 text-white flex items-center justify-center shadow-sm">
-            <Server className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-teams-600/10 dark:bg-teams-900/30 border border-slate-200 dark:border-neutral-700/80 overflow-hidden flex items-center justify-center p-0.5 shadow-xs shrink-0">
+            {customLogo ? (
+              <img src={customLogo} alt="Logo" className="w-full h-full object-contain rounded" />
+            ) : (
+              <div className="w-full h-full rounded-md bg-teams-600 text-white flex items-center justify-center">
+                <Server className="w-5 h-5" />
+              </div>
+            )}
           </div>
           <div className="truncate">
             <h1 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white leading-none">FolderWorks</h1>

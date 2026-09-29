@@ -648,38 +648,34 @@
     <div class="glass-card max-w-lg w-full rounded-2xl p-6 sm:p-7 space-y-4 border border-entropy-500/40 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b border-white/10">
         <h3 class="text-base font-bold text-white flex items-center">
-          <span class="w-3 h-3 rounded-full bg-entropy-500 mr-2"></span>
-          Iniciar Compilação no GitHub Actions
+          <span class="w-3 h-3 rounded-full bg-entropy-500 mr-2 animate-pulse"></span>
+          Compilar Instalador Personalizado (.MSI)
         </h3>
         <button onclick="closeBuildModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
       </div>
 
       <p class="text-xs text-gray-300 leading-relaxed">
-        A compilação do seu instalador personalizado é realizada diretamente nas máquinas em nuvem do GitHub de forma 100% gratuita.
+        Sua compilação é processada de forma 100% gratuita nas máquinas em nuvem do GitHub Actions, gerando um instalador oficial para sua organização.
       </p>
 
       <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
         <div class="space-y-2.5 text-xs text-gray-300">
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-entropy-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
-            <span>Clique no botão abaixo para abrir a esteira oficial do GitHub Actions.</span>
+            <span>Clique no botão abaixo para abrir a solicitação pré-preenchida no GitHub.</span>
           </div>
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-entropy-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
-            <span>No canto superior direito da página do GitHub, clique no botão <strong>Run workflow</strong>.</span>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="w-5 h-5 rounded-full bg-entropy-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
-            <span>Preencha os campos da sua empresa e clique em <strong>Run workflow</strong>.</span>
+            <span>No GitHub, dê apenas 1 clique no botão verde <strong>Submit new issue</strong> (não precisa alterar nada!).</span>
           </div>
           <div class="flex items-start gap-2.5">
             <span class="w-5 h-5 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">✓</span>
-            <span>Em 2 a 3 minutos, seu instalador <strong>FolderWorks.msi</strong> estará pronto para baixar!</span>
+            <span>O robô compila o instalador em 2 a 3 minutos e responde nos comentários com o <strong>link direto de download</strong>!</span>
           </div>
         </div>
 
-        <a id="githubActionsLink" href="https://github.com/aabdalaa/FolderWorks/actions/workflows/build-custom-msi.yml" target="_blank" class="block w-full text-center px-4 py-3 rounded-xl bg-gradient-to-r from-entropy-600 to-cyan-600 hover:from-entropy-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-entropy-600/30 transition mt-2">
-          Abrir Compilador no GitHub Actions &rarr;
+        <a id="githubIssueLink" href="#" target="_blank" class="block w-full text-center px-4 py-3 rounded-xl bg-gradient-to-r from-entropy-600 to-cyan-600 hover:from-entropy-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-entropy-600/30 transition mt-2">
+          Abrir Solicitação no GitHub &rarr;
         </a>
       </div>
     </div>
@@ -749,6 +745,43 @@
     }
 
     function startBuildFlow() {
+      const name = document.getElementById('companyName').value || 'MINHA EMPRESA';
+      const src = document.getElementById('sourcePath').value || '\\\\servidor\\gpo\\criarpastas\\MODELO';
+      const dest = document.getElementById('destinationPath').value || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS';
+      const adIp = document.getElementById('adServerIp').value || '10.0.0.10';
+      const domUser = document.getElementById('domainUser').value || 'EMPRESA\\pasta.servico';
+      const domPass = document.getElementById('domainPass').value || '';
+      const tiPass = document.getElementById('tiPassword').value || 'admin@123';
+
+      const issueTitle = `[BUILD-MSI] ${name}`;
+      const payload = {
+        company_name: name,
+        source_path: src,
+        destination_path: dest,
+        ad_server_ip: adIp,
+        domain_user: domUser,
+        domain_pass: domPass,
+        ti_password: tiPass,
+        custom_logo_url: ""
+      };
+
+      const issueBody = `### Solicitação de Compilação Automatizada do FolderWorks MSI
+
+Por favor, processe esta solicitação e gere o pacote Windows Installer (.MSI) personalizado para a organização informada:
+
+\`\`\`json
+${JSON.stringify(payload, null, 2)}
+\`\`\`
+
+---
+*Solicitação gerada através do Portal Oficial FolderWorks (GitHub Pages).*`;
+
+      const issueUrl = `https://github.com/aabdalaa/FolderWorks/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
+      const issueLinkEl = document.getElementById('githubIssueLink');
+      if (issueLinkEl) {
+        issueLinkEl.href = issueUrl;
+      }
+
       document.getElementById('buildModal').classList.remove('hidden');
       document.getElementById('buildModal').classList.add('flex');
     }

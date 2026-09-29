@@ -21,6 +21,8 @@ import {
   FileText,
   ExternalLink,
   Palette,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
 import { useIconColor } from '../../hooks/useIconColor';
@@ -30,6 +32,8 @@ interface SettingsViewProps {
   isTIAuthenticated?: boolean;
   onUnlockTI?: () => void;
   onLockTI?: () => void;
+  customLogo?: string | null;
+  onUpdateCustomLogo?: (logo: string | null) => void;
 }
 
 interface ShortcutItem {
@@ -52,7 +56,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   isTIAuthenticated: externalIsTIAuth,
   onUnlockTI,
   onLockTI,
+  customLogo,
+  onUpdateCustomLogo,
 }) => {
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result && onUpdateCustomLogo) {
+        onUpdateCustomLogo(result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleResetLogo = () => {
+    if (onUpdateCustomLogo) {
+      onUpdateCustomLogo(null);
+    }
+  };
+
   const [config, setConfig] = useState<any>(null);
   const [testResults, setTestResults] = useState<{ [key: string]: { success: boolean; message: string } }>({});
   const [testing, setTesting] = useState<{ [key: string]: boolean }>({});
@@ -658,6 +692,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      {/* 2.1 Identidade Visual e Logotipo do Aplicativo (Livre para o Usuário) */}
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0 overflow-hidden p-1 shadow-xs">
+              {customLogo ? (
+                <img src={customLogo} alt="Logotipo do Aplicativo" className="w-full h-full object-contain rounded-lg" />
+              ) : (
+                <ImageIcon className="w-6 h-6 text-teams-600 dark:text-teams-400" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Logotipo Personalizado da Aplicação</h3>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Livre para Usuário
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Personalize o ícone do cabeçalho da barra lateral com a marca da sua empresa. Formatos PNG, JPG ou SVG recomendados.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <input
+              type="file"
+              ref={logoInputRef}
+              onChange={handleLogoUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teams-600 hover:bg-teams-500 text-white shadow-xs transition-colors cursor-pointer"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>{customLogo ? 'Substituir Imagem' : 'Carregar Logotipo'}</span>
+            </button>
+            {customLogo && (
+              <button
+                type="button"
+                onClick={handleResetLogo}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer"
+                title="Restaurar ícone padrão da Entropy"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                <span>Restaurar Padrão</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
