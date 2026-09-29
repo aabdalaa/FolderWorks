@@ -134,7 +134,7 @@ async function buildMSI() {
     shortcutFolderName: 'FolderWorks',
     upgradeCode: '8f74a92c-561b-4632-9b21-3a218d6e9f10', // GUID FIXO PARA ATUALIZAÇÃO IN-PLACE
     manufacturer: 'ENTROPY - André Abdala',
-    version: '2.9.8',
+    version: '3.0.0',
     icon: path.join(projectRoot, 'src', 'assets', 'icon.ico'),
     outputDirectory: path.join(projectRoot, 'dist', 'msi'),
     ui: {
@@ -148,6 +148,13 @@ async function buildMSI() {
   const wxsFilePath = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.wxs');
   if (fs.existsSync(wxsFilePath)) {
     let wxsContent = fs.readFileSync(wxsFilePath, 'utf-8');
+    
+    // Substituir regra restritiva de downgrade por atualização permissiva
+    wxsContent = wxsContent.replace(
+      /<MajorUpgrade\s+[^>]*\/>/g,
+      '<MajorUpgrade AllowDowngrades="yes" Schedule="afterInstallInitialize" />'
+    );
+
     const killAppSnippet = `
     <!-- Encerramento Automático de Instâncias Anteriores do FolderWorks (Evita Files in Use) -->
     <CustomAction Id="SetKillAppCmd" Property="QtExecCmdLine" Value="&quot;[SystemFolder]taskkill.exe&quot; /F /IM FolderWorks.exe /T" Execute="immediate" />
@@ -166,7 +173,7 @@ async function buildMSI() {
 `;
     wxsContent = wxsContent.replace('</Product>', killAppSnippet + '\n</Product>');
     fs.writeFileSync(wxsFilePath, wxsContent, 'utf-8');
-    console.log('✓ Injetado encerramento forçado de instâncias ativas no FolderWorks.wxs');
+    console.log('✓ Injetado encerramento forçado e AllowDowngrades="yes" no FolderWorks.wxs');
   }
 
   await msiCreator.compile();
@@ -174,7 +181,7 @@ async function buildMSI() {
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');
   const desktopMsi = path.join(desktopPath, 'FolderWorks.msi');
   const installerDir = path.join(projectRoot, '..', '01 - Instalador', 'Internal');
-  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v2.9.8-win-x64.msi');
+  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v3.0.0-win-x64.msi');
   const internalLatestMsi = path.join(installerDir, 'FolderWorks.msi');
 
   if (fs.existsSync(sourceMsi)) {
