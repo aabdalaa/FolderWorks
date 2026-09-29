@@ -126,7 +126,7 @@
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">NOME DA EMPRESA</label>
-              <input type="text" id="companyName" value="RTO CONSULTORIA" placeholder="Ex: MINHA CONSULTORIA EMPRESARIAL" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm outline-none" oninput="updatePreview()">
+              <input type="text" id="companyName" value="SUA EMPRESA" placeholder="Ex: SUA EMPRESA OU CONSULTORIA" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm outline-none" oninput="updatePreview()">
             </div>
 
             <div>
@@ -157,22 +157,22 @@
           <div class="space-y-4">
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">CAMINHO UNC DO MODELO DE PASTAS (ORIGEM)</label>
-              <input type="text" id="sourcePath" value="\\192.168.1.10\gpo\criarpastas\MODELO" placeholder="Ex: \\servidor\compartilhamento\MODELO" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none" oninput="updatePreview()">
+              <input type="text" id="sourcePath" value="\\servidor\compartilhamento\MODELO" placeholder="Ex: \\servidor\compartilhamento\MODELO" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none" oninput="updatePreview()">
             </div>
 
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">CAMINHO UNC DE DESTINO DOS CLIENTES</label>
-              <input type="text" id="destinationPath" value="\\192.168.1.10\arquivos\CLIENTES\EMPRESAS" placeholder="Ex: \\servidor\arquivos\CLIENTES\EMPRESAS" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none" oninput="updatePreview()">
+              <input type="text" id="destinationPath" value="\\servidor\arquivos\CLIENTES\EMPRESAS" placeholder="Ex: \\servidor\arquivos\CLIENTES\EMPRESAS" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none" oninput="updatePreview()">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-300 mb-1.5">IP DO SERVIDOR ACTIVE DIRECTORY</label>
-                <input type="text" id="adServerIp" value="192.168.1.10" placeholder="Ex: 192.168.1.10" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none">
+                <input type="text" id="adServerIp" value="10.0.0.10" placeholder="Ex: 10.0.0.10" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none">
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-300 mb-1.5">USUÁRIO DE SERVIÇO DO AD</label>
-                <input type="text" id="domainUser" value="DOMINIO\pasta.servico" placeholder="Ex: DOMINIO\pasta.servico" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none">
+                <input type="text" id="domainUser" value="DOMINIO\usuario.servico" placeholder="Ex: DOMINIO\usuario.servico" class="w-full px-4 py-2.5 rounded-xl glass-input text-white text-sm font-mono outline-none">
               </div>
             </div>
 
@@ -245,7 +245,7 @@
               <div class="flex items-center space-x-3">
                 <img id="previewLogo" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60" alt="Logo da Empresa" class="h-9 w-auto max-w-[120px] object-contain rounded-md bg-white/5 p-1 border border-white/10">
                 <div>
-                  <h3 id="previewCompany" class="font-bold text-white text-sm tracking-tight">RTO CONSULTORIA</h3>
+                  <h3 id="previewCompany" class="font-bold text-white text-sm tracking-tight">SUA EMPRESA</h3>
                   <p class="text-[10px] text-gray-400 font-mono">Destino Conectado</p>
                 </div>
               </div>
@@ -256,11 +256,11 @@
             <div class="space-y-2 text-[11px]">
               <div class="p-2.5 rounded-lg bg-white/5 border border-white/5">
                 <span class="text-gray-500 block text-[9px] uppercase font-bold tracking-wider">Origem do Modelo</span>
-                <span id="previewSource" class="text-gray-300 font-mono truncate block text-[10px]">\\192.168.1.10\gpo\criarpastas\MODELO</span>
+                <span id="previewSource" class="text-gray-300 font-mono truncate block text-[10px]">\\servidor\compartilhamento\MODELO</span>
               </div>
               <div class="p-2.5 rounded-lg bg-white/5 border border-white/5">
                 <span class="text-gray-500 block text-[9px] uppercase font-bold tracking-wider">Destino Final</span>
-                <span id="previewDestination" class="text-gray-300 font-mono truncate block text-[10px]">\\192.168.1.10\arquivos\CLIENTES\EMPRESAS</span>
+                <span id="previewDestination" class="text-gray-300 font-mono truncate block text-[10px]">\\servidor\arquivos\CLIENTES\EMPRESAS</span>
               </div>
             </div>
 
