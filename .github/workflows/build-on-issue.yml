@@ -15,9 +15,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - name: "Clonar Repositório"
+        uses: actions/checkout@v4
+
       - name: "Comentar Início da Compilação na Issue"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: pwsh
         run: |
@@ -28,10 +32,7 @@ jobs:
           ⏱️ **Tempo estimado:** 2 a 3 minutos.
           Assim que a compilação for concluída, o link direto de download será postado aqui neste comentário!
           "@
-          gh issue comment $env:ISSUE_NUMBER --body $body
-
-      - name: "Clonar Repositório"
-        uses: actions/checkout@v4
+          gh issue comment $env:ISSUE_NUMBER --repo $env:GH_REPO --body $body
 
       - name: "Configurar Node.js"
         uses: actions/setup-node@v4
@@ -132,6 +133,7 @@ jobs:
         id: create_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: pwsh
         run: |
@@ -146,7 +148,7 @@ jobs:
           }
 
           Write-Host "Criando release $tag com o arquivo $($msiFile.FullName)..."
-          gh release create $tag $msiFile.FullName --title "FolderWorks Build #$env:ISSUE_NUMBER ($compName)" --notes "Instalador corporativo compilado automaticamente sob demanda para $compName."
+          gh release create $tag $msiFile.FullName --repo $env:GH_REPO --title "FolderWorks Build #$env:ISSUE_NUMBER ($compName)" --notes "Instalador corporativo compilado automaticamente sob demanda para $compName."
 
           $repo = $env:GITHUB_REPOSITORY
           $downloadUrl = "https://github.com/$repo/releases/download/$tag/$($msiFile.Name)"
@@ -156,6 +158,7 @@ jobs:
       - name: "Comentar na Issue com Link de Download e Encerrar"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: pwsh
         run: |
@@ -186,6 +189,6 @@ jobs:
           *Esta solicitação foi atendida e concluída automaticamente pelo robô do FolderWorks.*
           "@
 
-          gh issue comment $env:ISSUE_NUMBER --body $reply
-          gh issue close $env:ISSUE_NUMBER --reason "completed"
+          gh issue comment $env:ISSUE_NUMBER --repo $env:GH_REPO --body $reply
+          gh issue close $env:ISSUE_NUMBER --repo $env:GH_REPO --reason "completed"
           Write-Host "✓ Issue #$env:ISSUE_NUMBER finalizada com sucesso!"
