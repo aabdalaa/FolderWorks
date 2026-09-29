@@ -25,15 +25,16 @@ Baixe a versão universal estável e autocontida para Windows x64:
 
 ## ✨ Principais Recursos
 
-- **Configuração Centralizada & Compartilhada na Rede (SMB / UNC)**: A equipe de TI disponibiliza o arquivo `folderworks_config.json` em uma pasta compartilhada no servidor. Todas as estações conectadas sincronizam instantaneamente empresas, diretórios de destino, permissões e o logotipo corporativo.
-- **Logotipo Corporativo Personalizado Dinâmico**: Altere a logomarca da sua empresa diretamente na tela de *Configurações*. O logotipo é aplicado dinamicamente dentro do app (TitleBar e Sidebar) e fora dele (janela nativa e barra de tarefas do Windows), propagando-se automaticamente para todos os usuários da rede.
+- **Configuração Centralizada & Compartilhada na Rede (SMB / UNC)**: A equipe de TI disponibiliza o arquivo `folderworks_config.json` em uma pasta compartilhada no servidor. Todas as estações conectadas sincronizam instantaneamente empresas, diretórios de destino, permissões, logotipos e esquemas de cores.
+- **Definição Obrigatória de Senha do TI no Primeiro Acesso**: Modal bloqueante no primeiro uso para definição da senha mestra de TI, garantindo proteção total das configurações corporativas desde o primeiro minuto.
+- **Identidade Visual Multi-Empresa & Cores**: Suporte a logotipo geral da aplicação e logotipos individuais para cada empresa cadastrada. O TI pode optar por cor única global ou cor individual por empresa (24 opções), com opção de bloquear e ocultar o seletor de cores para usuários comuns.
+- **Atualização Dinâmica do Atalho Windows (`FolderWorks.lnk`)**: Ao atualizar a logomarca da aplicação, o atalho da Área de Trabalho e Menu Iniciar tem seu ícone `.ico` recalculado e injetado nativamente em tempo real em todas as máquinas conectadas à configuração compartilhada.
 - **Criação Instantânea & Paralela com Multithreading**: Crie estruturas completas ou pastas vazias em lote com botão `+` concorrente via `Promise.all` e Robocopy `/MT:128`.
 - **Preservação Absoluta de Permissões DACL/NTFS**: Duplicação exata de herança e direitos de segurança departamentais das pastas modelos do Active Directory.
 - **Impersonação Nativa Win32 (C# / .NET 64-bit)**: Executa operações de rede estritamente sob o token da conta de serviço corporativa via `LogonUser` e `CreateProcessWithLogonW`.
 - **Governança de TI & Perímetro Restrito**: Barreira de proteção contra criação ou movimentação fora das raízes de rede autorizadas com alerta sonoro e telemetria de bloqueio.
 - **Validação de Transferência com Modo Seguro**: Inspeção direta no Windows Explorer, confirmação em duas etapas e função instantânea de Desfazer Transferência com auditoria.
-- **Personalização de Tema e Cores**: Catálogo com 24 paletas corporativas integradas dinamicamente ao DOM e suporte nativo a modo Claro e Escuro com detecção do sistema operacional.
-- **Instalador Oficial MSI Autocontido**: Pacote `.MSI` gerado com WiX Toolset com suporte a atualizações in-place e encerramento automático de instâncias em uso.
+- **Instalador Oficial MSI Cru & Autocontido**: Pacote `.MSI` universal gerado com WiX Toolset com suporte a atualizações in-place e encerramento automático de instâncias em uso.
 
 ---
 

@@ -33,6 +33,8 @@ export interface ElectronAPI {
   clearLogs: () => Promise<boolean>;
   openLogFile: (filePath?: string) => Promise<boolean>;
   verifyTIPassword: (password: string) => Promise<boolean>;
+  isTIPasswordSet: () => Promise<boolean>;
+  setTIPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   getHistory: () => Promise<SharedAuditEvent[]>;
   clearHistory: () => Promise<SharedAuditEvent[]>;
   getNetworkLogs: () => Promise<string[]>;

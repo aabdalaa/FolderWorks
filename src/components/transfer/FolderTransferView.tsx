@@ -22,11 +22,14 @@ import {
   Plus,
   X,
 } from 'lucide-react';
+import { getCompanyKeys } from '../../utils/configUtils';
 
 interface FolderTransferViewProps {
   logs?: string[];
   onOpenLogs?: () => void;
   onModalStateChange?: (isOpen: boolean) => void;
+  selectedCompany?: string;
+  onCompanyChange?: (company: string) => void;
 }
 
 interface FolderItem {
@@ -45,9 +48,19 @@ interface TransferResult {
   method?: 'atomic_move' | 'robocopy';
 }
 
-export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalStateChange }) => {
-  const [company, setCompany] = useState<string>('');
+export const FolderTransferView: React.FC<FolderTransferViewProps> = ({
+  onModalStateChange,
+  selectedCompany: propSelectedCompany,
+  onCompanyChange,
+}) => {
+  const [company, setCompany] = useState<string>(propSelectedCompany || '');
   const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    if (propSelectedCompany) {
+      setCompany(propSelectedCompany);
+    }
+  }, [propSelectedCompany]);
   
   // Paths
   const [sourceDir, setSourceDir] = useState<string>('');
@@ -169,7 +182,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
   useEffect(() => {
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
-      const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
+      const keys = getCompanyKeys(allCfg);
       const targetComp = keys.includes(company) ? company : (keys[0] || '');
       if (targetComp !== company) {
         setCompany(targetComp);
@@ -501,15 +514,17 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Empresa:</span>
           <div className="flex flex-wrap rounded-lg bg-slate-100 dark:bg-neutral-900 p-1 border border-slate-200 dark:border-neutral-700 gap-1">
             {config &&
-              Object.keys(config)
-                .filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword')
+              getCompanyKeys(config)
                 .map((key) => {
                   const isSelected = company === key;
                   const compName = config[key]?.companyName || key;
                   return (
                     <button
                       key={key}
-                      onClick={() => setCompany(key)}
+                      onClick={() => {
+                        setCompany(key);
+                        onCompanyChange?.(key);
+                      }}
                       className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-white dark:bg-teams-600 text-teams-700 dark:text-white shadow-sm'

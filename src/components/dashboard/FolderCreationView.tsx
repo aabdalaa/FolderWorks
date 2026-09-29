@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { ToastData } from '../layout/ToastNotification';
+import { getCompanyKeys } from '../../utils/configUtils';
 
 interface FolderCreationViewProps {
   onCreateFolder: (
@@ -24,15 +25,25 @@ interface FolderCreationViewProps {
     folderName: string
   ) => Promise<{ success: boolean; folderName?: string; finalPath?: string; durationSeconds?: number; error?: string }>;
   onShowToast?: (data: ToastData) => void;
+  selectedCompany?: string;
+  onCompanyChange?: (company: string) => void;
 }
 
 export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
   onCreateFolder,
   onCreateEmptyFolder,
   onShowToast,
+  selectedCompany: propSelectedCompany,
+  onCompanyChange,
 }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [selectedCompany, setSelectedCompany] = useState<string>(propSelectedCompany || '');
   const [companies, setCompanies] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (propSelectedCompany) {
+      setSelectedCompany(propSelectedCompany);
+    }
+  }, [propSelectedCompany]);
 
   // Estado para Criar Pasta com Modelo (Card Superior)
   const [modelFolderNames, setModelFolderNames] = useState<string[]>(['']);
@@ -48,8 +59,8 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
     window.electronAPI?.getConfig().then((cfg) => {
       if (cfg) {
         setCompanies(cfg);
-        const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-        if (keys.length > 0 && (!selectedCompany || !keys.includes(selectedCompany))) {
+        const keys = getCompanyKeys(cfg);
+        if (keys.length > 0 && !keys.includes(selectedCompany)) {
           setSelectedCompany(keys[0]);
         }
       }
@@ -58,8 +69,8 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
     const unsub = window.electronAPI?.onConfigUpdated?.((updatedCfg) => {
       if (updatedCfg) {
         setCompanies(updatedCfg);
-        const keys = Object.keys(updatedCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-        if (keys.length > 0 && (!selectedCompany || !keys.includes(selectedCompany))) {
+        const keys = getCompanyKeys(updatedCfg);
+        if (keys.length > 0 && !keys.includes(selectedCompany)) {
           setSelectedCompany(keys[0]);
         }
       }
@@ -69,9 +80,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
     };
   }, [selectedCompany]);
 
-  const companyKeys = Object.keys(companies).filter(
-    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword'
-  );
+  const companyKeys = getCompanyKeys(companies);
 
   const invalidateCache = () => {
     try {
@@ -325,7 +334,10 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setSelectedCompany(key)}
+                      onClick={() => {
+                        setSelectedCompany(key);
+                        onCompanyChange?.(key);
+                      }}
                       className={`p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
                         isSelected
                           ? 'border-teams-600 bg-teams-50/50 dark:bg-teams-950/40 text-teams-700 dark:text-teams-300 ring-2 ring-teams-600/20 shadow-xs'

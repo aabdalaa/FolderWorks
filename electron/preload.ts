@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearLogs: () => ipcRenderer.invoke('clear-logs'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),
   verifyTIPassword: (password: string) => ipcRenderer.invoke('verify-ti-password', password),
+  isTIPasswordSet: () => ipcRenderer.invoke('is-ti-password-set'),
+  setTIPassword: (newPassword: string) => ipcRenderer.invoke('set-ti-password', newPassword),
   getHistory: () => ipcRenderer.invoke('get-history'),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
   getNetworkLogs: () => ipcRenderer.invoke('get-network-logs'),

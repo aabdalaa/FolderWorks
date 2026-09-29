@@ -87,6 +87,15 @@ export const HistoryView: React.FC = () => {
     }
   };
 
+  // Lista única de empresas para o filtro
+  const uniqueCompanies = useMemo(() => {
+    const set = new Set<string>();
+    history.forEach((item) => {
+      if (item.company && item.company !== 'GLOBAL') set.add(item.company);
+    });
+    return Array.from(set).sort();
+  }, [history]);
+
   // Lista única de operadores para o filtro
   const uniqueOperators = useMemo(() => {
     const set = new Set<string>();
@@ -282,8 +291,11 @@ export const HistoryView: React.FC = () => {
               className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-teams-500 cursor-pointer"
             >
               <option value="ALL">Todas</option>
-              <option value="EMPRESA 1">EMPRESA 1</option>
-              <option value="EMPRESA 2">EMPRESA 2</option>
+              {uniqueCompanies.map((comp) => (
+                <option key={comp} value={comp}>
+                  {comp}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -394,13 +406,7 @@ export const HistoryView: React.FC = () => {
 
                       {/* Empresa */}
                       <td className="p-3 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            item.company?.includes('2')
-                              ? 'bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800'
-                              : 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800'
-                          }`}
-                        >
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teams-50 dark:bg-teams-950/60 text-teams-700 dark:text-teams-400 border border-teams-200 dark:border-teams-800">
                           {item.company}
                         </span>
                       </td>

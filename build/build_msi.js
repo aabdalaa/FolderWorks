@@ -31,30 +31,56 @@ function loadDotEnv() {
 
 async function buildMSI() {
   const env = loadDotEnv();
+  const isCru = process.argv.includes('--cru') || !process.argv.includes('--internal');
 
-  const masterConfig = {
-    isLockedByMSI: true,
+  // Configuração crua universal para o MSI limpo (sem dados confidenciais)
+  const cruConfig = {
+    isLockedByMSI: false,
+    "Empresa Modelo": {
+      name: "Empresa Modelo",
+      companyName: "Empresa Modelo",
+      sourcePath: "C:\\FolderWorks\\MODELO",
+      destinationParentPath: "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+      destSharePath: "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+      allowedBasePath: "C:\\FolderWorks\\CLIENTES",
+      defaultSourceFolder: "C:\\FolderWorks\\CLIENTES\\EMPRESAS",
+      logDirectory: "C:\\FolderWorks\\LOGS",
+      selectedLogFile: "",
+      presetDestinations: [
+        { name: "00 - EX CLIENTES", path: "C:\\FolderWorks\\CLIENTES\\00 - EX CLIENTES", isPredefined: true },
+        { name: "01 - EMPRESAS ENCERRADAS", path: "C:\\FolderWorks\\CLIENTES\\01 - EMPRESAS ENCERRADAS", isPredefined: true }
+      ],
+      adServerIp: "",
+      domainUser: "",
+      adPass: ""
+    },
+    tiLogsPassword: ""
+  };
+
+  // Configuração corporativa sanitizada para o repositório público (valores de exemplo)
+  const corporateNetworkConfig = {
+    isLockedByMSI: false,
     EMPRESA_1: {
-      name: env.EMPRESA1_NAME || 'EMPRESA 01',
-      companyName: 'EMPRESA 01',
-      sourcePath: env.EMPRESA1_SOURCE_PATH || '\\\\servidor\\gpo\\criarpastas\\MODELO',
-      destinationParentPath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
-      destSharePath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
-      allowedBasePath: '\\\\servidor\\arquivos\\CLIENTES',
-      defaultSourceFolder: '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
-      logDirectory: '\\\\servidor\\gpo\\criarpastas\\LOGS',
+      name: env.EMPRESA1_NAME || 'Empresa Modelo 01',
+      companyName: 'Empresa Modelo 01',
+      sourcePath: env.EMPRESA1_SOURCE_PATH || '\\\\servidor\\compartilhamento\\MODELO',
+      destinationParentPath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\compartilhamento\\CLIENTES\\EMPRESAS',
+      destSharePath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\compartilhamento\\CLIENTES\\EMPRESAS',
+      allowedBasePath: '\\\\servidor\\compartilhamento\\CLIENTES',
+      defaultSourceFolder: '\\\\servidor\\compartilhamento\\CLIENTES\\EMPRESAS',
+      logDirectory: '\\\\servidor\\compartilhamento\\LOGS',
       selectedLogFile: '',
       presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\servidor\\arquivos\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
+        { name: '00 - EX CLIENTES', path: '\\\\servidor\\compartilhamento\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\compartilhamento\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
-      adServerIp: env.EMPRESA1_AD_IP || '10.0.0.10',
+      adServerIp: env.EMPRESA1_AD_IP || '',
       domainUser: env.EMPRESA1_AD_USER || 'DOMINIO\\pasta.servico',
       adPass: env.EMPRESA1_AD_PASS || ''
     },
     EMPRESA_2: {
-      name: env.EMPRESA2_NAME || 'EMPRESA 02',
-      companyName: 'EMPRESA 02',
+      name: env.EMPRESA2_NAME || 'Empresa Modelo 02',
+      companyName: 'Empresa Modelo 02',
       sourcePath: env.EMPRESA2_SOURCE_PATH || '\\\\servidor\\filial\\MODELO',
       destinationParentPath: env.EMPRESA2_DESTINATION_PATH || '\\\\servidor\\filial\\CLIENTES\\EMPRESAS',
       destSharePath: env.EMPRESA2_DESTINATION_PATH || '\\\\servidor\\filial\\CLIENTES\\EMPRESAS',
@@ -66,12 +92,15 @@ async function buildMSI() {
         { name: '00 - EX CLIENTES', path: '\\\\servidor\\filial\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\filial\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
-      adServerIp: env.EMPRESA2_AD_IP || '10.0.1.10',
+      adServerIp: env.EMPRESA2_AD_IP || '',
       domainUser: env.EMPRESA2_AD_USER || 'DOMINIO\\pasta.servico',
       adPass: env.EMPRESA2_AD_PASS || ''
     },
     tiLogsPassword: env.TI_LOGS_PASSWORD || ''
   };
+
+  const masterConfig = isCru ? cruConfig : corporateNetworkConfig;
+  console.log(`[-] Modo de compilação do MSI: ${isCru ? 'CRU / UNIVERSAL (Sem dados corporativos embutidos)' : 'INTERNAL / EMBUTIDO'}`);
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');
   const distDir = path.join(projectRoot, 'dist');
@@ -127,7 +156,7 @@ async function buildMSI() {
   console.log('[2/3] Gerando pacote .MSI com suporte a Atualização Automática (UpgradeCode)...');
   const msiCreator = new MSICreator({
     appDirectory: appDir,
-    description: 'FolderWorks - Entropy FolderWorks Suíte de Automação de Criador de Pastas (Pré-configurado no MSI)',
+    description: isCru ? 'FolderWorks - Suíte de Automação de Criador de Pastas (Universal)' : 'FolderWorks - Suíte de Automação de Criador de Pastas',
     exe: 'FolderWorks.exe',
     name: 'FolderWorks',
     shortcutName: 'FolderWorks',
@@ -180,30 +209,70 @@ async function buildMSI() {
 
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');
   const desktopMsi = path.join(desktopPath, 'FolderWorks.msi');
-  const installerDir = path.join(projectRoot, '..', '01 - Instalador', 'Internal');
-  const internalVersionMsi = path.join(installerDir, 'FolderWorks-v3.0.0-win-x64.msi');
-  const internalLatestMsi = path.join(installerDir, 'FolderWorks.msi');
+  const internalInstallerDir = path.join(projectRoot, '..', '01 - Instalador', 'Internal');
+  const publicInstallerDir = path.join(projectRoot, '..', '01 - Instalador', 'Public');
+  const oneFileDir = path.join(projectRoot, '..', '01 - Instalador', 'OneFile', 'FolderWorks-win32-x64');
 
   if (fs.existsSync(sourceMsi)) {
-    if (!fs.existsSync(installerDir)) fs.mkdirSync(installerDir, { recursive: true });
-    try { fs.copyFileSync(sourceMsi, internalVersionMsi); } catch (e) {}
-    try { fs.copyFileSync(sourceMsi, internalLatestMsi); } catch (e) {}
+    // 1. Diretório Internal
+    if (!fs.existsSync(internalInstallerDir)) fs.mkdirSync(internalInstallerDir, { recursive: true });
+    try { fs.copyFileSync(sourceMsi, path.join(internalInstallerDir, 'FolderWorks-v3.0.0-win-x64.msi')); } catch (e) {}
+    try { fs.copyFileSync(sourceMsi, path.join(internalInstallerDir, 'FolderWorks.msi')); } catch (e) {}
+
+    // 2. Diretório Public (Para publicação no GitHub Releases)
+    if (!fs.existsSync(publicInstallerDir)) fs.mkdirSync(publicInstallerDir, { recursive: true });
+    try { fs.copyFileSync(sourceMsi, path.join(publicInstallerDir, 'FolderWorks-v3.0.0-win-x64.msi')); } catch (e) {}
+    try { fs.copyFileSync(sourceMsi, path.join(publicInstallerDir, 'FolderWorks.msi')); } catch (e) {}
+
+    // 3. Desktop
     try {
       if (fs.existsSync(desktopMsi)) {
         try { fs.unlinkSync(desktopMsi); } catch (eUnlink) {}
       }
       fs.copyFileSync(sourceMsi, desktopMsi);
     } catch (eCopy) {
-      console.log(`[AVISO] O MSI gerado está disponível no repositório: ${sourceMsi}`);
+      console.log(`[AVISO] Não foi possível copiar para Área de Trabalho: ${eCopy.message}`);
+    }
+  }
+
+  // 4. Salvar arquivo de configuração corporativo pré-disponibilizado na rede (SMB)
+  const corporateJsonContent = JSON.stringify(corporateNetworkConfig, null, 2);
+  const internalConfigPath = path.join(internalInstallerDir, 'folderworks_config.json');
+  try {
+    fs.writeFileSync(internalConfigPath, corporateJsonContent, 'utf-8');
+    console.log(`✓ Arquivo de configuração corporativo salvo em: ${internalConfigPath}`);
+  } catch (e) {}
+
+  // Salvar template sanitizado em Public
+  const exampleJsonContent = JSON.stringify(cruConfig, null, 2);
+  const publicExamplePath = path.join(publicInstallerDir, 'folderworks_config.example.json');
+  try {
+    fs.writeFileSync(publicExamplePath, exampleJsonContent, 'utf-8');
+    console.log(`✓ Template sanitizado salvo em: ${publicExamplePath}`);
+  } catch (e) {}
+
+  // Publicar diretamente nas pastas de rede corporativa se configurado via .env
+  const networkShares = env.SHARED_CONFIG_NETWORK_PATHS ? env.SHARED_CONFIG_NETWORK_PATHS.split(';') : [];
+
+  for (const netPath of networkShares) {
+    if (!netPath || !netPath.trim()) continue;
+    try {
+      const netDir = path.dirname(netPath.trim());
+      if (fs.existsSync(netDir)) {
+        fs.writeFileSync(netPath.trim(), corporateJsonContent, 'utf-8');
+        console.log(`✓ Configuração sincronizada na rede: ${netPath}`);
+      }
+    } catch (netErr) {
+      console.log(`[AVISO REDE] Compartilhamento '${netPath}' offline ou sem permissão de escrita.`);
     }
   }
 
   console.log('');
   console.log('=========================================================');
-  console.log(' SUCESSO! PACOTE FOLDERWORKS .MSI PRÉ-CONFIGURADO GERADO EM:');
-  console.log(` -> ${sourceMsi}`);
-  console.log(` -> ${internalVersionMsi}`);
-  console.log(` -> ${desktopMsi} (Área de Trabalho)`);
+  console.log(` SUCESSO! INSTALADOR FOLDERWORKS v3.0.0 GERADO EM:`);
+  console.log(` -> Public:   ${path.join(publicInstallerDir, 'FolderWorks-v3.0.0-win-x64.msi')}`);
+  console.log(` -> Internal: ${path.join(internalInstallerDir, 'FolderWorks-v3.0.0-win-x64.msi')}`);
+  console.log(` -> Desktop:  ${desktopMsi}`);
   console.log('=========================================================');
 }
 

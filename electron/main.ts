@@ -21,38 +21,24 @@ const customIconPath = path.join(userDataPath, 'custom_icon.png');
 const historyPath = path.join(userDataPath, 'history.json');
 const logsPath = path.join(userDataPath, 'app.log');
 
-// Default Corporate Config with IT Governance Perimeter
+// Default Corporate Config with IT Governance Perimeter (Clean Universal Cru Template)
 const defaultCompanyConfigs: Record<string, any> = {
   EMPRESA_1: {
-    companyName: 'EMPRESA 01',
+    companyName: 'Empresa Modelo',
     domainUser: String.raw`DOMINIO\pasta.servico`,
     adPass: '',
-    adServerIp: '10.0.0.10',
-    sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
-    destSharePath: String.raw`\\servidor\arquivos\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\servidor\arquivos\CLIENTES`,
-    defaultSourceFolder: String.raw`\\servidor\arquivos\CLIENTES\EMPRESAS`,
-    logDirectory: String.raw`\\servidor\gpo\criarpastas\LOGS`,
+    adServerIp: '',
+    sourcePath: String.raw`\\servidor\compartilhamento\MODELO`,
+    destSharePath: String.raw`\\servidor\compartilhamento\CLIENTES\EMPRESAS`,
+    allowedBasePath: String.raw`\\servidor\compartilhamento\CLIENTES`,
+    defaultSourceFolder: String.raw`\\servidor\compartilhamento\CLIENTES\EMPRESAS`,
+    logDirectory: String.raw`\\servidor\compartilhamento\LOGS`,
     selectedLogFile: '',
+    companyLogo: '',
+    colorTheme: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\arquivos\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
-    ]
-  },
-  EMPRESA_2: {
-    companyName: 'EMPRESA 02',
-    domainUser: String.raw`DOMINIO\pasta.servico`,
-    adPass: '',
-    adServerIp: '10.0.1.10',
-    sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
-    destSharePath: String.raw`\\servidor\filial\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\servidor\filial\CLIENTES`,
-    defaultSourceFolder: String.raw`\\servidor\filial\CLIENTES\EMPRESAS`,
-    logDirectory: String.raw`\\servidor\filial\LOGS`,
-    selectedLogFile: '',
-    presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\filial\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\filial\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
+      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\compartilhamento\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\compartilhamento\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   }
 };
@@ -75,9 +61,35 @@ function sanitizeConfig(cfg: any): any {
   if (cfg.customLogo !== undefined) {
     sanitized.customLogo = cfg.customLogo;
   }
+  if (cfg.appLogo !== undefined) {
+    sanitized.appLogo = cfg.appLogo;
+  }
+  if (cfg.colorTheme !== undefined) {
+    sanitized.colorTheme = cfg.colorTheme;
+  }
+  if (cfg.lockColorTheme !== undefined) {
+    sanitized.lockColorTheme = Boolean(cfg.lockColorTheme);
+  }
+  if (cfg.colorMode !== undefined) {
+    sanitized.colorMode = cfg.colorMode;
+  }
+
+  const systemKeys = new Set([
+    'isLockedByMSI',
+    'tiLogsPassword',
+    'sharedLogFilePath',
+    'customLogo',
+    'appLogo',
+    'colorTheme',
+    'lockColorTheme',
+    'colorMode',
+    '_isSharedNetworkConfig',
+    '_sharedConfigFilePath',
+    '_isOfflineCache'
+  ]);
 
   const companyKeys = Object.keys(cfg).filter(
-    (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && k !== 'customLogo' && !k.startsWith('_')
+    (k) => !systemKeys.has(k) && !k.startsWith('_') && cfg[k] && typeof cfg[k] === 'object'
   );
 
   if (companyKeys.length === 0) {
@@ -86,6 +98,10 @@ function sanitizeConfig(cfg: any): any {
       ...(cfg.tiLogsPassword ? { tiLogsPassword: cfg.tiLogsPassword } : {}),
       ...(cfg.sharedLogFilePath !== undefined ? { sharedLogFilePath: String(cfg.sharedLogFilePath || '').trim() } : {}),
       ...(cfg.customLogo !== undefined ? { customLogo: cfg.customLogo } : {}),
+      ...(cfg.appLogo !== undefined ? { appLogo: cfg.appLogo } : {}),
+      ...(cfg.colorTheme !== undefined ? { colorTheme: cfg.colorTheme } : {}),
+      ...(cfg.lockColorTheme !== undefined ? { lockColorTheme: cfg.lockColorTheme } : {}),
+      ...(cfg.colorMode !== undefined ? { colorMode: cfg.colorMode } : {}),
     };
   }
 
@@ -108,12 +124,23 @@ function sanitizeConfig(cfg: any): any {
         defaultSourceFolder: raw.defaultSourceFolder || def.defaultSourceFolder || dest,
         logDirectory: raw.logDirectory || def.logDirectory || '',
         selectedLogFile: raw.selectedLogFile || def.selectedLogFile || '',
+        companyLogo: raw.companyLogo || '',
+        colorTheme: raw.colorTheme || '',
         presetDestinations: Array.isArray(raw.presetDestinations)
           ? raw.presetDestinations
           : (def.presetDestinations || []),
       };
     }
   }
+
+  // Preserva parâmetros globais e configurações de sistema
+  if (cfg.tiLogsPassword) sanitized.tiLogsPassword = cfg.tiLogsPassword;
+  if (cfg.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = String(cfg.sharedLogFilePath || '').trim();
+  if (cfg.customLogo !== undefined) sanitized.customLogo = cfg.customLogo;
+  if (cfg.appLogo !== undefined) sanitized.appLogo = cfg.appLogo;
+  if (cfg.colorTheme !== undefined) sanitized.colorTheme = cfg.colorTheme;
+  if (cfg.lockColorTheme !== undefined) sanitized.lockColorTheme = Boolean(cfg.lockColorTheme);
+  if (cfg.colorMode !== undefined) sanitized.colorMode = cfg.colorMode;
 
   return sanitized;
 }
@@ -217,9 +244,6 @@ function loadConfig(): any {
 
 function saveConfigData(cfg: any) {
   const sanitized = sanitizeConfig(cfg);
-  if (cfg.tiLogsPassword) sanitized.tiLogsPassword = cfg.tiLogsPassword;
-  if (cfg.sharedLogFilePath !== undefined) sanitized.sharedLogFilePath = cfg.sharedLogFilePath;
-  if (cfg.customLogo !== undefined) sanitized.customLogo = cfg.customLogo;
 
   const sharedFilePath = getSharedConfigPointer();
   if (sharedFilePath) {
@@ -239,6 +263,11 @@ function saveConfigData(cfg: any) {
 
   if (mainWindow) {
     mainWindow.webContents.send('config-updated', loadConfig());
+  }
+
+  // Atualiza atalhos da Área de Trabalho se houver logotipo no config
+  if (sanitized.customLogo || sanitized.appLogo) {
+    updateDesktopShortcutIcon(sanitized.customLogo || sanitized.appLogo);
   }
 }
 
@@ -263,14 +292,98 @@ function getTIPassword(): string {
     }
   }
 
-  return 'admin@123';
+  return '';
 }
 
 function getCompanyConfig(company: string) {
   const all = loadConfig();
-  const companyKeys = Object.keys(all).filter(k => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+  const systemKeys = new Set(['isLockedByMSI', 'tiLogsPassword', 'sharedLogFilePath', 'customLogo', 'appLogo', 'colorTheme', 'lockColorTheme', 'colorMode']);
+  const companyKeys = Object.keys(all).filter(k => !systemKeys.has(k) && !k.startsWith('_') && all[k] && typeof all[k] === 'object');
   return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['EMPRESA_1']);
 }
+
+function pngToIcoBuffer(pngBuf: Buffer): Buffer {
+  const icoHeader = Buffer.alloc(22);
+  icoHeader.writeUInt16LE(0, 0); // Reserved
+  icoHeader.writeUInt16LE(1, 2); // ICO type (1 = icon)
+  icoHeader.writeUInt16LE(1, 4); // 1 image
+  icoHeader.writeUInt8(0, 6); // Width: 0 = 256
+  icoHeader.writeUInt8(0, 7); // Height: 0 = 256
+  icoHeader.writeUInt8(0, 8); // Color count
+  icoHeader.writeUInt8(0, 9); // Reserved
+  icoHeader.writeUInt16LE(1, 10); // Color planes
+  icoHeader.writeUInt16LE(32, 12); // Bits per pixel
+  icoHeader.writeUInt32LE(pngBuf.length, 14); // Image size
+  icoHeader.writeUInt32LE(22, 18); // Offset
+  return Buffer.concat([icoHeader, pngBuf]);
+}
+
+function updateDesktopShortcutIcon(dataUrl: string | null) {
+  try {
+    const icoPath = path.join(userDataPath, 'app_icon.ico');
+    if (dataUrl) {
+      const img = nativeImage.createFromDataURL(dataUrl);
+      if (!img.isEmpty()) {
+        const pngBuf = img.toPNG();
+        const icoBuffer = pngToIcoBuffer(pngBuf);
+        fs.writeFileSync(icoPath, icoBuffer);
+      }
+    } else {
+      if (fs.existsSync(icoPath)) {
+        try { fs.unlinkSync(icoPath); } catch {}
+      }
+    }
+
+    const script = `
+$ico = "${icoPath.replace(/\\/g, '\\\\')}"
+$hasCustom = Test-Path $ico
+
+$targets = @(
+  [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'FolderWorks.lnk'),
+  [System.IO.Path]::Combine([Environment]::GetFolderPath('CommonDesktopDirectory'), 'FolderWorks.lnk'),
+  [System.IO.Path]::Combine([Environment]::GetFolderPath('Programs'), 'FolderWorks', 'FolderWorks.lnk'),
+  [System.IO.Path]::Combine([Environment]::GetFolderPath('CommonPrograms'), 'FolderWorks', 'FolderWorks.lnk')
+)
+
+$wsh = New-Object -ComObject WScript.Shell
+foreach ($t in $targets) {
+  if (Test-Path $t) {
+    try {
+      $sc = $wsh.CreateShortcut($t)
+      if ($hasCustom) {
+        $sc.IconLocation = "$ico,0"
+      } else {
+        $sc.IconLocation = "$($sc.TargetPath),0"
+      }
+      $sc.Save()
+    } catch {}
+  }
+}
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32ShellNotify {
+  [DllImport("shell32.dll")]
+  public static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+"@
+[Win32ShellNotify]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+`;
+
+    exec(`powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${script.replace(/\r?\n/g, '; ')}"`, (err) => {
+      if (err) {
+        appendLog(`[ATALHO WINDOWS ERRO] Falha ao atualizar ícone do atalho: ${err.message}`);
+      } else {
+        appendLog('[ATALHO WINDOWS] Atalhos da Área de Trabalho e Menu Iniciar atualizados com sucesso via SHChangeNotify.');
+      }
+    });
+  } catch (err: any) {
+    appendLog(`[ATALHO WINDOWS EXCEÇÃO] ${err.message}`);
+  }
+}
+
+
 
 function saveConfig(cfg: any) {
   const sanitized = sanitizeConfig(cfg);
@@ -382,11 +495,34 @@ interface DetectedLogFileInfo {
   format: string;
 }
 
+function inferCompanyFromPath(targetDir?: string): string {
+  const cfg = loadConfig();
+  const systemKeys = new Set(['isLockedByMSI', 'tiLogsPassword', 'sharedLogFilePath', 'customLogo', 'appLogo', 'colorTheme', 'lockColorTheme', 'colorMode']);
+  const companyKeys = Object.keys(cfg).filter(k => !systemKeys.has(k) && !k.startsWith('_') && cfg[k] && typeof cfg[k] === 'object');
+  if (!targetDir) return companyKeys[0] || 'EMPRESA_1';
+  const lower = targetDir.toLowerCase();
+  for (const k of companyKeys) {
+    const c = cfg[k];
+    if (c?.destSharePath && lower.includes(c.destSharePath.toLowerCase())) return k;
+    if (c?.allowedBasePath && lower.includes(c.allowedBasePath.toLowerCase())) return k;
+    if (c?.sourcePath && lower.includes(c.sourcePath.toLowerCase())) return k;
+  }
+  return companyKeys[0] || 'EMPRESA_1';
+}
+
 function getCompanyLogDirectory(companyKey?: string): string {
-  const comp = companyKey || 'EMPRESA_1';
+  const comp = companyKey || inferCompanyFromPath();
   const compCfg = getCompanyConfig(comp);
   if (compCfg && compCfg.logDirectory && String(compCfg.logDirectory).trim()) {
     return String(compCfg.logDirectory).trim();
+  }
+  const cfg = loadConfig();
+  const systemKeys = new Set(['isLockedByMSI', 'tiLogsPassword', 'sharedLogFilePath', 'customLogo', 'appLogo', 'colorTheme', 'lockColorTheme', 'colorMode']);
+  const companyKeys = Object.keys(cfg).filter(k => !systemKeys.has(k) && !k.startsWith('_') && cfg[k] && typeof cfg[k] === 'object');
+  for (const k of companyKeys) {
+    if (cfg[k]?.logDirectory && String(cfg[k].logDirectory).trim()) {
+      return String(cfg[k].logDirectory).trim();
+    }
   }
   return '';
 }
@@ -435,7 +571,7 @@ function updateCompanySelectedLogFile(companyKey: string, filePath: string) {
 }
 
 function resolveCompanyLogFile(companyKey?: string): string | null {
-  const comp = companyKey || 'EMPRESA_1';
+  const comp = companyKey || inferCompanyFromPath();
   const compCfg = getCompanyConfig(comp);
 
   // 1. Se TI já selecionou expressamente um arquivo válido existente
@@ -976,7 +1112,7 @@ function createWindow() {
     },
   });
 
-  // Se houver logotipo customizado na configuração, aplicar dinamicamente ao ícone da janela
+  // Se houver logotipo customizado na configuração, aplicar dinamicamente ao ícone da janela e aos atalhos do Windows
   try {
     const startupCfg = loadConfig();
     if (startupCfg?.customLogo) {
@@ -984,6 +1120,7 @@ function createWindow() {
       if (!img.isEmpty()) {
         mainWindow.setIcon(img);
         fs.writeFileSync(customIconPath, img.toPNG());
+        updateDesktopShortcutIcon(startupCfg.customLogo);
       }
     }
   } catch {}
@@ -1095,7 +1232,7 @@ ipcMain.handle('reset-config', () => {
   return { success: true, config: resetCfg };
 });
 
-// Ícone Dinâmico da Janela e Barra de Tarefas
+// Ícone Dinâmico da Janela, Barra de Tarefas e Atalhos do Windows
 ipcMain.handle('set-window-icon', async (_, dataUrl: string | null) => {
   if (!mainWindow) return false;
   try {
@@ -1104,24 +1241,44 @@ ipcMain.handle('set-window-icon', async (_, dataUrl: string | null) => {
       if (!img.isEmpty()) {
         mainWindow.setIcon(img);
         fs.writeFileSync(customIconPath, img.toPNG());
-        appendLog('[ÍCONE] Logotipo corporativo aplicado à janela e barra de tarefas do Windows.');
+        updateDesktopShortcutIcon(dataUrl);
+        appendLog('[ÍCONE] Logotipo corporativo aplicado à janela, barra de tarefas e atalhos da Área de Trabalho.');
         return true;
       }
     } else {
       if (fs.existsSync(customIconPath)) {
         try { fs.unlinkSync(customIconPath); } catch {}
       }
+      updateDesktopShortcutIcon(null);
       const defaultIcon = getAppIconPath();
       if (defaultIcon && fs.existsSync(defaultIcon)) {
         mainWindow.setIcon(defaultIcon);
       }
-      appendLog('[ÍCONE] Ícone da janela restaurado para o padrão corporativo.');
+      appendLog('[ÍCONE] Ícone da janela e atalhos restaurados para o padrão corporativo.');
       return true;
     }
   } catch (err: any) {
     appendLog(`[ÍCONE ERRO] Falha ao definir ícone da janela: ${err.message}`);
   }
   return false;
+});
+
+// Verificação e Definição da Senha Mestra do TI
+ipcMain.handle('is-ti-password-set', () => {
+  const pwd = getTIPassword();
+  return Boolean(pwd && pwd.length > 0);
+});
+
+ipcMain.handle('set-ti-password', async (_, newPassword: string) => {
+  const trimmed = typeof newPassword === 'string' ? newPassword.trim() : '';
+  if (!trimmed) {
+    return { success: false, error: 'A senha do TI não pode ser vazia.' };
+  }
+  const current = loadConfig();
+  current.tiLogsPassword = trimmed;
+  saveConfigData(current);
+  appendLog('[AUDITORIA TI] Senha mestra de TI definida/alterada com sucesso.');
+  return { success: true };
 });
 
 // Configuração Compartilhada na Rede Corporativa (SMB / UNC / Disco)
@@ -1271,6 +1428,9 @@ ipcMain.handle('reload-config', async () => {
   const cfg = loadConfig();
   if (mainWindow) {
     mainWindow.webContents.send('config-updated', cfg);
+  }
+  if (cfg.customLogo || cfg.appLogo) {
+    updateDesktopShortcutIcon(cfg.customLogo || cfg.appLogo);
   }
   appendLog('[CONFIG] Configurações recarregadas sob demanda.');
   return { success: true, config: cfg };
@@ -1521,7 +1681,7 @@ ipcMain.handle('get-network-logs', () => {
 
 // Detecção, listagem e seleção de arquivos de log por empresa
 ipcMain.handle('detect-company-log-files', async (_, companyKey: string) => {
-  const comp = companyKey || 'EMPRESA_1';
+  const comp = companyKey || inferCompanyFromPath();
   const compCfg = getCompanyConfig(comp);
   const logDir = getCompanyLogDirectory(comp);
 
@@ -1590,7 +1750,7 @@ ipcMain.handle('select-company-log-file', async (_, { companyKey, filePath }: { 
 });
 
 ipcMain.handle('create-company-log-file', async (_, { companyKey, format }: { companyKey: string; format?: string }) => {
-  const comp = companyKey || 'EMPRESA_1';
+  const comp = companyKey || inferCompanyFromPath();
   const logDir = getCompanyLogDirectory(comp);
   if (!logDir) throw new Error('Diretório de logs não configurado.');
 
@@ -1945,9 +2105,7 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
 
     // Inferir empresa se não especificada explicitamente
     if (!company) {
-      const all = loadConfig();
-      const keys = Object.keys(all).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-      if (keys.length > 0) company = keys[0];
+      company = inferCompanyFromPath(targetDir);
     }
 
     const executor = getExecutorPath();
@@ -2435,9 +2593,7 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
 
     const newFullPath = path.join(parentDir, cleanNewName);
 
-    const all = loadConfig();
-    const companyKeys = Object.keys(all).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-    const compName = company || (companyKeys.length > 0 ? companyKeys[0] : 'EMPRESA_1');
+    const compName = company || inferCompanyFromPath(cleanTarget);
     const compConfig = getCompanyConfig(compName);
     const allowedBase = compConfig?.allowedBasePath || compConfig?.destSharePath;
 
@@ -2565,8 +2721,8 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   appendLog(`[ORIGEM MODELO AD] ${effectiveSourcePath}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
-  const adUser = config.domainUser || `${company}\\pasta.servico`;
-  const pureUser = adUser.includes('\\') ? adUser.split('\\')[1] : (adUser || 'pasta.servico');
+  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
+  const pureUser = adUser.includes('\\') ? adUser.split('\\')[1] : (adUser || 'pasta.paralegal');
   const adPass = config.adPass || '';
   const adServerIp = config.adServerIp;
 
@@ -2689,7 +2845,7 @@ ipcMain.handle('create-empty-folder', async (_, { company, folderName }) => {
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO VAZIA] Empresa: ${company} | Pasta: ${trimmedName}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
-  const adUser = config.domainUser || `${company}\\pasta.servico`;
+  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
   const adPass = config.adPass || '';
 
   const possibleExecutorPaths = [

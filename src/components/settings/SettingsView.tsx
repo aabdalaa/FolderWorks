@@ -28,7 +28,9 @@ import {
   Unlink,
 } from 'lucide-react';
 import { TIAccessModal } from '../logs/TIAccessModal';
+import { ChangeTIPasswordModal } from '../auth/ChangeTIPasswordModal';
 import { useIconColor } from '../../hooks/useIconColor';
+import { getCompanyKeys } from '../../utils/configUtils';
 
 interface SettingsViewProps {
   onTestConnection: (company: string, overrideConfig?: any) => Promise<{ success: boolean; message: string }>;
@@ -63,6 +65,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateCustomLogo,
 }) => {
   const logoInputRef = React.useRef<HTMLInputElement>(null);
+  const companyLogoInputRef = React.useRef<HTMLInputElement>(null);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [activeColorCompany, setActiveColorCompany] = useState<string>('');
 
   const [config, setConfig] = useState<any>(null);
   const [sharedConfigInfo, setSharedConfigInfo] = useState<{
@@ -91,6 +96,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleSelectSharedConfigFile = async () => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const selected = await window.electronAPI?.selectConfigFile('open');
     if (!selected) return;
     setIsLoadingSharedConfig(true);
@@ -109,6 +118,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [manualSharedPath, setManualSharedPath] = useState('');
 
   const handleConnectManualPath = async () => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const trimmed = manualSharedPath.trim();
     if (!trimmed) return;
     setIsLoadingSharedConfig(true);
@@ -126,6 +139,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleCreateSharedConfigFile = async () => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const targetPath = await window.electronAPI?.selectConfigFile('save');
     if (!targetPath) return;
     setIsLoadingSharedConfig(true);
@@ -140,6 +157,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleDisconnectSharedConfig = async () => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setIsLoadingSharedConfig(true);
     await window.electronAPI?.setSharedConfigFile('');
     setIsLoadingSharedConfig(false);
@@ -161,6 +182,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -187,6 +212,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleResetLogo = async () => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     if (onUpdateCustomLogo) {
       onUpdateCustomLogo(null);
     }
@@ -198,6 +227,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       await window.electronAPI?.setWindowIcon(null);
     } catch {}
   };
+
+  const handleCompanyLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, compKey: string) => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        handleFieldChange(compKey, 'companyLogo', result);
+        const updatedConfig = {
+          ...config,
+          [compKey]: {
+            ...config[compKey],
+            companyLogo: result,
+          },
+        };
+        setConfig(updatedConfig);
+        try {
+          await window.electronAPI?.saveConfig(updatedConfig);
+        } catch {}
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleResetCompanyLogo = async (compKey: string) => {
+    if (!isTIUnlocked) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    handleFieldChange(compKey, 'companyLogo', '');
+    const updatedConfig = {
+      ...config,
+      [compKey]: {
+        ...config[compKey],
+        companyLogo: '',
+      },
+    };
+    setConfig(updatedConfig);
+    try {
+      await window.electronAPI?.saveConfig(updatedConfig);
+    } catch {}
+  };
+
   const [testResults, setTestResults] = useState<{ [key: string]: { success: boolean; message: string } }>({});
   const [testing, setTesting] = useState<{ [key: string]: boolean }>({});
 
@@ -232,12 +316,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (shortcut.isPredefined) return true;
     const normalized = (shortcut.name || '').trim().toUpperCase();
     return normalized === '00 - EX CLIENTES' || normalized === '01 - EMPRESAS ENCERRADAS';
-  };
-
-  // Helper to extract company keys
-  const getCompanyKeys = (cfg: any): string[] => {
-    if (!cfg || typeof cfg !== 'object') return [];
-    return Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath');
   };
 
   // Sync external TI authentication state
@@ -705,6 +783,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </button>
 
                 <button
+                  onClick={() => setIsChangePasswordModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  title="Alterar a Senha Mestra do TI"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-teams-600 dark:text-teams-400" />
+                  <span>Senha TI</span>
+                </button>
+
+                <button
                   onClick={handleSaveConfig}
                   disabled={isSaving}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-teams-600 hover:bg-teams-700 active:bg-teams-800 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-teams-600/20 cursor-pointer"
@@ -744,69 +831,192 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         )}
       </div>
 
-      {/* 2. Cores do Sistema e Tema Global (Livre para o Usuário - 24 Opções) */}
-      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0">
-                <Palette className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Personalização de Tema e Cores</h3>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    24 Cores Disponíveis
-                  </span>
+      {/* 2. Cores do Sistema e Tema Global (Com Bloqueio TI e Modo por Empresa) */}
+      {!(Boolean(config?.lockColorTheme) && !isTIUnlocked) && (
+        <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-teams-50 dark:bg-teams-950/60 text-teams-600 dark:text-teams-400 border border-teams-200 dark:border-teams-800 flex items-center justify-center shrink-0">
+                  <Palette className="w-4 h-4" />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Escolha a cor de destaque principal da aplicação. Todos os botões, abas, destaques e ícones adotarão a cor escolhida instantaneamente.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 text-xs font-semibold text-teams-700 dark:text-teams-300 shrink-0">
-              <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: currentColor.hex }} />
-              <span>Tema Ativo: {currentColor.name}</span>
-            </div>
-          </div>
-
-          {/* Grid com as 24 Opções de Cores */}
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2 pt-1">
-            {availableColors.map((color) => {
-              const isSelected = selectedColorId === color.id;
-              return (
-                <button
-                  key={color.id}
-                  type="button"
-                  onClick={() => setIconColor(color.id)}
-                  className={`group relative flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-teams-600 bg-teams-50/70 dark:bg-teams-950/70 ring-2 ring-teams-600/40 shadow-xs scale-105'
-                      : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 bg-slate-50/40 dark:bg-neutral-900/40 hover:scale-102'
-                  }`}
-                  title={`${color.name} (${color.category || ''})`}
-                >
-                  <div className="relative">
-                    <span
-                      className="w-5 h-5 rounded-full block shadow-xs transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    {isSelected && (
-                      <span className="absolute inset-0 flex items-center justify-center text-white drop-shadow-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Personalização de Tema e Cores</h3>
+                    {config?.lockColorTheme ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Restrito ao TI
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        24 Cores Disponíveis
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 mt-1 truncate max-w-full text-center">
-                    {color.name.split(' ')[0]}
-                  </span>
-                </button>
-              );
-            })}
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {config?.colorMode === 'per_company'
+                      ? 'Defina a cor individual para cada empresa cadastrada. A cor do app mudará automaticamente ao alternar de empresa.'
+                      : 'Escolha a cor de destaque principal da aplicação. Todos os botões, abas, destaques e ícones adotarão a cor escolhida instantaneamente.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-teams-50 dark:bg-teams-950/60 border border-teams-200 dark:border-teams-800 text-xs font-semibold text-teams-700 dark:text-teams-300 shrink-0">
+                <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" style={{ backgroundColor: currentColor.hex }} />
+                <span>Tema Ativo: {currentColor.name}</span>
+              </div>
+            </div>
+
+            {/* Controles Administrativos do TI para Cores */}
+            {isTIUnlocked && (
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-900/70 border border-slate-200 dark:border-neutral-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(config?.lockColorTheme)}
+                    onChange={(e) => {
+                      const updated = { ...config, lockColorTheme: e.target.checked };
+                      setConfig(updated);
+                      window.electronAPI?.saveConfig(updated);
+                    }}
+                    className="rounded text-teams-600 focus:ring-teams-500 w-4 h-4 cursor-pointer"
+                  />
+                  <span>Bloquear personalização de cores pelo usuário comum</span>
+                </label>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Modo de Cor:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...config, colorMode: 'single' };
+                      setConfig(updated);
+                      window.electronAPI?.saveConfig(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      (config?.colorMode || 'single') === 'single'
+                        ? 'bg-teams-600 text-white shadow-xs'
+                        : 'bg-slate-200 dark:bg-neutral-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300'
+                    }`}
+                  >
+                    Cor Única Global
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...config, colorMode: 'per_company' };
+                      setConfig(updated);
+                      window.electronAPI?.saveConfig(updated);
+                    }}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      config?.colorMode === 'per_company'
+                        ? 'bg-teams-600 text-white shadow-xs'
+                        : 'bg-slate-200 dark:bg-neutral-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300'
+                    }`}
+                  >
+                    Cor por Empresa
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Seletor de Empresa caso o modo 'per_company' esteja ativo */}
+            {config?.colorMode === 'per_company' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">Configurando Cor para:</span>
+                {companyKeys.map((key) => {
+                  const targetKey = activeColorCompany || companyKeys[0];
+                  const isCurrentActive = targetKey === key;
+                  const compColorId = config[key]?.colorTheme || 'indigo';
+                  const compColorObj = availableColors.find((c) => c.id === compColorId) || availableColors[0];
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setActiveColorCompany(key);
+                        setIconColor(compColorId);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        isCurrentActive
+                          ? 'bg-white dark:bg-neutral-800 border border-teams-500 text-teams-600 dark:text-teams-400 shadow-xs ring-1 ring-teams-500/30'
+                          : 'bg-slate-100 dark:bg-neutral-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-neutral-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full shadow-xs" style={{ backgroundColor: compColorObj.hex }} />
+                      <span>{config[key]?.companyName || key}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Grid com as 24 Opções de Cores */}
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2 pt-1">
+              {availableColors.map((color) => {
+                const targetComp = activeColorCompany || companyKeys[0];
+                const activeSelectedId =
+                  config?.colorMode === 'per_company'
+                    ? (config[targetComp]?.colorTheme || 'indigo')
+                    : selectedColorId;
+                const isSelected = activeSelectedId === color.id;
+
+                return (
+                  <button
+                    key={color.id}
+                    type="button"
+                    onClick={() => {
+                      if (config?.colorMode === 'per_company') {
+                        const compToUpdate = activeColorCompany || companyKeys[0];
+                        if (compToUpdate) {
+                          handleFieldChange(compToUpdate, 'colorTheme', color.id);
+                          setIconColor(color.id);
+                          const updated = {
+                            ...config,
+                            [compToUpdate]: {
+                              ...config[compToUpdate],
+                              colorTheme: color.id,
+                            },
+                          };
+                          setConfig(updated);
+                          window.electronAPI?.saveConfig(updated);
+                        }
+                      } else {
+                        setIconColor(color.id);
+                        const updated = { ...config, colorTheme: color.id };
+                        setConfig(updated);
+                        window.electronAPI?.saveConfig(updated);
+                      }
+                    }}
+                    className={`group relative flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-teams-600 bg-teams-50/70 dark:bg-teams-950/70 ring-2 ring-teams-600/40 shadow-xs scale-105'
+                        : 'border-slate-200 dark:border-neutral-700 hover:border-slate-300 dark:hover:border-neutral-600 bg-slate-50/40 dark:bg-neutral-900/40 hover:scale-102'
+                    }`}
+                    title={`${color.name} (${color.category || ''})`}
+                  >
+                    <div className="relative">
+                      <span
+                        className="w-5 h-5 rounded-full block shadow-xs transition-transform group-hover:scale-110"
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      {isSelected && (
+                        <span className="absolute inset-0 flex items-center justify-center text-white drop-shadow-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 mt-1 truncate max-w-full text-center">
+                      {color.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 2.0 Arquivo de Configuração Compartilhado na Rede (Centralizado) */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
@@ -820,6 +1030,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Configuração Centralizada na Rede Corporativa
                 </h3>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  <Lock className="w-3 h-3" />
+                  Restrito ao TI
+                </span>
                 {sharedConfigInfo.isConfigured ? (
                   sharedConfigInfo.isConnected ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -847,18 +1061,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <input
                       type="text"
                       value={manualSharedPath}
+                      readOnly={!isTIUnlocked}
                       onChange={(e) => setManualSharedPath(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleConnectManualPath()}
-                      placeholder="Cole ou digite o caminho UNC: \\servidor\compartilhamento\folderworks_config.json"
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-slate-800 dark:text-slate-100 font-mono focus:ring-1 focus:ring-teams-500 outline-none placeholder:text-slate-400 dark:placeholder:text-neutral-500"
+                      placeholder={isTIUnlocked ? "Cole ou digite o caminho UNC: \\\\servidor\\compartilhamento\\folderworks_config.json" : "Desbloqueie com a senha do TI para vincular caminho de rede"}
+                      className={`w-full px-3 py-1.5 text-xs rounded-lg border font-mono outline-none ${
+                        isTIUnlocked
+                          ? 'border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-teams-500'
+                          : 'border-slate-200 dark:border-neutral-800 bg-slate-100 dark:bg-neutral-950 text-slate-400 cursor-not-allowed'
+                      }`}
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={handleConnectManualPath}
+                    onClick={() => {
+                      if (!isTIUnlocked) {
+                        setIsAuthModalOpen(true);
+                        return;
+                      }
+                      handleConnectManualPath();
+                    }}
                     disabled={!manualSharedPath.trim() || isLoadingSharedConfig}
                     className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teams-600 hover:bg-teams-700 text-white disabled:opacity-50 cursor-pointer shrink-0 transition-colors shadow-xs"
                   >
+                    {!isTIUnlocked && <Lock className="w-3 h-3" />}
                     <span>Conectar</span>
                   </button>
                 </div>
@@ -877,23 +1103,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
               type="button"
-              onClick={handleSelectSharedConfigFile}
+              onClick={() => {
+                if (!isTIUnlocked) {
+                  setIsAuthModalOpen(true);
+                  return;
+                }
+                handleSelectSharedConfigFile();
+              }}
               disabled={isLoadingSharedConfig}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teams-600 hover:bg-teams-500 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              title="Localizar arquivo .json de configuração no servidor ou disco"
+              title={isTIUnlocked ? "Localizar arquivo .json de configuração no servidor ou disco" : "Desbloqueie com a senha do TI para alterar o arquivo"}
             >
-              <FolderOpen className="w-3.5 h-3.5" />
+              {!isTIUnlocked ? <Lock className="w-3.5 h-3.5" /> : <FolderOpen className="w-3.5 h-3.5" />}
               <span>{sharedConfigInfo.isConfigured ? 'Trocar Arquivo na Rede' : 'Vincular Arquivo na Rede'}</span>
             </button>
 
             <button
               type="button"
-              onClick={handleCreateSharedConfigFile}
+              onClick={() => {
+                if (!isTIUnlocked) {
+                  setIsAuthModalOpen(true);
+                  return;
+                }
+                handleCreateSharedConfigFile();
+              }}
               disabled={isLoadingSharedConfig}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer disabled:opacity-50"
-              title="Exportar a configuração atual para um novo arquivo no servidor compartilhado"
+              title={isTIUnlocked ? "Exportar a configuração atual para um novo arquivo no servidor compartilhado" : "Desbloqueie com a senha do TI para exportar"}
             >
-              <Share2 className="w-3.5 h-3.5" />
+              {!isTIUnlocked ? <Lock className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
               <span>Criar na Rede</span>
             </button>
 
@@ -911,12 +1149,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={handleDisconnectSharedConfig}
+                  onClick={() => {
+                    if (!isTIUnlocked) {
+                      setIsAuthModalOpen(true);
+                      return;
+                    }
+                    handleDisconnectSharedConfig();
+                  }}
                   disabled={isLoadingSharedConfig}
                   className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900 transition-colors cursor-pointer"
-                  title="Desvincular e usar armazenamento local desta máquina"
+                  title={isTIUnlocked ? "Desvincular e usar armazenamento local desta máquina" : "Desbloqueie com a senha do TI para desvincular"}
                 >
-                  <Unlink className="w-3.5 h-3.5" />
+                  {!isTIUnlocked ? <Lock className="w-3.5 h-3.5" /> : <Unlink className="w-3.5 h-3.5" />}
                   <span>Desvincular</span>
                 </button>
               </>
@@ -925,7 +1169,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* 2.1 Identidade Visual e Logotipo do Aplicativo (Livre para o Usuário) */}
+      {/* 2.1 Identidade Visual e Logotipo do Aplicativo (Restrito ao TI) */}
       <div className="bg-white dark:bg-neutral-800 rounded-xl border border-slate-200 dark:border-neutral-700 p-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -939,12 +1183,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Logotipo Personalizado da Aplicação</h3>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  Livre para Usuário
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Restrito ao TI
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Personalize o ícone do cabeçalho da barra lateral com a marca da sua empresa. Formatos PNG, JPG ou SVG recomendados.
+                Personalize o ícone do cabeçalho, atalho da Área de Trabalho e barra lateral com a marca da sua empresa. Formatos PNG, JPG ou SVG recomendados.
               </p>
             </div>
           </div>
@@ -959,20 +1204,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             />
             <button
               type="button"
-              onClick={() => logoInputRef.current?.click()}
+              onClick={() => {
+                if (!isTIUnlocked) {
+                  setIsAuthModalOpen(true);
+                  return;
+                }
+                logoInputRef.current?.click();
+              }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teams-600 hover:bg-teams-500 text-white shadow-xs transition-colors cursor-pointer"
+              title={isTIUnlocked ? "Carregar logotipo" : "Desbloqueie com a senha do TI para carregar logotipo"}
             >
-              <Upload className="w-3.5 h-3.5" />
+              {!isTIUnlocked ? <Lock className="w-3.5 h-3.5" /> : <Upload className="w-3.5 h-3.5" />}
               <span>{customLogo ? 'Substituir Imagem' : 'Carregar Logotipo'}</span>
             </button>
             {customLogo && (
               <button
                 type="button"
-                onClick={handleResetLogo}
+                onClick={() => {
+                  if (!isTIUnlocked) {
+                    setIsAuthModalOpen(true);
+                    return;
+                  }
+                  handleResetLogo();
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-neutral-600 transition-colors cursor-pointer"
-                title="Restaurar ícone padrão da Entropy"
+                title={isTIUnlocked ? "Restaurar ícone padrão da Entropy" : "Desbloqueie com a senha do TI para restaurar"}
               >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                {!isTIUnlocked ? <Lock className="w-3.5 h-3.5" /> : <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />}
                 <span>Restaurar Padrão</span>
               </button>
             )}
@@ -1271,22 +1529,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
             aria-hidden={!isTIUnlocked}
           >
-          {/* Identificação */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Nome da Empresa / Filial
-            </label>
-            <input
-              type="text"
-              readOnly={!isTIUnlocked}
-              value={activeComp.companyName || ''}
-              onChange={(e) => handleFieldChange(activeCompanyTab, 'companyName', e.target.value)}
-              className={`w-full max-w-sm p-2 rounded-lg text-xs font-semibold ${
-                isTIUnlocked
-                  ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
-                  : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
-              }`}
-            />
+          {/* Identificação e Logotipo da Empresa */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Nome da Empresa / Filial
+              </label>
+              <input
+                type="text"
+                readOnly={!isTIUnlocked}
+                value={activeComp.companyName || ''}
+                onChange={(e) => handleFieldChange(activeCompanyTab, 'companyName', e.target.value)}
+                className={`w-full p-2 rounded-lg text-xs font-semibold ${
+                  isTIUnlocked
+                    ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
+                    : 'bg-slate-50 dark:bg-neutral-900/50 border border-slate-200 dark:border-neutral-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                }`}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Identificador exibido nos menus e abas.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Logotipo Exclusivo da Empresa
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 flex items-center justify-center shrink-0 overflow-hidden p-1 shadow-xs">
+                  {activeComp.companyLogo ? (
+                    <img src={activeComp.companyLogo} alt={activeComp.companyName} className="w-full h-full object-contain rounded" />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-slate-400" />
+                  )}
+                </div>
+                {isTIUnlocked && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={companyLogoInputRef}
+                      onChange={(e) => handleCompanyLogoUpload(e, activeCompanyTab)}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => companyLogoInputRef.current?.click()}
+                      className="px-2.5 py-1.5 bg-teams-600 hover:bg-teams-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{activeComp.companyLogo ? 'Alterar Logo' : 'Enviar Logo'}</span>
+                    </button>
+                    {activeComp.companyLogo && (
+                      <button
+                        type="button"
+                        onClick={() => handleResetCompanyLogo(activeCompanyTab)}
+                        className="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-700 text-rose-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                        title="Remover logotipo desta empresa"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Exibido quando esta empresa for selecionada. Se vazio, exibe o logotipo geral do app.
+              </p>
+            </div>
           </div>
 
           <hr className="border-slate-100 dark:border-neutral-700" />
@@ -1869,6 +2177,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal: Alterar Senha do TI */}
+      <ChangeTIPasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        onSuccess={() => {
+          setIsChangePasswordModalOpen(false);
+          setSaveStatus({ type: 'success', message: 'Senha mestra do TI alterada com sucesso!' });
+        }}
+      />
     </div>
   );
 };

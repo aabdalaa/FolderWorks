@@ -14,11 +14,17 @@ import { ActivityLogModal } from './components/logs/ActivityLogModal';
 import { SecurityBoundaryModal } from './components/layout/SecurityBoundaryModal';
 import { ToastNotification, ToastData } from './components/layout/ToastNotification';
 import { Terminal, Shield } from 'lucide-react';
+import { FirstRunPasswordModal } from './components/auth/FirstRunPasswordModal';
+import { getCompanyKeys } from './utils/configUtils';
 import { useTheme } from './hooks/useTheme';
 import { useIconColor } from './hooks/useIconColor';
 
 export const App: React.FC = () => {
-  useIconColor(); // Initialize dynamic theme colors across all buttons and components
+  const { setIconColor } = useIconColor();
+  const [config, setConfig] = useState<any>(null);
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [isFirstRunModalOpen, setIsFirstRunModalOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [previousTab, setPreviousTab] = useState<AppTab>('dashboard');
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -27,12 +33,34 @@ export const App: React.FC = () => {
   const [isTIAuthenticated, setIsTIAuthenticated] = useState(false);
   const [perimeterBlockedData, setPerimeterBlockedData] = useState<{ chosenPath: string; allowedBasePath: string; company?: string } | null>(null);
   const [toastData, setToastData] = useState<ToastData | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
   const [serverStatuses, setServerStatuses] = useState<Record<string, boolean | null>>({});
   const { theme, setTheme } = useTheme();
 
   const [customLogo, setCustomLogo] = useState<string | null>(() => {
     return localStorage.getItem('folderworks_custom_logo') || null;
   });
+
+  // Primeiro acesso: verifica se a senha do TI está configurada
+  useEffect(() => {
+    window.electronAPI?.isTIPasswordSet?.().then((isSet) => {
+      if (!isSet) {
+        setIsFirstRunModalOpen(true);
+      }
+    });
+  }, []);
+
+  // Sincroniza dinamicamente a cor da aplicação conforme o modo e empresa ativa
+  useEffect(() => {
+    if (!config) return;
+    if (config.colorMode === 'per_company') {
+      if (selectedCompany && config[selectedCompany]?.colorTheme) {
+        setIconColor(config[selectedCompany].colorTheme);
+      }
+    } else if (config.colorTheme) {
+      setIconColor(config.colorTheme);
+    }
+  }, [selectedCompany, config]);
 
   const handleUpdateCustomLogo = (logo: string | null) => {
     if (logo) {
@@ -80,9 +108,7 @@ export const App: React.FC = () => {
 
     const testAllServers = (cfg: any) => {
       if (!cfg) return;
-      const keys = Object.keys(cfg).filter(
-        (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && cfg[k] && typeof cfg[k] === 'object'
-      );
+      const keys = getCompanyKeys(cfg);
       keys.forEach((comp) => {
         window.electronAPI?.testServerConnection(comp).then((res) => {
           setServerStatuses((prev) => ({ ...prev, [comp]: res.success }));
@@ -90,8 +116,14 @@ export const App: React.FC = () => {
       });
     };
 
-    window.electronAPI?.getConfig().then((cfg) => {
+    const handleConfigData = (cfg: any) => {
+      if (!cfg) return;
+      setConfig(cfg);
       testAllServers(cfg);
+      const keys = getCompanyKeys(cfg);
+      if (keys.length > 0) {
+        setSelectedCompany((prev) => (keys.includes(prev) ? prev : keys[0]));
+      }
       if (cfg?.customLogo) {
         setCustomLogo(cfg.customLogo);
         window.electronAPI?.setWindowIcon(cfg.customLogo);
@@ -101,15 +133,10 @@ export const App: React.FC = () => {
           window.electronAPI?.setWindowIcon(localLogo);
         }
       }
-    });
+    };
 
-    const unsubConfig = window.electronAPI?.onConfigUpdated?.((cfg) => {
-      testAllServers(cfg);
-      if (cfg?.customLogo) {
-        setCustomLogo(cfg.customLogo);
-        window.electronAPI?.setWindowIcon(cfg.customLogo);
-      }
-    });
+    window.electronAPI?.getConfig().then(handleConfigData);
+    const unsubConfig = window.electronAPI?.onConfigUpdated?.(handleConfigData);
 
     const unsubPerimeter = window.electronAPI?.onPerimeterBlocked?.((data) => {
       setPerimeterBlockedData(data);
@@ -201,12 +228,19 @@ export const App: React.FC = () => {
   };
 
   const headerInfo = getHeaderDetails();
-  const isAnyModalOpen = isTransferModalOpen || isTIAccessModalOpen || isActivityLogModalOpen;
+  const isAnyModalOpen = isTransferModalOpen || isTIAccessModalOpen || isActivityLogModalOpen || isFirstRunModalOpen;
+
+  // Logotipo dinâmico: Prioriza o logotipo da empresa selecionada, depois o geral do app, depois o default
+  const currentActiveLogo =
+    (selectedCompany && config?.[selectedCompany]?.companyLogo) ||
+    config?.customLogo ||
+    customLogo ||
+    null;
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-neutral-950 text-slate-800 dark:text-slate-100 overflow-hidden font-sans select-none transition-colors relative">
       {/* 1. Custom Frameless TitleBar */}
-      <TitleBar isLocked={isAnyModalOpen} customLogo={customLogo} />
+      <TitleBar isLocked={isAnyModalOpen} customLogo={currentActiveLogo} />
 
       {/* 2. Main Body with Sidebar Navigation */}
       <div className="flex flex-1 overflow-hidden">
@@ -214,7 +248,7 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           onSelectTab={handleSelectTab}
           serverStatuses={serverStatuses}
-          customLogo={customLogo}
+          customLogo={currentActiveLogo}
         />
 
         {/* Viewport Content */}
@@ -232,11 +266,15 @@ export const App: React.FC = () => {
             {activeTab === 'transfer' && (
               <FolderTransferView
                 onModalStateChange={setIsTransferModalOpen}
+                selectedCompany={selectedCompany}
+                onCompanyChange={setSelectedCompany}
               />
             )}
             {activeTab === 'rename' && (
               <FolderRenameView
                 onShowToast={(data) => setToastData(data)}
+                selectedCompany={selectedCompany}
+                onCompanyChange={setSelectedCompany}
               />
             )}
             {activeTab === 'dashboard' && (
@@ -244,6 +282,8 @@ export const App: React.FC = () => {
                 onCreateFolder={handleCreateFolder}
                 onCreateEmptyFolder={handleCreateEmptyFolder}
                 onShowToast={(data) => setToastData(data)}
+                selectedCompany={selectedCompany}
+                onCompanyChange={setSelectedCompany}
               />
             )}
             {activeTab === 'settings' && (
@@ -310,6 +350,15 @@ export const App: React.FC = () => {
       <ToastNotification
         toast={toastData}
         onClose={() => setToastData(null)}
+      />
+
+      {/* 8. Modal de Definição de Senha Mestra no Primeiro Acesso */}
+      <FirstRunPasswordModal
+        isOpen={isFirstRunModalOpen}
+        onSuccess={() => {
+          setIsFirstRunModalOpen(false);
+          setIsTIAuthenticated(true);
+        }}
       />
     </div>
   );

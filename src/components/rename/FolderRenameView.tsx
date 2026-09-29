@@ -15,6 +15,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { ToastData } from '../layout/ToastNotification';
+import { getCompanyKeys } from '../../utils/configUtils';
 
 interface FolderItem {
   name: string;
@@ -25,12 +26,25 @@ interface FolderItem {
 interface FolderRenameViewProps {
   onRenameFolder?: (payload: { targetPath: string; newName: string; company?: string }) => Promise<{ success: boolean; newPath?: string; durationSeconds?: number; error?: string }>;
   onShowToast?: (data: ToastData) => void;
+  selectedCompany?: string;
+  onCompanyChange?: (company: string) => void;
 }
 
-export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFolder, onShowToast }) => {
-  const [company, setCompany] = useState<string>('');
+export const FolderRenameView: React.FC<FolderRenameViewProps> = ({
+  onRenameFolder,
+  onShowToast,
+  selectedCompany: propSelectedCompany,
+  onCompanyChange,
+}) => {
+  const [company, setCompany] = useState<string>(propSelectedCompany || '');
   const [config, setConfig] = useState<any>(null);
   const [currentSourceDir, setCurrentSourceDir] = useState<string>('');
+
+  useEffect(() => {
+    if (propSelectedCompany) {
+      setCompany(propSelectedCompany);
+    }
+  }, [propSelectedCompany]);
   
   // IT Boundary validation
   const [boundaryStatus, setBoundaryStatus] = useState<{ isValid: boolean; allowedBase: string; message: string }>({
@@ -63,7 +77,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
   useEffect(() => {
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
-      const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
+      const keys = getCompanyKeys(allCfg);
       const targetComp = keys.includes(company) ? company : (keys[0] || '');
       if (targetComp !== company) {
         setCompany(targetComp);
@@ -85,7 +99,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     };
   }, [company]);
 
-  const companyKeys = config ? Object.keys(config).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
+  const companyKeys = getCompanyKeys(config);
 
   const getCacheKey = (dir: string, comp: string) => `fw_folders_cache_${comp}_${dir.toLowerCase().trim()}`;
 
@@ -385,6 +399,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
                   type="button"
                   onClick={() => {
                     setCompany(key);
+                    onCompanyChange?.(key);
                     setSelectedPath('');
                     setCurrentFolderName('');
                     setNewFolderName('');

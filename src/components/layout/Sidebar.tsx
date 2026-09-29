@@ -76,9 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="space-y-1.5 text-[11px]">
-          {serverStatuses && Object.keys(serverStatuses).length > 0 ? (
+          {serverStatuses && Object.entries(serverStatuses).filter(([k, v]) => !['sharedLogFilePath', 'isLockedByMSI', 'tiLogsPassword', 'customLogo', 'appLogo', 'colorTheme', 'lockColorTheme', 'colorMode'].includes(k) && !k.startsWith('_')).length > 0 ? (
             Object.entries(serverStatuses)
-              .filter(([k]) => k !== 'sharedLogFilePath' && k !== 'isLockedByMSI' && k !== 'tiLogsPassword')
+              .filter(([k]) => !['sharedLogFilePath', 'isLockedByMSI', 'tiLogsPassword', 'customLogo', 'appLogo', 'colorTheme', 'lockColorTheme', 'colorMode'].includes(k) && !k.startsWith('_'))
               .map(([compName, status]) => (
               <div key={compName} className="flex items-center justify-between">
                 <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[160px]">{compName}</span>
@@ -94,33 +94,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ))
           ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 dark:text-slate-300 font-medium">EMPRESA 1</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    reliquiaStatus === true
-                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
-                      : reliquiaStatus === false
-                      ? 'bg-rose-500 shadow-sm shadow-rose-500'
-                      : 'bg-amber-400 animate-pulse'
-                  }`}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 dark:text-slate-300 font-medium">EMPRESA 2</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    rtoStatus === true
-                      ? 'bg-emerald-500 shadow-sm shadow-emerald-500'
-                      : rtoStatus === false
-                      ? 'bg-rose-500 shadow-sm shadow-rose-500'
-                      : 'bg-amber-400 animate-pulse'
-                  }`}
-                />
-              </div>
-            </>
+            <div className="text-[10px] text-slate-400 italic">
+              Nenhuma empresa conectada
+            </div>
           )}
         </div>
       </div>

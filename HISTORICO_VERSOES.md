@@ -1,22 +1,30 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
-## Versão 3.0.0 (29/09/2026) - **Instalador Oficial Universal (.MSI Limpo), Configuração Centralizada na Rede (SMB / UNC), Logotipo Corporativo Dinâmico (Janela e Taskbar) e Correção Definitiva de Tela Preta**
+## Versão 3.0.0 (29/09/2026) - **Instalador Oficial Universal (.MSI Cru), Definição Obrigatória de Senha do TI no Primeiro Acesso, Identidade Visual Multi-Empresa (Logos e Cores), Atualização Dinâmica do Atalho Windows (.lnk) e Configuração Centralizada na Rede (SMB / UNC)**
 - **Instalador Oficial Universal ("Cru") para Windows x64**:
   - Geração de pacote instalador .MSI oficial autocontido limpo (`FolderWorks-v3.0.0-win-x64.msi`) disponível para download público no GitHub Releases.
-  - Eliminação da dependência de compilação remota individual por empresa: o aplicativo instala de forma genérica e universal e vincula à rede corporativa com 1 clique.
+  - Eliminação da dependência de compilação remota individual por empresa: o aplicativo instala de forma genérica e universal e vincula à rede corporativa com 1 clique ou molda o ambiente do zero.
+- **Definição Obrigatória de Senha de TI no Primeiro Acesso (`FirstRunPasswordModal`)**:
+  - Na primeira execução em ambiente limpo, abertura de modal bloqueante obrigatório exigindo a criação e confirmação da primeira senha de TI.
+  - Disponibilizado botão dedicado *"Senha TI"* no cabeçalho das Configurações (`ChangeTIPasswordModal`) para alteração da credencial mestra.
+- **Identidade Visual Multi-Empresa (Logotipo Geral vs Logotipo por Empresa)**:
+  - Configuração de logotipo geral da aplicação e logotipos individuais para cada empresa cadastrada.
+  - Alternância dinâmica instantânea do logotipo na Sidebar e TitleBar conforme a empresa selecionada.
+- **Atualização Dinâmica do Atalho na Área de Trabalho do Windows (`FolderWorks.lnk`)**:
+  - Conversão do PNG customizado para `.ico` nativo em `userData/app_icon.ico`.
+  - Injeção via Windows Script Host (WSH) nos atalhos da Área de Trabalho do usuário, Área de Trabalho Pública e Menu Iniciar.
+  - Emissão da notificação Win32 `SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero)` (`SHCNE_ASSOCCHANGED`), forçando o Windows Shell a atualizar o ícone do atalho em tempo real em todas as máquinas da rede.
+- **Cores por Empresa e Bloqueio de Personalização pelo TI**:
+  - TI pode escolher entre "Cor Única Global" ou "Cor por Empresa" (dentre as 24 cores disponíveis).
+  - Opção exclusiva do TI *"Bloquear personalização de cores pelo usuário"*: quando ativado, o card de seleção de cores é completamente removido da interface do usuário comum.
 - **Configuração Centralizada e Compartilhada na Rede Corporativa (SMB / UNC)**:
   - Arquivo `folderworks_config.json` compartilhado na rede (UNC `\\servidor\compartilhamento\...` ou unidade mapeada).
-  - Todas as estações conectadas sincronizam simultaneamente em tempo real: empresas cadastradas, diretórios de origem e destino, senhas e parâmetros de TI, permissões de segurança e o logotipo corporativo.
-  - Sistema de apontador persistente em `userData/shared_config_pointer.json` e cache offline de contingência em `userData/config_cache.json` para estabilidade contínua caso a rede sofra oscilações.
-  - Card visual dedicado em *Configurações*: botões para *Vincular Arquivo na Rede*, campo para digitação direta de caminho UNC, botão *Criar na Rede*, *Recarregar* e *Desvincular*.
-- **Logotipo Corporativo Personalizado Dinâmico (Dentro e Fora da Aplicação)**:
-  - Upload e personalização de logotipo diretamente na aba de *Configurações* (suporte a PNG, JPG, SVG).
-  - Atualização dinâmica em tempo real dentro do aplicativo (TitleBar e Sidebar) e fora da aplicação (ícone da janela nativa do Windows e ícone na Barra de Tarefas via Win32 `mainWindow.setIcon()`).
-  - Logotipo propagado automaticamente para todas as máquinas da empresa via arquivo de configuração compartilhado na rede.
+  - Todas as estações conectadas sincronizam simultaneamente em tempo real: empresas cadastradas, diretórios de origem e destino, senhas e parâmetros de TI, permissões de segurança, logotipos e esquemas de cores.
+  - Sistema de apontador persistente em `userData/shared_config_pointer.json` e cache offline de contingência em `userData/config_cache.json`.
+  - Card visual dedicado em *Configurações*: botões para *Vincular Arquivo na Rede*, campo para digitação direta de caminho UNC, botão *Criar na Rede*, *Recarregar* e *Desvincular* (todos restritos ao TI).
 - **Correção Definitiva de Renderização e Eliminação de Tela Preta**:
   - Desativação explícita da aceleração gráfica de GPU do Chromium (`app.disableHardwareAcceleration()`) para eliminar falhas de DirectComposition com janelas frameless (`frame: false`).
   - Revelação suave com evento `ready-to-show` e timeout de contingência de 1500ms para evitar qualquer retenção em tela preta ou invisível.
-  - Auditoria completa de eventos de ciclo de vida e erros de renderização (`console-message`, `did-fail-load`, `render-process-gone`) gravados em `app.log`.
 - **Distribuição Multi-Ambiente**:
   - Disponibilizado em `01 - Instalador/Public/`, `01 - Instalador/Internal/`, `01 - Instalador/OneFile/` e publicado no GitHub Releases oficial `v3.0.0`.
 
