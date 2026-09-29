@@ -34,30 +34,12 @@ async function buildMSI() {
 
   const masterConfig = {
     isLockedByMSI: true,
-    RTO: {
-      name: env.RTO_NAME || 'RTO',
-      companyName: 'RTO',
-      sourcePath: env.RTO_SOURCE_PATH || '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\MODELO',
-      destinationParentPath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      destSharePath: env.RTO_DESTINATION_PATH || '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      allowedBasePath: '\\\\192.168.50.102\\rto\\CLIENTES',
-      defaultSourceFolder: '\\\\192.168.50.102\\rto\\CLIENTES\\EMPRESAS',
-      logDirectory: '\\\\192.168.50.102\\gpo\\criarpastas_paralegal\\LOGS',
-      selectedLogFile: '',
-      presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
-      ],
-      adServerIp: env.RTO_AD_IP || '127.0.0.1',
-      domainUser: env.RTO_AD_USER || 'EMPRESA\\pasta.servico',
-      adPass: env.RTO_AD_PASS || ''
-    },
-    RELIQUIA: {
-      name: env.RELIQUIA_NAME || 'EMPRESA 02',
-      companyName: 'EMPRESA 02',
-      sourcePath: env.RELIQUIA_SOURCE_PATH || '\\\\servidor\\gpo\\criarpastas\\MODELO',
-      destinationParentPath: env.RELIQUIA_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
-      destSharePath: env.RELIQUIA_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
+    EMPRESA_1: {
+      name: env.EMPRESA1_NAME || 'EMPRESA 01',
+      companyName: 'EMPRESA 01',
+      sourcePath: env.EMPRESA1_SOURCE_PATH || '\\\\servidor\\gpo\\criarpastas\\MODELO',
+      destinationParentPath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
+      destSharePath: env.EMPRESA1_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
       allowedBasePath: '\\\\servidor\\arquivos\\CLIENTES',
       defaultSourceFolder: '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
       logDirectory: '\\\\servidor\\gpo\\criarpastas\\LOGS',
@@ -66,9 +48,27 @@ async function buildMSI() {
         { name: '00 - EX CLIENTES', path: '\\\\servidor\\arquivos\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
-      adServerIp: env.RELIQUIA_AD_IP || '127.0.0.1',
-      domainUser: env.RELIQUIA_AD_USER || 'EMPRESA\\pasta.servico',
-      adPass: env.RELIQUIA_AD_PASS || ''
+      adServerIp: env.EMPRESA1_AD_IP || '10.0.0.10',
+      domainUser: env.EMPRESA1_AD_USER || 'DOMINIO\\pasta.servico',
+      adPass: env.EMPRESA1_AD_PASS || ''
+    },
+    EMPRESA_2: {
+      name: env.EMPRESA2_NAME || 'EMPRESA 02',
+      companyName: 'EMPRESA 02',
+      sourcePath: env.EMPRESA2_SOURCE_PATH || '\\\\servidor\\filial\\MODELO',
+      destinationParentPath: env.EMPRESA2_DESTINATION_PATH || '\\\\servidor\\filial\\CLIENTES\\EMPRESAS',
+      destSharePath: env.EMPRESA2_DESTINATION_PATH || '\\\\servidor\\filial\\CLIENTES\\EMPRESAS',
+      allowedBasePath: '\\\\servidor\\filial\\CLIENTES',
+      defaultSourceFolder: '\\\\servidor\\filial\\CLIENTES\\EMPRESAS',
+      logDirectory: '\\\\servidor\\filial\\LOGS',
+      selectedLogFile: '',
+      presetDestinations: [
+        { name: '00 - EX CLIENTES', path: '\\\\servidor\\filial\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\filial\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
+      ],
+      adServerIp: env.EMPRESA2_AD_IP || '10.0.1.10',
+      domainUser: env.EMPRESA2_AD_USER || 'DOMINIO\\pasta.servico',
+      adPass: env.EMPRESA2_AD_PASS || ''
     },
     tiLogsPassword: env.TI_LOGS_PASSWORD || ''
   };

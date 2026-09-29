@@ -2,7 +2,7 @@
 
 ## Versão 3.0.0 (28/09/2026) - **Versão Final de Entrega: Card Dedicado "Criar Pasta Vazia", Criação Múltipla Concorrente com Botão (+), Paralelismo Nativo e Rotina Win32 --mkdir**
 - **Novo Card Dedicado "Criar Pasta Vazia"**:
-  - Nova funcionalidade integrada na parte inferior da tela *Criar Pasta*, permitindo a abertura de diretórios puros e limpos no destino da empresa selecionada (RTO ou RELÍQUIA) sem replicar modelos de pastas ou arquivos.
+  - Nova funcionalidade integrada na parte inferior da tela *Criar Pasta*, permitindo a abertura de diretórios puros e limpos no destino da empresa selecionada (EMPRESA 02 ou RELÍQUIA) sem replicar modelos de pastas ou arquivos.
   - Execução instantânea (em dezenas de milissegundos) direto na rede corporativa.
   - Disparo de notificações Toast no canto inferior direito com botão "Abrir Pasta" no Windows Explorer.
 - **Criação Múltipla Concorrente com Botão `+` na Barra de Texto**:
@@ -25,7 +25,7 @@
 - **Atalhos Rápidos Desvinculados do Bloqueio de TI (Card Dedicado e 100% Aberto)**:
   - Extraída a configuração de atalhos rápidos de dentro do formulário com privacidade blur e bloqueio administrativo do TI.
   - Criado card dedicado e autônomo nas Configurações, imediatamente acessível para qualquer colaborador configurar seus destinos favoritos sem requerer senha do TI.
-  - Abas rápidas para alternar a configuração de atalhos entre filiais e empresas corporativas (`RTO`, `RELIQUIA`, etc.).
+  - Abas rápidas para alternar a configuração de atalhos entre filiais e empresas corporativas (`EMPRESA 02`, `EMPRESA 01`, etc.).
 - **Autonomia Total na Gestão de Atalhos do Usuário**:
   - Botão `+ Adicionar Atalho` para criar atalhos personalizados.
   - Botão `Procurar...` integrado ao Windows Explorer com validação automática de perímetro corporativo (`allowedBasePath`), garantindo zero vazamento para áreas externas ou desautorizadas da rede.
@@ -48,7 +48,7 @@
   - **Execução Paralela Concorrente (`Promise.all`)**: Todas as pastas informadas são enviadas e processadas simultaneamente na rede corporativa, acionando instâncias paralelas do motor nativo com Robocopy multithread `/MT:128`, eliminando a lentidão de criação individual sequencial.
   - Preservação estrita das permissões de segurança NTFS (DACL/SACL) herdadas dos diretórios MODELO corporativos.
 - **Diagnóstico e Otimização de Desempenho da Relíquia**:
-  - Identificada a causa fundamental de latência na Relíquia: a pasta MODELO da Relíquia possui **4.413 subdiretórios** (contra 509 da RTO). A criação paralela em lote permite criar múltiplos clientes de forma simultânea, contornando a latência de round-trips do SMB sem alterar as permissões de segurança.
+  - Identificada a causa fundamental de latência na Relíquia: a pasta MODELO da Relíquia possui **4.413 subdiretórios** (contra 509 da EMPRESA 02). A criação paralela em lote permite criar múltiplos clientes de forma simultânea, contornando a latência de round-trips do SMB sem alterar as permissões de segurança.
 - **Notificação Toast Homogênea em Modo Escuro**:
   - Correção das classes de estilo do pop-up toast no canto inferior direito para classes escuras padrão (`dark:bg-neutral-900`, `dark:border-neutral-800`), eliminando o fundo branco indesejado em ambientes de tema escuro e integrando sombra e barra de progresso à cor do tema ativo.
 - **Botão "Abrir Pasta no Destino" na Validação do Operador (Módulo Transferência)**:
@@ -66,7 +66,7 @@
 ## Versão 2.9.7 (23/09/2026) - **Auditoria Enriquecida, Buffer FIFO de 500 Linhas, Clean Slate, Toast com Desfazer (10s), Modal de Perímetro e Atalhos do Usuário**
 - **Enriquecimento Granular de Auditoria Corporativa**:
   - Captura real do usuário da máquina física (`os.userInfo().username` ou `process.env.USERNAME`), distinguindo com precisão a pessoa física do operador da conta de serviço `pasta.paralegal`.
-  - Registro detalhado do nome do computador (`os.hostname()`), empresa manipulada (RTO, RELIQUIA, etc.), ação executada, nome da pasta criada ou alterada, data e hora exatas da operação e versão do aplicativo (`v2.9.7`).
+  - Registro detalhado do nome do computador (`os.hostname()`), empresa manipulada (EMPRESA 02, EMPRESA 01, etc.), ação executada, nome da pasta criada ou alterada, data e hora exatas da operação e versão do aplicativo (`v2.9.7`).
   - Duração real medida em segundos com alta precisão (`durationSeconds`) em operações de criação, renomeação, transferência segura e rollback.
   - Status explícito (sucesso/falha) com mensagens de erro contextualizadas.
 - **Limpeza de Logs Anteriores (Clean Slate)**:
@@ -96,8 +96,8 @@
 
 ## Versão 2.9.6 (23/09/2026) - **Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas de Rede e Armazenamento Duplo**
 - **Auditoria Corporativa Centralizada por Empresa em Pastas GPO (`logDirectory`)**:
-  - Padrão RTO configurado em: `\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`.
-  - Padrão RELIQUIA configurado em: `\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`.
+  - Padrão EMPRESA 02 configurado em: `\\10.0.0.20\gpo\criarpastas_paralegal\LOGS`.
+  - Padrão EMPRESA 01 configurado em: `\\10.0.0.10\gpo\criarpastas_paralegal\LOGS`.
   - Cada filial corporativa possui sua própria trilha de auditoria isolada e centralizada nas pastas GPO oficiais de infraestrutura.
 - **Detecção Inteligente de Formato de Log, Autocriação e Preservação Absoluta**:
   - **Pasta Vazia**: Se nenhum arquivo for detectado na pasta GPO, o sistema autocria o arquivo ideal de auditoria no formato NDJSON (`folderworks_audit.json`), garantindo alta escalabilidade e concorrência SMB multiusuário sem corrupção.
@@ -114,7 +114,7 @@
 - **Armazenamento Duplo Ativo e Concomitante**:
   - O sistema mantém simultaneamente a gravação do histórico local na estação de trabalho (`history.json` e `app.log`) e o envio centralizado para o arquivo de log compartilhado na rede corporativa.
 - **Sanitização de Status da Barra Lateral**:
-  - Removido `sharedLogFilePath` da lista de monitoramento de status das empresas na barra lateral (`Sidebar.tsx`), mantendo o indicador de status verde/vermelho estritamente para conexões válidas (`RTO` e `RELIQUIA`).
+  - Removido `sharedLogFilePath` da lista de monitoramento de status das empresas na barra lateral (`Sidebar.tsx`), mantendo o indicador de status verde/vermelho estritamente para conexões válidas (`EMPRESA 02` e `EMPRESA 01`).
 - **Novo Pacote Oficial MSI v2.9.6**:
   - Compilado via WiX Toolset v3.14 com GUID fixo de atualização in-place (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e distribuído para `01 - Instalador/Internal/` e Área de Trabalho.
 
@@ -122,7 +122,7 @@
 
 ## Versão 2.9.5 (23/09/2026) - **Trilha de Auditoria e Logs em Arquivo Compartilhado Configurável (.TXT, .MD, .JSON, .YAML)**
 - **Arquivo de Log e Auditoria Compartilhado Configurável na Rede (`sharedLogFilePath`)**:
-  - Nova configuração corporativa global acessível via painel de Configurações de TI, permitindo que a empresa defina livremente o local de armazenamento dos logs (ex.: `\\192.168.50.102\rto\LOGS\folderworks_audit.json`).
+  - Nova configuração corporativa global acessível via painel de Configurações de TI, permitindo que a empresa defina livremente o local de armazenamento dos logs (ex.: `\\10.0.0.20\empresa_02\LOGS\folderworks_audit.json`).
   - Suporte completo a 4 formatos estruturados:
     - `.json`: Gravação atômica em JSON Lines (NDJSON), onde cada evento representa uma linha JSON independente, permitindo dezenas de acessos concorrentes via rede SMB sem corrupção de arquivo.
     - `.yaml` / `.yml`: Gravação contínua no formato de lista hierárquica YAML (`- id: ...`).
@@ -144,13 +144,13 @@
   - Eliminado 100% qualquer geração ou renomeação para pastas temporárias `.~trash_*` no motor nativo `ExecuteAsUser.cs` durante operações de exclusão ou movimentação de diretórios.
   - O motor agora executa a limpeza rápida via Robocopy `/MIR` de um diretório temporário vazio diretamente no caminho de destino (`targetPath`), aguarda a finalização síncrona do processo e em seguida chama `Directory.Delete(targetPath, true)` com fallback Win32 `rmdir /s /q`.
   - Se algum arquivo estiver aberto ou travado por outro usuário na rede, o diretório permanece com seu nome original e retorna mensagem de erro explicativa, sem jamais gerar lixo ou pastas fantasmas no servidor.
-  - Limpeza imediata realizada de qualquer pasta órfã remanescente nos servidores RTO e RELIQUIA.
+  - Limpeza imediata realizada de qualquer pasta órfã remanescente nos servidores EMPRESA 02 e EMPRESA 01.
 - **Abertura Automática do Windows Firewall para UDP 48899 via Instalador MSI**:
   - Injetadas CustomActions elevadas no instalador WiX (`build_msi.js` e `build_custom_msi.js`) executadas com privilégio `SYSTEM` (`Impersonate="no"` e `Execute="deferred"`).
   - Configura automaticamente regras de entrada e saída no firewall do Windows (`netsh advfirewall firewall add rule name="Entropy FolderWorks P2P UDP" dir=in/out action=allow protocol=UDP localport=48899 profile=any`) em todas as estações sem intervenção do usuário.
   - Implementada também verificação e criação dinâmica em tempo de execução dentro de `electron/main.ts`.
-- **Sincronização P2P Bidirecional Ativa e Roteamento para a Sub-rede das Estações (`192.168.80.255`)**:
-  - Adicionada a sub-rede física das estações de trabalho (`192.168.80.255`) à lista explícita de broadcast, além de `255.255.255.255`, `192.168.50.255` e `192.168.1.255`.
+- **Sincronização P2P Bidirecional Ativa e Roteamento para a Sub-rede das Estações (`10.0.80.255`)**:
+  - Adicionada a sub-rede física das estações de trabalho (`10.0.80.255`) à lista explícita de broadcast, além de `255.255.255.255`, `10.0.20.255` e `10.0.10.255`.
   - Implementado protocolo de sincronização ativa bidirecional via UDP (`FOLDERWORKS_SYNC_REQUEST` e `FOLDERWORKS_SYNC_RESPONSE`): ao inicializar o app ou consultar a aba de histórico, a máquina solicita os eventos recentes aos computadores vizinhos na rede, garantindo que mesmo estações recém-iniciadas obtenham a trilha de auditoria completa em tempo real.
   - Vinculação do socket UDP a `0.0.0.0` com `reuseAddr: true` para captura irrestrita de pacotes em todas as interfaces.
 - **Novo Pacote Oficial MSI v2.9.4**:
@@ -160,7 +160,7 @@
 
 ## Versão 2.9.3 (22/09/2026) - **Aplicação Estrita do Perímetro de Segurança de TI em Todos os Módulos**
 - **Perímetro de Segurança Canônico e Inviolável (`allowedBasePath`)**:
-  - Implementado algoritmo canônico de validação de perímetro (`isWithinBoundary`): normaliza os caminhos de rede e barras (`/` e `\`), garantindo que diretórios fora do perímetro configurado pela TI (ex.: acessar `\\192.168.50.102\rto\DEPARTAMENTOS` quando o perímetro é restrito a `\\192.168.50.102\rto\CLIENTES`) sejam estritamente bloqueados.
+  - Implementado algoritmo canônico de validação de perímetro (`isWithinBoundary`): normaliza os caminhos de rede e barras (`/` e `\`), garantindo que diretórios fora do perímetro configurado pela TI (ex.: acessar `\\10.0.0.20\empresa_02\DEPARTAMENTOS` quando o perímetro é restrito a `\\10.0.0.20\empresa_02\CLIENTES`) sejam estritamente bloqueados.
   - Prevenção contra bypass de correspondência parcial de string (`CLIENTES_SECRET` não corresponde a `CLIENTES`).
 - **Bloqueio em Nível de Backend (Electron IPC) em Todas as Operações**:
   - `list-subdirectories`: Bloqueia requisições fora do perímetro e recusa-se a listar conteúdos de pastas restritas, retornando mensagem explícita de segurança de TI.
@@ -176,10 +176,10 @@
 
 ---
 
-## Versão 2.9.2 (22/09/2026) - **Restauração do Modelo Oficial GPO RTO e Otimização da Criação de Pastas**
-- **Restauração do Modelo Oficial GPO da RTO (`gpo\criarpastas_paralegal\MODELO`)**:
-  - Corrigido o caminho de origem do modelo RTO para apontar estritamente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`.
-  - Eliminado o redirecionamento forçado anterior para a pasta `MODELO 2026` em `rto\MODELOS`.
+## Versão 2.9.2 (22/09/2026) - **Restauração do Modelo Oficial GPO EMPRESA 02 e Otimização da Criação de Pastas**
+- **Restauração do Modelo Oficial GPO da EMPRESA 02 (`gpo\criarpastas_paralegal\MODELO`)**:
+  - Corrigido o caminho de origem do modelo EMPRESA 02 para apontar estritamente para `\\10.0.0.20\gpo\criarpastas_paralegal\MODELO`.
+  - Eliminado o redirecionamento forçado anterior para a pasta `MODELO 2026` em `empresa_02\MODELOS`.
   - Replicadas com 100% de fidelidade as permissões departamentais oficiais (ex.: `EXPEDICAO` contendo unicamente `FISCAL`, `CONTABIL`, `administrativo`, `JURIDICO-CPA`, `Administradores`, `suporte` e `SISTEMA`, sem vazamento para setores indevidos como `PARALEGAL` ou `PESSOAL`).
 - **Otimização de Criação e Remoção de Validação Externa**:
   - Removida a validação externa síncrona via PowerShell LDAP que executava consultas no Domain Controller antes da criação.
@@ -191,8 +191,8 @@
 
 ## Versão 2.9.1 (18/09/2026) - **Comunicação Peer-to-Peer UDP (Porta 48899), Zero Arquivos nos Servidores e Controle Estrito de Logs**
 - **Protocolo de Rede P2P UDP Puro (Porta 48899)**:
-  - Eliminação definitiva de qualquer gravação de arquivos de auditoria ou logs nos servidores de arquivos (`\\192.168.50.102` e `\\192.168.1.242`). Remoção total do diretório `.folderworks_audit`.
-  - Comunicação peer-to-peer direta entre as estações de trabalho através de sockets UDP Broadcast na porta 48899 (`reuseAddr: true` e `setBroadcast(true)`), cobrindo broadcast universal e sub-redes dirigidas (255.255.255.255, 192.168.50.255, 192.168.1.255).
+  - Eliminação definitiva de qualquer gravação de arquivos de auditoria ou logs nos servidores de arquivos (`\\10.0.0.20` e `\\10.0.0.10`). Remoção total do diretório `.folderworks_audit`.
+  - Comunicação peer-to-peer direta entre as estações de trabalho através de sockets UDP Broadcast na porta 48899 (`reuseAddr: true` e `setBroadcast(true)`), cobrindo broadcast universal e sub-redes dirigidas (255.255.255.255, 10.0.20.255, 10.0.10.255).
   - O aplicativo transmite e recebe eventos de auditoria silenciosamente pela rede local em milissegundos, mantendo todas as instâncias da equipe sincronizadas em tempo real sem sobrecarregar discos de rede.
 - **Eliminação de Spam e Buffer Circular de Logs**:
   - Removidas mensagens de rotina a cada 5 segundos da função `list-subdirectories` (`[LISTAGEM AD] Listando...` e `[LISTAGEM AD] Sucesso:...`), preservando o arquivo `app.log` limpo apenas para operações reais do usuário e erros críticos.
@@ -207,7 +207,7 @@
 
 ## Versão 2.9.0 (17/09/2026) - **Auditoria Descentralizada em Rede (P2P SMB), Rastreamento de Operadores e Correção Gramatical**
 - **Histórico e Logs Corporativos Compartilhados em Rede (P2P SMB)**:
-  - Implementada arquitetura de auditoria descentralizada sem necessidade de servidor central ou banco de dados externo: os computadores sincronizam suas ações silenciosamente através dos compartilhamentos corporativos já existentes da RTO e RELIQUIA (`.folderworks_audit/events/`).
+  - Implementada arquitetura de auditoria descentralizada sem necessidade de servidor central ou banco de dados externo: os computadores sincronizam suas ações silenciosamente através dos compartilhamentos corporativos já existentes da EMPRESA 02 e EMPRESA 01 (`.folderworks_audit/events/`).
   - Cada operação realizada (criação, movimentação, renomeação, exclusão de origem, desfeita) gera um arquivo JSON atômico e collision-free (`evt_<timestamp>_<machine>_<random>.json`), eliminando completamente conflitos de concorrência ou bloqueios de arquivo SMB.
   - Se um computador estiver momentaneamente desconectado, o evento é enfileirado localmente em `pending_audit/` e sincronizado automaticamente na rede assim que restabelecida a conectividade.
   - Gravação simultânea de trilha legível de auditoria em `network_activity.log` em cada compartilhamento corporativo.
@@ -217,7 +217,7 @@
 - **Interface de Histórico Corporativo e Logs de TI Modernizada**:
   - Exibição unificada das operações de todas as estações de trabalho com badge indicador de rede sincronizada e identificação visual de cada operador.
   - Auto-refresh em tempo real a cada 5 segundos, com recarga instantânea ao focar a janela ou receber notificações IPC de rede.
-  - Filtros instantâneos por Empresa (Todas, RTO, RELIQUIA), por Tipo de Ação e por Colaborador/Operador, além de barra de busca textual completa.
+  - Filtros instantâneos por Empresa (Todas, EMPRESA 02, EMPRESA 01), por Tipo de Ação e por Colaborador/Operador, além de barra de busca textual completa.
   - Modal de logs de TI atualizado com seletor de abas entre *Log Local* e *Auditoria da Rede*.
 - **Correção Gramatical e Remoção de Redundância ("Criar Pasta")**:
   - Removida a redundância gramatical da palavra *"Nova"* em todos os botões, títulos de abas, formulários, menu lateral e manual do usuário (`Criar Nova Pasta` -> `Criar Pasta`).
@@ -226,10 +226,10 @@
 
 ---
 
-## Versão 2.8.7 (15/09/2026) - **Correção Definitiva de Permissões RTO, Limpeza de Interface e Auto-Refresh 5s**
-- **Correção e Priorização do Modelo Oficial de Pastas RTO (`EM USO\MODELO 2026`)**:
-  - Diagnosticada e corrigida a causa raiz da ausência de permissões departamentais nas pastas criadas na rede da RTO: a configuração apontava anteriormente para `\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`, diretório que possuía o grupo `Todos` herdado e sem permissões departamentais explícitas.
-  - Redirecionada a origem para o modelo em produção `\\192.168.50.102\rto\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`, que contém 100% das DACLs departamentais restritas (RH `1111`, Paralegal `1112`, Fiscal `1113`, Contábil `1116`, TI `3608`), sem vazamento de privilégios para o grupo `Todos`.
+## Versão 2.8.7 (15/09/2026) - **Correção Definitiva de Permissões EMPRESA 02, Limpeza de Interface e Auto-Refresh 5s**
+- **Correção e Priorização do Modelo Oficial de Pastas EMPRESA 02 (`EM USO\MODELO 2026`)**:
+  - Diagnosticada e corrigida a causa raiz da ausência de permissões departamentais nas pastas criadas na rede da EMPRESA 02: a configuração apontava anteriormente para `\\10.0.0.20\gpo\criarpastas_paralegal\MODELO`, diretório que possuía o grupo `Todos` herdado e sem permissões departamentais explícitas.
+  - Redirecionada a origem para o modelo em produção `\\10.0.0.20\empresa_02\MODELOS\MODELO DE PASTAS\EM USO\MODELO 2026`, que contém 100% das DACLs departamentais restritas (RH `1111`, Paralegal `1112`, Fiscal `1113`, Contábil `1116`, TI `3608`), sem vazamento de privilégios para o grupo `Todos`.
   - Adicionada verificação dinâmica prioritária no handler `create-folder` garantindo a utilização do modelo oficial mesmo em ambientes com arquivos de configuração legados.
 - **Ajuste Visual e Limpeza da Tela de Transferência**:
   - Removido integralmente o container estático e redundante *"2. Status e Confirmação da Transferência"* da interface de movimentação de pastas (`FolderTransferView.tsx`), conforme solicitação do usuário.
@@ -244,15 +244,15 @@
 
 ---
 
-## Versão 2.8.6 (15/09/2026) - **Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da RELIQUIA**
+## Versão 2.8.6 (15/09/2026) - **Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da EMPRESA 01**
 - **Restauração Mandatória de Segurança NTFS DACL (`/COPY:DATS /DCOPY:DAT`)**:
   - Reintegrada a flag de segurança `S` em todas as rotinas de cópia e transferência com Robocopy (`ExecuteAsUser.cs` e `electron/main.ts`).
-  - O Robocopy agora transfere integralmente as listas de controle de acesso discricionárias (DACLs) explícitas de cada departamento (`CONTABILIDADE` -> `RELIQUIA\CONTABIL`, `DP` -> `RELIQUIA\PESSOAL`, `EXPEDICAO` -> `RELIQUIA\FISCAL` / `CONTABIL` / `ADMINISTRAÇÃO`, `FISCAL` -> `RELIQUIA\FISCAL`, `PARALEGAL` -> `RELIQUIA\PARALEGAL`, `SPED` -> `RELIQUIA\FISCAL` / `CONTABIL`), garantindo que os colaboradores de cada setor mantenham seus privilégios corretos de acesso.
+  - O Robocopy agora transfere integralmente as listas de controle de acesso discricionárias (DACLs) explícitas de cada departamento (`CONTABILIDADE` -> `EMPRESA 01\CONTABIL`, `DP` -> `EMPRESA 01\PESSOAL`, `EXPEDICAO` -> `EMPRESA 01\FISCAL` / `CONTABIL` / `ADMINISTRAÇÃO`, `FISCAL` -> `EMPRESA 01\FISCAL`, `PARALEGAL` -> `EMPRESA 01\PARALEGAL`, `SPED` -> `EMPRESA 01\FISCAL` / `CONTABIL`), garantindo que os colaboradores de cada setor mantenham seus privilégios corretos de acesso.
 - **Desacoplamento Assíncrono da Lixeira no Botão "Deu certo"**:
   - Em `DeleteDirectory`, uma vez que a pasta de origem é atomicamente renomeada para a lixeira oculta (`.~trash_...`) em **270 milissegundos**, o método imediatamente desanexa o processo de purga em segundo plano e retorna sucesso à interface.
   - O modal de confirmação fecha instantaneamente no primeiro clique (sub-segundo), eliminando esperas síncronas de 60 segundos enquanto o servidor limpa milhares de arquivos.
-- **Otimização Extrema de Rede para Servidores SMB com Alta Densidade (RELIQUIA)**:
-  - Adicionada a flag `/IPG:0` (Inter-Packet Gap = 0) e supressão de retries (`/R:0 /W:0`), permitindo que as 4.413 pastas do modelo da RELIQUIA sejam criadas em 23 segundos com ExitCode 0 absoluto.
+- **Otimização Extrema de Rede para Servidores SMB com Alta Densidade (EMPRESA 01)**:
+  - Adicionada a flag `/IPG:0` (Inter-Packet Gap = 0) e supressão de retries (`/R:0 /W:0`), permitindo que as 4.413 pastas do modelo da EMPRESA 01 sejam criadas em 23 segundos com ExitCode 0 absoluto.
 - **Novo Pacote Oficial MSI v2.8.6**:
   - Compilado via WiX Toolset v3.14 com GUID fixo (`8f74a92c-561b-4632-9b21-3a218d6e9f10`) e disponibilizado na Área de Trabalho e repositório de instaladores.
 
@@ -263,7 +263,7 @@
   - Diagnosticada e corrigida a causa raiz da falha em exclusão de pastas com milhares de itens: o processo mono-thread `rmdir /s /q` sofria timeout de 60s em redes SMB e permanecia executando em segundo plano, colidindo com a purga Robocopy que era disparada logo em seguida sobre os mesmos arquivos.
   - Removida a concorrência prévia de `rmdir`, eliminando 100% dos bloqueios de compartilhamento (`ERROR 32 / sharing violation`).
 - **Desvinculação Atômica Imediata para Lixeira Oculta (`.~trash_...`)**:
-  - Implementada a renomeação atômica instantânea para pasta oculta no mesmo compartilhamento SMB (`Directory.Move`). Em teste em tempo real na rede da RELIQUIA, a pasta de **4.413 itens** foi liberada em **272 milissegundos**, sumindo imediatamente da rede e permitindo conclusão imediata para o operador.
+  - Implementada a renomeação atômica instantânea para pasta oculta no mesmo compartilhamento SMB (`Directory.Move`). Em teste em tempo real na rede da EMPRESA 01, a pasta de **4.413 itens** foi liberada em **272 milissegundos**, sumindo imediatamente da rede e permitindo conclusão imediata para o operador.
   - A pasta oculta de lixeira é purgada de forma limpa pelo Robocopy `/MIR /MT:128` com 128 threads paralelas.
 - **Cancelamento Forçado Seguro (`TerminateProcess`)**:
   - Adicionado encerramento forçado automático via `TerminateProcess` em caso de estouro de timeout de qualquer processo filho do motor nativo C#, impedindo a criação de processos órfãos que segurem travas de arquivos.
@@ -418,10 +418,10 @@
   - `Manual & Diagnóstico` → `Manual de Uso`
   - Interface mais limpa, direta e humanizada de acordo com as diretrizes de UX/UI da ENTROPY.
 - **Governança Active Directory / NTFS de Pastas Administrativas**:
-  - Aplicada regra NTFS de negação estrita (`Deny | FullControl`) para a conta de serviço `pasta.paralegal` em todas as pastas administrativas (`_000-CHECK-LIST MENSAL`, `_ATA de REUNIOES`, `_CONTROLES DAS EMPRESAS`, `_LEIA-ME`, `_MODELOS DE DOCUMENTOS`) no servidor RTO, igualando a política de segurança já vigente no servidor RELIQUIA.
+  - Aplicada regra NTFS de negação estrita (`Deny | FullControl`) para a conta de serviço `pasta.paralegal` em todas as pastas administrativas (`_000-CHECK-LIST MENSAL`, `_ATA de REUNIOES`, `_CONTROLES DAS EMPRESAS`, `_LEIA-ME`, `_MODELOS DE DOCUMENTOS`) no servidor EMPRESA 02, igualando a política de segurança já vigente no servidor EMPRESA 01.
   - Zero uso de expressões regulares ou filtros por código de cliente: a restrição opera 100% via permissões nativas de segurança do AD e DACL NTFS sob o token do usuário.
 - **Ocultação de Pastas no Windows Explorer (`Hidden`)**:
-  - Aplicado o atributo de sistema `Hidden` (`attrib +h`) em todas as pastas administrativas dos servidores de arquivos (RTO e RELIQUIA). Com isso, o Windows Explorer e as caixas de diálogo nativas de seleção de pastas omitem automaticamente essas pastas para todos os usuários comuns.
+  - Aplicado o atributo de sistema `Hidden` (`attrib +h`) em todas as pastas administrativas dos servidores de arquivos (EMPRESA 02 e EMPRESA 01). Com isso, o Windows Explorer e as caixas de diálogo nativas de seleção de pastas omitem automaticamente essas pastas para todos os usuários comuns.
 - **Aprimoramento do Motor C# Nativo (`ExecuteAsUser.cs`)**:
   - Adicionada verificação explícita do atributo `FileAttributes.Hidden` na função `ListDirectories`.
   - Reforçado o bloqueio por exceção de segurança (`UnauthorizedAccessException`), garantindo que pastas sem autorização nunca cheguem à interface.
@@ -433,7 +433,7 @@
 
 ## Versão 2.7.4 (11/09/2026) - **Grade Interativa de Listagem e Pesquisa de Pastas em "Renomear Pasta"**
 - **Listagem e Pesquisa de Pastas Integrada à Tela de Renomear**:
-  - Incorporada a mesma experiência da tela de *Transferência*: carregamento automático das pastas do servidor de arquivos da empresa selecionada (RTO, RELIQUIA, etc.).
+  - Incorporada a mesma experiência da tela de *Transferência*: carregamento automático das pastas do servidor de arquivos da empresa selecionada (EMPRESA 02, EMPRESA 01, etc.).
   - Campo de busca rápida em tempo real para pesquisar cliente por código ou nome (`Pesquisar cliente por código ou nome...`).
   - Grade visual com ícones representativos (`FolderOpen`), nomes de pastas, datas de modificação e indicador de seleção ativa.
   - Seleção com um clique: ao clicar em qualquer pasta da lista, o caminho completo é configurado, o nome atual é exibido e o campo de novo nome é preenchido instantaneamente para permitir edição rápida e sem digitação manual de caminhos.
@@ -465,7 +465,7 @@
   - Implementada execução blindada via `execFile('powershell.exe', ...)` utilizando `-EncodedCommand` com codificação Base64 UTF-16LE, imune a problemas de escape, aspas ou caracteres especiais.
   - Adicionado `$ProgressPreference = 'SilentlyContinue'` para suprimir transmissões indesejadas de progresso CLIXML no fluxo de erro do PowerShell.
   - Integrada decodificação defensiva `decodeProcessOutput` para preservar acentos do português em mensagens de erro e alertas de domínio.
-  - O "Status dos Servidores" e o botão "Testar Conexão" agora refletem com 100% de fidelidade o estado real da rede: **Verde** para servidores e credenciais ativas (RELIQUIA e RTO com `pasta.paralegal`) e **Vermelho** com mensagem detalhada do AD caso as credenciais estejam incorretas (ex: `RTO\aaaa`).
+  - O "Status dos Servidores" e o botão "Testar Conexão" agora refletem com 100% de fidelidade o estado real da rede: **Verde** para servidores e credenciais ativas (EMPRESA 01 e EMPRESA 02 com `pasta.paralegal`) e **Vermelho** com mensagem detalhada do AD caso as credenciais estejam incorretas (ex: `EMPRESA 02\aaaa`).
 - **Sincronização de Metadados e Versionamento SemVer**:
   - Atualização uniforme de versão para **v2.7.2** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
 - **Novo Pacote Oficial MSI v2.7.2**: Compilado com WiX Toolset v3.14.
@@ -499,25 +499,25 @@
     1. Teste de conectividade de rede na porta TCP 445 (SMB);
     2. Autenticação real via LDAP com `System.DirectoryServices.DirectoryEntry` utilizando o usuário e senha configurados;
     3. Pesquisa ativa no catálogo global com `DirectorySearcher` para confirmar existência da conta.
-  - Usuários inexistentes (ex: `RTO\aaaa`) ou credenciais incorretas são imediatamente rejeitados com diagnósticos detalhados.
+  - Usuários inexistentes (ex: `EMPRESA 02\aaaa`) ou credenciais incorretas são imediatamente rejeitados com diagnósticos detalhados.
 - **Correção de Falha Crítica de Segurança em Configurações**:
   - Em `SettingsView.tsx`, o botão de visualização de senha `(👁)` foi completamente ocultado para usuários não autorizados.
   - O campo de senha não injeta a credencial real no DOM quando bloqueado, exibindo apenas uma máscara estática (`••••••••••••`).
   - Apenas após autenticação mestre do TI com senha de administrador a credencial real torna-se acessível e auditável.
-- **Empresa e Usuário Padrão Atualizados para RTO**:
-  - O aplicativo inicializa com a empresa **RTO** e o usuário **`RTO\pasta.paralegal`** selecionados por padrão em todos os módulos (Criação, Transferência, Renomeação e Configurações).
+- **Empresa e Usuário Padrão Atualizados para EMPRESA 02**:
+  - O aplicativo inicializa com a empresa **EMPRESA 02** e o usuário **`EMPRESA 02\pasta.paralegal`** selecionados por padrão em todos os módulos (Criação, Transferência, Renomeação e Configurações).
 - **Sincronização de Metadados e Versionamento SemVer**:
   - Atualização uniforme de versão para **v2.7.0** em `package.json`, `TitleBar.tsx`, `Header.tsx`, `AboutView.tsx` e scripts WiX (`build_msi.js`, `build_custom_msi.js`).
 - **Novo Pacote Oficial MSI v2.7.0**: Compilado com WiX Toolset v3.14 mantendo UpgradeCode in-place idêntico.
 
 ---
 
-## Versão 2.6.2 (11/09/2026) - **Atualização de Variáveis Corporativas Padrão da RELIQUIA e RTO**
-- **Atualização de Infraestrutura de Rede da Empresa RELIQUIA**:
-  - `sourcePath` (Modelo de Pastas / Origem da Estrutura): Atualizado de `\\192.168.100.30\gpo\criarpastas_paralegal\MODELO` para `\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`.
-  - `adServerIp` (Servidor AD / IP ou Host): Atualizado de `192.168.100.30` para `192.168.1.242`.
-- **Atualização de Credencial de Domínio da Empresa RTO**:
-  - `domainUser` (Usuário de Serviço): Atualizado de `pasta.paralegal` para `RTO\pasta.paralegal` nas configurações padrão e gerador de instaladores.
+## Versão 2.6.2 (11/09/2026) - **Atualização de Variáveis Corporativas Padrão da EMPRESA 01 e EMPRESA 02**
+- **Atualização de Infraestrutura de Rede da Empresa EMPRESA 01**:
+  - `sourcePath` (Modelo de Pastas / Origem da Estrutura): Atualizado de `\\10.0.0.30\gpo\criarpastas_paralegal\MODELO` para `\\10.0.0.10\gpo\criarpastas_paralegal\MODELO`.
+  - `adServerIp` (Servidor AD / IP ou Host): Atualizado de `10.0.0.30` para `10.0.0.10`.
+- **Atualização de Credencial de Domínio da Empresa EMPRESA 02**:
+  - `domainUser` (Usuário de Serviço): Atualizado de `pasta.paralegal` para `EMPRESA 02\pasta.paralegal` nas configurações padrão e gerador de instaladores.
 - **Sincronização em Toda a Infraestrutura de Build e Configuração**:
   - Atualizados `.env`, `main.ts`, `build_msi.js`, `build_custom_msi.js` e `MSIBuilderView.tsx` para assegurar que restaurações de fábrica e novas compilações utilizem os novos parâmetros.
 - **Sincronização de Metadados e Versionamento SemVer**:
@@ -695,7 +695,7 @@
 ---
 
 ## Versão 2.5.5 (08/09/2026) - **Remoção de Linha Redundante de Versão na Barra Lateral e Polimento Visual**
-- **Otimização da Barra Lateral**: Removida a linha `"Versão do App"` do card inferior da barra lateral (`Sidebar.tsx`), eliminando a sobreposição visual redundante e mantendo o card exclusivamente focado no `"Status dos Servidores"` (`RELIQUIA` e `RTO` com indicadores luminosos em tempo real).
+- **Otimização da Barra Lateral**: Removida a linha `"Versão do App"` do card inferior da barra lateral (`Sidebar.tsx`), eliminando a sobreposição visual redundante e mantendo o card exclusivamente focado no `"Status dos Servidores"` (`EMPRESA 01` e `EMPRESA 02` com indicadores luminosos em tempo real).
 - **Consistência de Identidade e Badges**: A versão oficial do aplicativo é exibida de maneira unificada e discreta exclusivamente na barra de título customizada (`TitleBar.tsx`) e no cabeçalho superior (`Header.tsx`).
 - **Novo Pacote MSI v2.5.5**: Gerado instalador leve oficial com WiX Toolset e disponibilizado para atualização transparente in-place.
 
@@ -713,7 +713,7 @@
 ---
 
 ## Versão 2.5.3 (04/09/2026) - **Higienização Completa de UX/UI, Ocultação de Dados Técnicos/IPs e Simplificação de Textos**
-- **Ocultação de Dados Técnicos e Infraestrutura**: Removida a exibição de endereços IP de todas as telas (botões de empresa RELIQUIA e RTO, status da barra lateral e configurações).
+- **Ocultação de Dados Técnicos e Infraestrutura**: Removida a exibição de endereços IP de todas as telas (botões de empresa EMPRESA 01 e EMPRESA 02, status da barra lateral e configurações).
 - **Remoção de Credenciais e Contas da Interface**: Removida a badge `pasta.paralegal` do cabeçalho superior e de todas as telas operacionais. Removidas credenciais e referências a APIs internas do manual interno do usuário.
 - **Simplificação de Rótulos e Textos para Usuário Comum**:
   - Botão de seleção em massa renomeado de "Marcar Visíveis" para "SELECIONAR TODAS".
@@ -749,7 +749,7 @@
 ## Versão 2.4.3 (26/08/2026) - **Execução Primária Nativa com `CreateProcessWithLogonW` sob o Token de `pasta.paralegal`**
 - **Disparo de Processo sob Token Primário do AD (`CreateProcessWithLogonW`)**: Implementado o lançamento de processo com `LOGON_NETCREDENTIALS_ONLY` direto na API do Windows (advapi32.dll). O Robocopy é inicializado estritamente sob o token primário da conta de serviço `pasta.paralegal`, impedindo qualquer interferência da conta do usuário logado na estação (`franciele.lopes`, etc.).
 - **Preservação de Dono e Permissões Administrativas**: Pastas e subpastas são criadas preservando integralmente o dono (`BUILTIN\Administradores` / Domínio) e as permissões de segurança NTFS copiadas do GPO MODELO.
-- **Validação Completa em Laboratório**: Testado e validado em tempo real para RELIQUIA e RTO com retorno `ExitCode: 0` e confirmação de subpastas e dono.
+- **Validação Completa em Laboratório**: Testado e validado em tempo real para EMPRESA 01 e EMPRESA 02 com retorno `ExitCode: 0` e confirmação de subpastas e dono.
 - **Destaque Visual da Versão `v2.4.3`**: Badges na TitleBar, Header e Sidebar para validação imediata da versão em execução.
 - **Pacote MSI v2.4.3**: Gerado na Área de Trabalho (`FolderWorks.msi`).
 

@@ -14,36 +14,36 @@ const logsPath = path.join(userDataPath, 'app.log');
 
 // Default Corporate Config with IT Governance Perimeter
 const defaultCompanyConfigs: Record<string, any> = {
-  RTO: {
-    companyName: 'RTO',
-    domainUser: String.raw`RTO\pasta.servico`,
+  EMPRESA_1: {
+    companyName: 'EMPRESA 01',
+    domainUser: String.raw`DOMINIO\pasta.servico`,
     adPass: '',
-    adServerIp: '127.0.0.1',
+    adServerIp: '10.0.0.10',
     sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
-    destSharePath: String.raw`\\servidor\rto\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\servidor\rto\CLIENTES`,
-    defaultSourceFolder: String.raw`\\servidor\rto\CLIENTES\EMPRESAS`,
+    destSharePath: String.raw`\\servidor\arquivos\CLIENTES\EMPRESAS`,
+    allowedBasePath: String.raw`\\servidor\arquivos\CLIENTES`,
+    defaultSourceFolder: String.raw`\\servidor\arquivos\CLIENTES\EMPRESAS`,
     logDirectory: String.raw`\\servidor\gpo\criarpastas\LOGS`,
     selectedLogFile: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\rto\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\rto\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
+      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\arquivos\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   },
-  RELIQUIA: {
-    companyName: 'RELIQUIA',
-    domainUser: String.raw`RELIQUIA\pasta.servico`,
+  EMPRESA_2: {
+    companyName: 'EMPRESA 02',
+    domainUser: String.raw`DOMINIO\pasta.servico`,
     adPass: '',
-    adServerIp: '127.0.0.1',
+    adServerIp: '10.0.1.10',
     sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
-    destSharePath: String.raw`\\servidor\reliquia-arquivos\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
-    defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
-    logDirectory: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`,
+    destSharePath: String.raw`\\servidor\filial\CLIENTES\EMPRESAS`,
+    allowedBasePath: String.raw`\\servidor\filial\CLIENTES`,
+    defaultSourceFolder: String.raw`\\servidor\filial\CLIENTES\EMPRESAS`,
+    logDirectory: String.raw`\\servidor\filial\LOGS`,
     selectedLogFile: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
+      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\filial\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\filial\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   }
 };
@@ -92,7 +92,7 @@ function sanitizeConfig(cfg: any): any {
         destinationParentPath: dest,
         allowedBasePath: raw.allowedBasePath || def.allowedBasePath || dest,
         defaultSourceFolder: raw.defaultSourceFolder || def.defaultSourceFolder || dest,
-        logDirectory: raw.logDirectory || def.logDirectory || (comp === 'RTO' ? String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS` : comp === 'RELIQUIA' ? String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS` : ''),
+        logDirectory: raw.logDirectory || def.logDirectory || '',
         selectedLogFile: raw.selectedLogFile || def.selectedLogFile || '',
         presetDestinations: Array.isArray(raw.presetDestinations)
           ? raw.presetDestinations
@@ -160,8 +160,7 @@ function getTIPassword(): string {
 function getCompanyConfig(company: string) {
   const all = loadConfig();
   const companyKeys = Object.keys(all).filter(k => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-  return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['RELIQUIA']);
-  return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['RTO']);
+  return all[company] || (companyKeys.length > 0 ? all[companyKeys[0]] : defaultCompanyConfigs['EMPRESA_1']);
 }
 
 function saveConfig(cfg: any) {
@@ -275,17 +274,10 @@ interface DetectedLogFileInfo {
 }
 
 function getCompanyLogDirectory(companyKey?: string): string {
-  const comp = companyKey || 'RTO';
+  const comp = companyKey || 'EMPRESA_1';
   const compCfg = getCompanyConfig(comp);
   if (compCfg && compCfg.logDirectory && String(compCfg.logDirectory).trim()) {
     return String(compCfg.logDirectory).trim();
-  }
-  const normKey = String(comp).toUpperCase();
-  if (normKey === 'RTO') {
-    return String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`;
-  }
-  if (normKey === 'RELIQUIA') {
-    return String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`;
   }
   return '';
 }
@@ -334,7 +326,7 @@ function updateCompanySelectedLogFile(companyKey: string, filePath: string) {
 }
 
 function resolveCompanyLogFile(companyKey?: string): string | null {
-  const comp = companyKey || 'RTO';
+  const comp = companyKey || 'EMPRESA_1';
   const compCfg = getCompanyConfig(comp);
 
   // 1. Se TI já selecionou expressamente um arquivo válido existente
@@ -1089,7 +1081,7 @@ ipcMain.handle('get-history', () => {
     (k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword' && k !== 'sharedLogFilePath' && cfg[k] && typeof cfg[k] === 'object'
   );
 
-  // Lê os registros de log de rede de cada empresa (RTO, RELIQUIA, etc.)
+  // Lê os registros de log de rede de cada empresa configurada
   for (const compKey of companyKeys) {
     try {
       const logFile = resolveCompanyLogFile(compKey);
@@ -1180,7 +1172,7 @@ ipcMain.handle('get-network-logs', () => {
 
 // Detecção, listagem e seleção de arquivos de log por empresa
 ipcMain.handle('detect-company-log-files', async (_, companyKey: string) => {
-  const comp = companyKey || 'RTO';
+  const comp = companyKey || 'EMPRESA_1';
   const compCfg = getCompanyConfig(comp);
   const logDir = getCompanyLogDirectory(comp);
 
@@ -1249,7 +1241,7 @@ ipcMain.handle('select-company-log-file', async (_, { companyKey, filePath }: { 
 });
 
 ipcMain.handle('create-company-log-file', async (_, { companyKey, format }: { companyKey: string; format?: string }) => {
-  const comp = companyKey || 'RTO';
+  const comp = companyKey || 'EMPRESA_1';
   const logDir = getCompanyLogDirectory(comp);
   if (!logDir) throw new Error('Diretório de logs não configurado.');
 
@@ -1604,11 +1596,9 @@ ipcMain.handle('list-subdirectories', async (_, req: any, compParam?: string) =>
 
     // Inferir empresa se não especificada explicitamente
     if (!company) {
-      if (targetDir.toLowerCase().includes('192.168.1.242') || targetDir.toLowerCase().includes('reliquia')) {
-        company = 'RELIQUIA';
-      } else if (targetDir.toLowerCase().includes('192.168.50.102') || targetDir.toLowerCase().includes('rto')) {
-        company = 'RTO';
-      }
+      const all = loadConfig();
+      const keys = Object.keys(all).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+      if (keys.length > 0) company = keys[0];
     }
 
     const executor = getExecutorPath();
@@ -2096,7 +2086,9 @@ ipcMain.handle('rename-folder', async (_, { targetPath, newName, company }: { ta
 
     const newFullPath = path.join(parentDir, cleanNewName);
 
-    const compName = company || (cleanTarget.toLowerCase().includes('reliquia') ? 'RELIQUIA' : 'RTO');
+    const all = loadConfig();
+    const companyKeys = Object.keys(all).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
+    const compName = company || (companyKeys.length > 0 ? companyKeys[0] : 'EMPRESA_1');
     const compConfig = getCompanyConfig(compName);
     const allowedBase = compConfig?.allowedBasePath || compConfig?.destSharePath;
 

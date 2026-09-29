@@ -18,7 +18,7 @@ on:
       ad_server_ip:
         description: 'Endereço IP ou Host do Active Directory'
         required: false
-        default: '192.168.1.10'
+        default: '10.0.0.10'
       domain_user:
         description: 'Usuário de Serviço do AD (ex: DOMINIO\pasta.servico)'
         required: false

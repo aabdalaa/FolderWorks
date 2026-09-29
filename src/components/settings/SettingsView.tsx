@@ -62,10 +62,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Active Company Tab in Settings
-  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('RTO');
+  const [activeCompanyTab, setActiveCompanyTab] = useState<string>('');
 
   // Active Company Tab for Shortcuts (Livre para o Usuário)
-  const [shortcutCompanyTab, setShortcutCompanyTab] = useState<string>('RTO');
+  const [shortcutCompanyTab, setShortcutCompanyTab] = useState<string>('');
 
   // Company Log State
   const [companyLogState, setCompanyLogState] = useState<{ [compKey: string]: CompanyLogDetectionState }>({});
@@ -110,10 +110,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const keys = getCompanyKeys(cfg);
       if (keys.length > 0) {
         if (!activeCompanyTab) {
-          setActiveCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
+          setActiveCompanyTab(keys[0]);
         }
         if (!shortcutCompanyTab) {
-          setShortcutCompanyTab(keys.includes('RTO') ? 'RTO' : keys[0]);
+          setShortcutCompanyTab(keys[0]);
         }
       }
     });
@@ -132,10 +132,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     if (companyKeys.length > 0) {
       if (!activeCompanyTab || !companyKeys.includes(activeCompanyTab)) {
-        setActiveCompanyTab(companyKeys.includes('RTO') ? 'RTO' : companyKeys[0]);
+        setActiveCompanyTab(companyKeys[0]);
       }
       if (!shortcutCompanyTab || !companyKeys.includes(shortcutCompanyTab)) {
-        setShortcutCompanyTab(companyKeys.includes('RTO') ? 'RTO' : companyKeys[0]);
+        setShortcutCompanyTab(companyKeys[0]);
       }
     }
   }, [companyKeys, activeCompanyTab, shortcutCompanyTab]);
@@ -1158,7 +1158,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onChange={(e) => {
                     handleFieldChange(activeCompanyTab, 'logDirectory', e.target.value);
                   }}
-                  placeholder="Ex: \\192.168.50.102\gpo\criarpastas_paralegal\LOGS"
+                  placeholder="Ex: \\servidor\compartilhamento\LOGS"
                   className={`flex-1 p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'
@@ -1300,7 +1300,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   readOnly={!isTIUnlocked}
                   value={activeComp.adServerIp || ''}
                   onChange={(e) => handleFieldChange(activeCompanyTab, 'adServerIp', e.target.value)}
-                  placeholder="Ex: 192.168.1.10"
+                  placeholder="Ex: 10.0.0.10 ou dc.empresa.local"
                   className={`w-full p-2 rounded-lg font-mono text-[11px] ${
                     isTIUnlocked
                       ? 'bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-600 text-slate-900 dark:text-white'

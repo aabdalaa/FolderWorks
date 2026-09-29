@@ -31,7 +31,7 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
   onCreateEmptyFolder,
   onShowToast,
 }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string>('RTO');
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [companies, setCompanies] = useState<Record<string, any>>({});
 
   // Estado para Criar Pasta com Modelo (Card Superior)
@@ -49,8 +49,8 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
       if (cfg) {
         setCompanies(cfg);
         const keys = Object.keys(cfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-        if (keys.length > 0 && !keys.includes(selectedCompany)) {
-          setSelectedCompany(keys.includes('RTO') ? 'RTO' : keys[0]);
+        if (keys.length > 0 && (!selectedCompany || !keys.includes(selectedCompany))) {
+          setSelectedCompany(keys[0]);
         }
       }
     });
@@ -59,8 +59,8 @@ export const FolderCreationView: React.FC<FolderCreationViewProps> = ({
       if (updatedCfg) {
         setCompanies(updatedCfg);
         const keys = Object.keys(updatedCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword');
-        if (keys.length > 0 && !keys.includes(selectedCompany)) {
-          setSelectedCompany(keys.includes('RTO') ? 'RTO' : keys[0]);
+        if (keys.length > 0 && (!selectedCompany || !keys.includes(selectedCompany))) {
+          setSelectedCompany(keys[0]);
         }
       }
     });

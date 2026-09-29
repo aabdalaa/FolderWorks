@@ -27,9 +27,6 @@ export const App: React.FC = () => {
   const [isTIAuthenticated, setIsTIAuthenticated] = useState(false);
   const [perimeterBlockedData, setPerimeterBlockedData] = useState<{ chosenPath: string; allowedBasePath: string; company?: string } | null>(null);
   const [toastData, setToastData] = useState<ToastData | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [reliquiaStatus, setReliquiaStatus] = useState<boolean | null>(null);
-  const [rtoStatus, setRtoStatus] = useState<boolean | null>(null);
   const [serverStatuses, setServerStatuses] = useState<Record<string, boolean | null>>({});
   const { theme, setTheme } = useTheme();
 
@@ -73,8 +70,6 @@ export const App: React.FC = () => {
       keys.forEach((comp) => {
         window.electronAPI?.testServerConnection(comp).then((res) => {
           setServerStatuses((prev) => ({ ...prev, [comp]: res.success }));
-          if (comp === 'RELIQUIA') setReliquiaStatus(res.success);
-          if (comp === 'RTO') setRtoStatus(res.success);
         });
       });
     };
@@ -114,8 +109,6 @@ export const App: React.FC = () => {
   const handleTestConnection = async (company: string, overrideConfig?: any) => {
     const res = await window.electronAPI?.testServerConnection(company, overrideConfig);
     setServerStatuses((prev) => ({ ...prev, [company]: res.success }));
-    if (company === 'RELIQUIA') setReliquiaStatus(res.success);
-    if (company === 'RTO') setRtoStatus(res.success);
     return res;
   };
 
@@ -191,8 +184,6 @@ export const App: React.FC = () => {
         <Sidebar
           activeTab={activeTab}
           onSelectTab={handleSelectTab}
-          reliquiaStatus={reliquiaStatus}
-          rtoStatus={rtoStatus}
           serverStatuses={serverStatuses}
         />
 

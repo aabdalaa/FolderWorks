@@ -6,16 +6,12 @@ export type AppTab = 'dashboard' | 'transfer' | 'rename' | 'settings' | 'history
 interface SidebarProps {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
-  reliquiaStatus?: boolean | null;
-  rtoStatus?: boolean | null;
   serverStatuses?: Record<string, boolean | null>;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
-  reliquiaStatus,
-  rtoStatus,
   serverStatuses,
 }) => {
   const navItems = [
@@ -92,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-slate-600 dark:text-slate-300 font-medium">RELIQUIA</span>
+                <span className="text-slate-600 dark:text-slate-300 font-medium">EMPRESA 1</span>
                 <span
                   className={`w-2 h-2 rounded-full ${
                     reliquiaStatus === true
@@ -105,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-600 dark:text-slate-300 font-medium">RTO</span>
+                <span className="text-slate-600 dark:text-slate-300 font-medium">EMPRESA 2</span>
                 <span
                   className={`w-2 h-2 rounded-full ${
                     rtoStatus === true

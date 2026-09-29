@@ -46,7 +46,7 @@ interface TransferResult {
 }
 
 export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalStateChange }) => {
-  const [company, setCompany] = useState<string>('RTO');
+  const [company, setCompany] = useState<string>('');
   const [config, setConfig] = useState<any>(null);
   
   // Paths
@@ -170,7 +170,7 @@ export const FolderTransferView: React.FC<FolderTransferViewProps> = ({ onModalS
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
       const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
-      const targetComp = keys.includes(company) ? company : (keys.includes('RTO') ? 'RTO' : keys[0] || 'RTO');
+      const targetComp = keys.includes(company) ? company : (keys[0] || '');
       if (targetComp !== company) {
         setCompany(targetComp);
       }

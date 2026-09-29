@@ -60,7 +60,7 @@ export const UserGuideView: React.FC = () => {
               Acesse a aba <strong>Criar Pasta</strong> no menu lateral do aplicativo.
             </li>
             <li>
-              Selecione a <strong>empresa</strong> correspondente à operação (RTO ou RELÍQUIA).
+              Selecione a <strong>empresa</strong> correspondente à operação desejada.
             </li>
             <li>
               <strong>Criar Pasta (com Modelo AD)</strong>: No primeiro card, digite o nome desejado. Caso deseje criar múltiplas pastas de uma vez, clique no botão <strong>+</strong> no final da barra de texto para adicionar novas linhas e clique em <em>Criar Pastas Simultâneas</em>. O sistema executará tarefas paralelas multithread na rede replicando o modelo do AD.
@@ -254,7 +254,7 @@ export const UserGuideView: React.FC = () => {
               <li><strong>Telemetria em Tempo Real</strong>: Acompanhe as etapas de varredura, chamadas de sistema e taxa de transferência de arquivos.</li>
               <li><strong>Categorização por Cores</strong>: Mensagens de sucesso são destacadas em verde, avisos em amarelo e eventuais falhas em vermelho.</li>
               <li><strong>Limpeza de Histórico Protegida</strong>: Confirmação protegida pela senha do TI para evitar exclusões acidentais da trilha local.</li>
-              <li><strong>Armazenamento Duplo e Centralização GPO</strong>: Gravação simultânea na estação local e no arquivo compartilhado corporativo nas pastas GPO (RTO e RELIQUIA), operando 100% via SMB sem necessidade de portas de rede abertas.</li>
+              <li><strong>Armazenamento Duplo e Centralização GPO</strong>: Gravação simultânea na estação local e no arquivo compartilhado corporativo nas pastas GPO de rede, operando 100% via SMB sem necessidade de portas de rede abertas.</li>
               <li><strong>Exportação em Arquivo</strong>: Opção para abrir o relatório de eventos e auditoria no editor padrão do Windows para anexar em chamados ou auditorias técnicas.</li>
               <li><strong>Bloqueio Imediato</strong>: Botão para fechar e travar a sessão de TI logo após a inspeção.</li>
             </ul>
@@ -377,7 +377,7 @@ export const UserGuideView: React.FC = () => {
               </div>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Auditoria Centralizada em Pastas GPO Corporativas, Formato Inteligente, Erradicação de Portas e Armazenamento Duplo</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                Centralização de logs em pastas compartilhadas GPO da RTO (\\192.168.50.102\gpo\criarpastas_paralegal\LOGS) e RELIQUIA (\\192.168.1.242\gpo\criarpastas_paralegal\LOGS). Detecção inteligente com criação automática de arquivo no formato ideal (.JSON NDJSON) se vazio, preservação absoluta de arquivos de log existentes sem recriação e seletor para o TI em caso de múltiplos arquivos. Erradicação de 100% dos sockets e regras da porta 48899. Configurações de log ocultas para não-administradores, exclusão de histórico local protegida por senha com saída 'X' e manutenção do armazenamento duplo (local + rede).
+                Centralização de logs em pastas compartilhadas GPO de cada empresa configurada na rede corporativa. Detecção inteligente com criação automática de arquivo no formato ideal (.JSON NDJSON) se vazio, preservação absoluta de arquivos de log existentes sem recriação e seletor para o TI em caso de múltiplos arquivos. Erradicação de 100% dos sockets e regras da porta 48899. Configurações de log ocultas para não-administradores, exclusão de histórico local protegida por senha com saída 'X' e manutenção do armazenamento duplo (local + rede).
               </p>
             </div>
 
@@ -415,7 +415,7 @@ export const UserGuideView: React.FC = () => {
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
               <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.2</span>
-              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração do Modelo Oficial GPO RTO e Otimização Win32</h5>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração do Modelo Oficial GPO Corporativo e Otimização Win32</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Retorno ao caminho de modelo oficial da GPO (MODELO) com replicação das permissões departamentais oficiais e disparo direto para o binário Win32 ExecuteAsUser.exe.
               </p>
@@ -445,9 +445,9 @@ export const UserGuideView: React.FC = () => {
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
               <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.7</span>
-              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Correção de Permissões RTO, Limpeza Visual e Auto-Refresh Silencioso (5s)</h5>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Correção de Permissões Departamentais, Limpeza Visual e Auto-Refresh Silencioso (5s)</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                Redirecionamento definitivo da origem de modelos da RTO para o template oficial em produção ('EM USO\MODELO 2026'), garantindo 100% de integridade das DACLs departamentais restritas (RH, Paralegal, Fiscal, Contábil, TI) sem vazamento do grupo Todos. Remoção do bloco redundante de confirmação da tela de transferência e implementação de auto-refresh em background a cada 5 segundos nas abas de Mover e Renomear com invalidação automática de cache na criação de novas pastas.
+                Redirecionamento definitivo da origem de modelos para o template oficial em produção, garantindo 100% de integridade das DACLs departamentais restritas (RH, Paralegal, Fiscal, Contábil, TI) sem vazamento do grupo Todos. Remoção do bloco redundante de confirmação da tela de transferência e implementação de auto-refresh em background a cada 5 segundos nas abas de Mover e Renomear com invalidação automática de cache na criação de novas pastas.
               </p>
             </div>
 
@@ -455,7 +455,7 @@ export const UserGuideView: React.FC = () => {
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
               <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.8.6</span>
-              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema da RELIQUIA</h5>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Restauração de Permissões NTFS DACL (/COPY:DATS) e Aceleração Extrema</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
                 Restauração obrigatória da cópia de segurança NTFS (/COPY:DATS /DCOPY:DAT), garantindo a transferência fidedigna das permissões departamentais (CONTABIL, PESSOAL, FISCAL, PARALEGAL, SPED) do modelo para as empresas criadas. Desacoplamento assíncrono da purga da lixeira em DeleteDirectory, reduzindo o tempo de resposta do botão 'Deu certo' para menos de 1 segundo sem travar a interface. Otimização Robocopy com /MT:128 e /IPG:0 sem retries.
               </p>

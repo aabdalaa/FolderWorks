@@ -28,7 +28,7 @@ interface FolderRenameViewProps {
 }
 
 export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFolder, onShowToast }) => {
-  const [company, setCompany] = useState<string>('RTO');
+  const [company, setCompany] = useState<string>('');
   const [config, setConfig] = useState<any>(null);
   const [currentSourceDir, setCurrentSourceDir] = useState<string>('');
   
@@ -64,7 +64,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     window.electronAPI?.getConfig().then((allCfg) => {
       setConfig(allCfg);
       const keys = allCfg ? Object.keys(allCfg).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
-      const targetComp = keys.includes(company) ? company : (keys.includes('RTO') ? 'RTO' : keys[0] || 'RTO');
+      const targetComp = keys.includes(company) ? company : (keys[0] || '');
       if (targetComp !== company) {
         setCompany(targetComp);
       }
@@ -85,7 +85,7 @@ export const FolderRenameView: React.FC<FolderRenameViewProps> = ({ onRenameFold
     };
   }, [company]);
 
-  const companyKeys = config ? Object.keys(config).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : ['RTO', 'RELIQUIA'];
+  const companyKeys = config ? Object.keys(config).filter((k) => k !== 'isLockedByMSI' && k !== 'tiLogsPassword') : [];
 
   const getCacheKey = (dir: string, comp: string) => `fw_folders_cache_${comp}_${dir.toLowerCase().trim()}`;
 
