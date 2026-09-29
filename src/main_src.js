@@ -220,7 +220,7 @@ ipcMain.handle('create-folder', async (event, { companyKey, clientName }) => {
     const rawAdUser = process.env.AD_USER || 'pasta.paralegal';
     const pureUser = rawAdUser.includes('\\') ? rawAdUser.split('\\')[1] : rawAdUser;
     const adUser = config.name === 'RELIQUIA' && !rawAdUser.includes('\\') ? `RELIQUIA\\${rawAdUser}` : rawAdUser;
-    const adPass = process.env.AD_PASS || 'Mestre@300';
+    const adPass = process.env.AD_PASS || '';
     const adServerIp = config.name === 'RTO' ? '192.168.50.102' : '192.168.1.242';
 
     // 2. VALIDAÇÃO OBRIGATÓRIA DA EXISTÊNCIA DA CONTA DE SERVIÇO NO AD ESPECÍFICO DA EMPRESA (LDAP DIRECTORYENTRY)
@@ -237,7 +237,7 @@ ipcMain.handle('create-folder', async (event, { companyKey, clientName }) => {
 
     // Se o usuário 'pasta.paralegal' NÃO EXISTIR no Active Directory do domínio selecionado, ABORTA A CRIAÇÃO IMEDIATAMENTE!
     if (!userExistsInAD) {
-      const errorMsg = `[ERRO CRÍTICO AD] A conta de serviço '${pureUser}' não foi encontrada no Active Directory da ${config.name} (servidor ${adServerIp}).\n\nPor favor, crie a conta '${pureUser}' no Active Directory da ${config.name} (com a senha 'Mestre@300') antes de gerar pastas para esta empresa.`;
+      const errorMsg = `[ERRO CRÍTICO AD] A conta de serviço '${pureUser}' não foi encontrada no Active Directory da ${config.name} (servidor ${adServerIp}).\n\nPor favor, valide a conta '${pureUser}' no Active Directory antes de gerar pastas para esta empresa.`;
       appendLog(`[ABORTADO ${config.name}] ${errorMsg}`);
       return resolve({ success: false, error: errorMsg });
     }

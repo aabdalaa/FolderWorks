@@ -1,60 +1,86 @@
-# 🏢 Entropy FolderWorks - Suíte de Automação de Estrutura de Pastas
+# 🏢 Entropy FolderWorks
 
 ![Developer](https://img.shields.io/badge/Desenvolvedor-Andr%C3%A9%20Abdala%20%2F%20ENTROPY-7C3AED?style=for-the-badge)
-![Electron](https://img.shields.io/badge/Electron-31.7.7-4B5563?style=for-the-badge&logo=electron)
-![License](https://img.shields.io/badge/Licen%C3%A7a-MIT-green?style=for-the-badge)
+![Electron](https://img.shields.io/badge/Electron-34.x-4B5563?style=for-the-badge&logo=electron)
+![React](https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=for-the-badge&logo=tailwind-css)
+![Platform](https://img.shields.io/badge/Plataforma-Windows%20x64-blue?style=for-the-badge&logo=windows)
+![Version](https://img.shields.io/badge/Vers%C3%A3o-3.0.0-emerald?style=for-the-badge)
+![License](https://img.shields.io/badge/Licen%C3%A7a-Propriet%C3%A1ria%20%2F%20Entropy-purple?style=for-the-badge)
 
-O **Entropy FolderWorks** é o aplicativo desktop oficial da suíte **ENTROPY** para automação da criação de estruturas de pastas de clientes para setores jurídicos e paralegal. Suporta cópia de permissões de segurança **NTFS (/SEC)**, resiliência autossuficiente (fallback nativo), interface sem serrilhados e inicialização automática em **Tela Cheia**.
-
----
-
-## 💻 Recursos e Funcionalidades
-
-- **Interface Web Desktop 100% Anti-Serrilhada**: Desenvolvido sobre a engine Chromium (Electron) com CSS Grid/Flexbox e design em tons de roxo (*Dark Violet Theme*).
-- **Cópia Exata de Permissões NTFS (/SEC)**: Duplica 100% das permissões de grupos do Active Directory das pastas modelos.
-- **Fallback Autossuficiente**: Se os modelos da rede estiverem indisponíveis, cria a árvore de pastas embutida em código nativo JS.
-- **Segurança & Proteção Anti-Engenharia Reversa**: Script de build automatizado com ofuscação de código de alta intensidade.
-- **Gerenciamento com `.env`**: Configuração simplificada de IPs e caminhos de rede via arquivo de ambiente.
+O **Entropy FolderWorks** é a suíte corporativa desktop oficial do ecossistema **ENTROPY** projetada para automação de alta performance na criação, replicação e governança de estruturas de pastas de clientes em ambientes corporativos e redes Windows Domain / Active Directory (AD).
 
 ---
 
-## 🛠️ Como Configurar e Rodar
+## ✨ Principais Recursos
 
-### 1. Clonar o repositório e instalar dependências
+- **Criação Instantânea & Paralela com Multithreading**: Crie estruturas completas ou pastas vazias em lote com botão `+` concorrente via `Promise.all` e Robocopy `/MT:128`.
+- **Preservação Absoluta de Permissões DACL/NTFS**: Duplicação exata de herança e direitos de segurança departamentais das pastas modelos do Active Directory.
+- **Impersonação Nativa Win32 (C# / .NET 64-bit)**: Executa operações de rede estritamente sob o token da conta de serviço corporativa via `LogonUser` e `CreateProcessWithLogonW`.
+- **Governança de TI & Perímetro Restrito**: Barreira de proteção contra criação ou movimentação fora das raízes de rede autorizadas com alerta sonoro e telemetria de bloqueio.
+- **Validação de Transferência com Modo Seguro**: Inspeção direta no Windows Explorer, confirmação em duas etapas e função instantânea de Desfazer Transferência com auditoria.
+- **Personalização Dinâmica de Marca & Cores**: Catálogo com 24 paletas corporativas integradas dinamicamente ao DOM e suporte a modo Claro e Escuro.
+- **Instalador Oficial MSI Autocontido**: Pacote `.MSI` gerado com WiX Toolset v3.14 com suporte a atualizações in-place e encerramento automático de instâncias em uso.
+
+---
+
+## 🛠️ Stack Tecnológica
+
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Lucide Icons.
+- **Desktop Runtime**: Electron 34 com contextIsolation e preload bridges seguros.
+- **Motor de Execução Nativo**: C# (.NET Framework 4.0 / AnyCPU x64) com Win32 API (`advapi32.dll` / `kernel32.dll`).
+- **Instalação e Empacotamento**: WiX Toolset v3.14 com `electron-wix-msi` e Electron Packager ASAR.
+
+---
+
+## 🚀 Como Executar em Desenvolvimento
+
+### 1. Clonar o repositório
 ```bash
-git clone https://github.com/seu-usuario/entropy-folderworks.git
-cd entropy-folderworks
+git clone https://github.com/aabdalaa/FolderWorks.git
+cd FolderWorks
+```
+
+### 2. Instalar dependências
+```bash
 npm install
 ```
 
-### 2. Configurar o arquivo `.env`
-Renomeie o arquivo `.env.example` para `.env` e configure os endereços IP e caminhos dos servidores:
-```env
-RTO_DISPLAY_NAME="RTO CONSULTORIA EMPRESARIAL"
-RTO_SOURCE_PATH="\\192.168.50.102\gpo\criarpastas_paralegal\MODELO 2026"
-RTO_DESTINATION_PATH="\\192.168.50.102\rto\CLIENTES\EMPRESAS"
-
-RELIQUIA_DISPLAY_NAME="RELIQUIA ASSESSORIA CONTÁBIL"
-RELIQUIA_SOURCE_PATH="\\192.168.100.30\gpo\criarpastas_paralegal\MODELO 2026"
-RELIQUIA_DESTINATION_PATH="\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS"
-```
-
-### 3. Executar o aplicativo em modo desenvolvimento
+### 3. Configurar ambiente
+Copie o template de ambiente:
 ```bash
-npm start
+cp .env.example .env
+```
+Preencha as variáveis corporativas de sua rede no arquivo `.env`.
+
+### 4. Executar em modo desenvolvimento
+```bash
+npm run dev
 ```
 
 ---
 
-## 📦 Como Gerar o Instalador Protegido (.MSI)
+## 📦 Como Compilar o Pacote Instalador (.MSI)
 
-Para gerar o pacote de instalação executável criptografado:
+Para compilar o pacote instalador completo com configurações e credenciais embutidas de forma segura:
 ```bash
 npm run build:msi
 ```
-O arquivo `.msi` final será gerado em `dist/msi/EntropyFolderWorks.msi`.
+O pacote será gerado em `dist/msi/FolderWorks.msi` pronto para distribuição via GPO ou instalação manual em máquinas corporativas.
 
 ---
 
-## 👤 Autor
-Desenvolvido por **André Abdala** (`ENTROPY`).
+## 👤 Autor e Desenvolvedor
+
+**André Abdala**  
+*Desenvolvedor de Software & Criador do Ecossistema ENTROPY*
+
+- **GitHub**: [github.com/aabdalaa](https://github.com/aabdalaa)
+- **LinkedIn**: [linkedin.com/in/andreabdala](https://www.linkedin.com/in/andreabdala/)
+- **Instagram**: [@\_aabdala\_](https://www.instagram.com/_aabdala_/)
+
+---
+
+## 🌌 Ecossistema ENTROPY
+
+> *"A transformação do caos, da complexidade técnica e da desordem do mundo real em sistemas funcionais, claros e controlados."*

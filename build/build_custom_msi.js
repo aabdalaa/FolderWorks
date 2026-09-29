@@ -128,9 +128,13 @@ async function compileCustomMSI(customConfig, customMsiName = 'FolderWorks_Custo
 
   const sourceMsi = path.join(projectRoot, 'dist', 'msi', 'FolderWorks.msi');
   const targetMsiName = customMsiName.endsWith('.msi') ? customMsiName : `${customMsiName}.msi`;
+  const outputDir = path.join(projectRoot, 'dist', 'output');
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+  const outputMsi = path.join(outputDir, targetMsiName);
   const desktopMsi = path.join(desktopPath, targetMsiName);
 
   if (fs.existsSync(sourceMsi)) {
+    try { fs.copyFileSync(sourceMsi, outputMsi); } catch (e) {}
     try {
       if (fs.existsSync(desktopMsi)) {
         try { fs.unlinkSync(desktopMsi); } catch (eUnlink) {}

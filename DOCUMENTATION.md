@@ -48,9 +48,9 @@ Para o correto funcionamento do aplicativo, a infraestrutura deve atender aos se
 ### 🔑 Credenciais do Usuário da Rede (AD)
 O aplicativo utiliza uma conta dedicada do Active Directory para autenticar as conexões de rede antes de iniciar a cópia. Isso permite que qualquer colaborador (mesmo sem direitos administrativos) crie as pastas com as permissões corretas.
 
-- **Usuário AD**: `pasta.paralegal`
-- **Senha AD**: `Mestre@300`
-- **Função**: Autenticação via `net use` nos servidores de arquivos.
+- **Usuário AD**: `pasta.servico` (ou conta definida pela TI)
+- **Senha AD**: `[Definida pela TI]`
+- **Função**: Autenticação via impersonação Win32 / net use nos servidores de arquivos.
 
 > [!IMPORTANT]
 > A conta `pasta.paralegal` deve possuir permissão de **Modificação/Leitura** na pasta compartilhada de modelo GPO (`gpo`) e permissão de **Controle Total / Modificação** na pasta de destino de clientes (`EMPRESAS`).

@@ -1,0 +1,154 @@
+name: 🚀 Compilador de MSI Personalizado (FolderWorks)
+
+on:
+  workflow_dispatch:
+    inputs:
+      company_name:
+        description: 'Nome da Empresa Principal'
+        required: true
+        default: 'MINHA EMPRESA'
+      source_path:
+        description: 'Caminho UNC da Pasta MODELO (Origem)'
+        required: true
+        default: '\\servidor\gpo\criarpastas\MODELO'
+      destination_path:
+        description: 'Caminho UNC da Pasta DESTINO (Clientes)'
+        required: true
+        default: '\\servidor\arquivos\CLIENTES\EMPRESAS'
+      ad_server_ip:
+        description: 'Endereço IP ou Host do Active Directory'
+        required: false
+        default: '192.168.1.10'
+      domain_user:
+        description: 'Usuário de Serviço do AD (ex: DOMINIO\pasta.servico)'
+        required: false
+        default: 'EMPRESA\pasta.servico'
+      domain_pass:
+        description: 'Senha da Conta de Serviço do AD'
+        required: false
+        default: ''
+      ti_password:
+        description: 'Senha Mestre do TI'
+        required: false
+        default: 'admin@123'
+      custom_logo_url:
+        description: 'URL pública de imagem do Logotipo da Empresa (.png ou .jpg)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    name: Compilar FolderWorks MSI
+    runs-on: windows-latest
+
+    steps:
+      - name: 📥 Clonar Repositório
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Instalar Dependências
+        run: npm install --legacy-peer-deps
+
+      - name: 🎨 Processar Logotipo Customizado (se fornecido)
+        shell: pwsh
+        run: |
+          $logoUrl = "${{ github.event.inputs.custom_logo_url }}"
+          if ($logoUrl -and $logoUrl.Trim() -ne "") {
+            Write-Host "Baixando logotipo customizado de: $logoUrl"
+            try {
+              Invoke-WebRequest -Uri $logoUrl -OutFile "src/assets/logo.png"
+              Write-Host "✓ Logotipo customizado aplicado em src/assets/logo.png"
+            } catch {
+              Write-Warning "Aviso: Falha ao baixar logotipo da URL informada: $_"
+            }
+          }
+
+      - name: 🛠️ Injetar Configurações Corporativas do TI
+        shell: pwsh
+        run: |
+          $compName = "${{ github.event.inputs.company_name }}"
+          $srcPath = "${{ github.event.inputs.source_path }}"
+          $destPath = "${{ github.event.inputs.destination_path }}"
+          $adIp = "${{ github.event.inputs.ad_server_ip }}"
+          $adUser = "${{ github.event.inputs.domain_user }}"
+          $adPass = "${{ github.event.inputs.domain_pass }}"
+          $tiPass = "${{ github.event.inputs.ti_password }}"
+
+          $cleanSafeName = ($compName -replace '[^a-zA-Z0-9_-]', '_')
+
+          $cfg = @{
+            isLockedByMSI = $true
+            tiLogsPassword = $tiPass
+            $cleanSafeName = @{
+              name = $compName
+              companyName = $compName
+              sourcePath = $srcPath
+              destinationParentPath = $destPath
+              destSharePath = $destPath
+              allowedBasePath = $destPath
+              defaultSourceFolder = $destPath
+              logDirectory = ""
+              selectedLogFile = ""
+              presetDestinations = @()
+              adServerIp = $adIp
+              domainUser = $adUser
+              adPass = $adPass
+            }
+          }
+
+          $cfgJson = $cfg | ConvertTo-Json -Depth 5
+          Set-Content -Path "custom_config.json" -Value $cfgJson -Encoding UTF8
+          Write-Host "✓ custom_config.json gerado com sucesso para a empresa: $compName"
+
+      - name: 🔨 Compilar Frontend e Pacote MSI
+        shell: pwsh
+        run: |
+          $compName = "${{ github.event.inputs.company_name }}"
+          $cleanSafeName = ($compName -replace '[^a-zA-Z0-9_-]', '_')
+          $targetMsi = "FolderWorks-$cleanSafeName-v3.0.0.msi"
+
+          node -e @"
+          const { compileCustomMSI } = require('./build/build_custom_msi.js');
+          const fs = require('fs');
+          const cfg = JSON.parse(fs.readFileSync('custom_config.json', 'utf-8'));
+          compileCustomMSI(cfg, '$targetMsi').then(res => {
+            console.log('✓ MSI compilado com sucesso:', res);
+          }).catch(err => {
+            console.error('Falha na compilação do MSI:', err);
+            process.exit(1);
+          });
+          "@
+
+      - name: 📤 Publicar Artefato do Instalador (.MSI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FolderWorks-Instalador-MSI
+          path: dist/output/*.msi
+          if-no-files-found: error
+
+      - name: 🏷️ Criar Release Oficial de Download
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: release-${{ github.run_id }}
+          name: "FolderWorks - ${{ github.event.inputs.company_name }} (v3.0.0)"
+          body: |
+            ## 🏢 Pacote Instalador Customizado - ${{ github.event.inputs.company_name }}
+            
+            - **Empresa**: `${{ github.event.inputs.company_name }}`
+            - **Origem (Modelo)**: `${{ github.event.inputs.source_path }}`
+            - **Destino (Clientes)**: `${{ github.event.inputs.destination_path }}`
+            - **Servidor AD**: `${{ github.event.inputs.ad_server_ip }}`
+            
+            ### ⬇️ Download Direto
+            Baixe o instalador `.msi` anexado abaixo para instalar em qualquer computador Windows da empresa.
+          files: dist/output/*.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

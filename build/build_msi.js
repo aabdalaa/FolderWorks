@@ -48,29 +48,29 @@ async function buildMSI() {
         { name: '00 - EX CLIENTES', path: '\\\\192.168.50.102\\rto\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
         { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.50.102\\rto\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
-      adServerIp: env.RTO_AD_IP || '192.168.50.102',
-      domainUser: env.RTO_AD_USER || 'RTO\\pasta.paralegal',
-      adPass: env.RTO_AD_PASS || 'Mestre@300'
+      adServerIp: env.RTO_AD_IP || '127.0.0.1',
+      domainUser: env.RTO_AD_USER || 'EMPRESA\\pasta.servico',
+      adPass: env.RTO_AD_PASS || ''
     },
     RELIQUIA: {
-      name: env.RELIQUIA_NAME || 'RELIQUIA',
-      companyName: 'RELIQUIA',
-      sourcePath: env.RELIQUIA_SOURCE_PATH || '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\MODELO',
-      destinationParentPath: env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
-      destSharePath: env.RELIQUIA_DESTINATION_PATH || '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
-      allowedBasePath: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES',
-      defaultSourceFolder: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\EMPRESAS',
-      logDirectory: '\\\\192.168.1.242\\gpo\\criarpastas_paralegal\\LOGS',
+      name: env.RELIQUIA_NAME || 'EMPRESA 02',
+      companyName: 'EMPRESA 02',
+      sourcePath: env.RELIQUIA_SOURCE_PATH || '\\\\servidor\\gpo\\criarpastas\\MODELO',
+      destinationParentPath: env.RELIQUIA_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
+      destSharePath: env.RELIQUIA_DESTINATION_PATH || '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
+      allowedBasePath: '\\\\servidor\\arquivos\\CLIENTES',
+      defaultSourceFolder: '\\\\servidor\\arquivos\\CLIENTES\\EMPRESAS',
+      logDirectory: '\\\\servidor\\gpo\\criarpastas\\LOGS',
       selectedLogFile: '',
       presetDestinations: [
-        { name: '00 - EX CLIENTES', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
-        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\192.168.1.242\\reliquia-arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
+        { name: '00 - EX CLIENTES', path: '\\\\servidor\\arquivos\\CLIENTES\\00 - EX CLIENTES', isPredefined: true },
+        { name: '01 - EMPRESAS ENCERRADAS', path: '\\\\servidor\\arquivos\\CLIENTES\\01 - EMPRESAS ENCERRADAS', isPredefined: true }
       ],
-      adServerIp: env.RELIQUIA_AD_IP || '192.168.1.242',
-      domainUser: env.RELIQUIA_AD_USER || 'RELIQUIA\\pasta.paralegal',
-      adPass: env.RELIQUIA_AD_PASS || 'Mestre@300'
+      adServerIp: env.RELIQUIA_AD_IP || '127.0.0.1',
+      domainUser: env.RELIQUIA_AD_USER || 'EMPRESA\\pasta.servico',
+      adPass: env.RELIQUIA_AD_PASS || ''
     },
-    tiLogsPassword: env.TI_LOGS_PASSWORD || 'mestre@300'
+    tiLogsPassword: env.TI_LOGS_PASSWORD || ''
   };
 
   console.log('[-] Limpando diretórios temporários e de compilação anteriores...');

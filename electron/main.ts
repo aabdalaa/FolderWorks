@@ -16,27 +16,27 @@ const logsPath = path.join(userDataPath, 'app.log');
 const defaultCompanyConfigs: Record<string, any> = {
   RTO: {
     companyName: 'RTO',
-    domainUser: String.raw`RTO\pasta.paralegal`,
-    adPass: 'Mestre@300',
-    adServerIp: '192.168.50.102',
-    sourcePath: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\MODELO`,
-    destSharePath: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
-    allowedBasePath: String.raw`\\192.168.50.102\rto\CLIENTES`,
-    defaultSourceFolder: String.raw`\\192.168.50.102\rto\CLIENTES\EMPRESAS`,
-    logDirectory: String.raw`\\192.168.50.102\gpo\criarpastas_paralegal\LOGS`,
+    domainUser: String.raw`RTO\pasta.servico`,
+    adPass: '',
+    adServerIp: '127.0.0.1',
+    sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
+    destSharePath: String.raw`\\servidor\rto\CLIENTES\EMPRESAS`,
+    allowedBasePath: String.raw`\\servidor\rto\CLIENTES`,
+    defaultSourceFolder: String.raw`\\servidor\rto\CLIENTES\EMPRESAS`,
+    logDirectory: String.raw`\\servidor\gpo\criarpastas\LOGS`,
     selectedLogFile: '',
     presetDestinations: [
-      { name: '00 - EX CLIENTES', path: String.raw`\\192.168.50.102\rto\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
-      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\192.168.50.102\rto\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
+      { name: '00 - EX CLIENTES', path: String.raw`\\servidor\rto\CLIENTES\00 - EX CLIENTES`, isPredefined: true },
+      { name: '01 - EMPRESAS ENCERRADAS', path: String.raw`\\servidor\rto\CLIENTES\01 - EMPRESAS ENCERRADAS`, isPredefined: true }
     ]
   },
   RELIQUIA: {
     companyName: 'RELIQUIA',
-    domainUser: String.raw`RELIQUIA\pasta.paralegal`,
-    adPass: 'Mestre@300',
-    adServerIp: '192.168.1.242',
-    sourcePath: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\MODELO`,
-    destSharePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
+    domainUser: String.raw`RELIQUIA\pasta.servico`,
+    adPass: '',
+    adServerIp: '127.0.0.1',
+    sourcePath: String.raw`\\servidor\gpo\criarpastas\MODELO`,
+    destSharePath: String.raw`\\servidor\reliquia-arquivos\CLIENTES\EMPRESAS`,
     allowedBasePath: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES`,
     defaultSourceFolder: String.raw`\\192.168.1.242\reliquia-arquivos\CLIENTES\EMPRESAS`,
     logDirectory: String.raw`\\192.168.1.242\gpo\criarpastas_paralegal\LOGS`,
@@ -84,8 +84,8 @@ function sanitizeConfig(cfg: any): any {
       sanitized[comp] = {
         name: compName,
         companyName: compName,
-        domainUser: raw.domainUser || def.domainUser || `${compName}\\pasta.paralegal`,
-        adPass: raw.adPass || def.adPass || 'Mestre@300',
+        domainUser: raw.domainUser || def.domainUser || `${compName}\\pasta.servico`,
+        adPass: raw.adPass || def.adPass || '',
         adServerIp: raw.adServerIp || def.adServerIp || '',
         sourcePath: raw.sourcePath || def.sourcePath || '',
         destSharePath: dest,
@@ -154,7 +154,7 @@ function getTIPassword(): string {
     }
   }
 
-  return 'mestre@300';
+  return 'admin@123';
 }
 
 function getCompanyConfig(company: string) {
@@ -2224,9 +2224,9 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
   appendLog(`[ORIGEM MODELO AD] ${effectiveSourcePath}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
-  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
-  const pureUser = adUser.includes('\\') ? adUser.split('\\')[1] : (adUser || 'pasta.paralegal');
-  const adPass = config.adPass || 'Mestre@300';
+  const adUser = config.domainUser || `${company}\\pasta.servico`;
+  const pureUser = adUser.includes('\\') ? adUser.split('\\')[1] : (adUser || 'pasta.servico');
+  const adPass = config.adPass || '';
   const adServerIp = config.adServerIp;
 
   // SEARCH FOR ExecuteAsUser.exe IN ALL BUNDLE LOCATIONS
@@ -2348,8 +2348,8 @@ ipcMain.handle('create-empty-folder', async (_, { company, folderName }) => {
   appendLog(`[SOLICITAÇÃO DE CRIAÇÃO VAZIA] Empresa: ${company} | Pasta: ${trimmedName}`);
   appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
 
-  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
-  const adPass = config.adPass || 'Mestre@300';
+  const adUser = config.domainUser || `${company}\\pasta.servico`;
+  const adPass = config.adPass || '';
 
   const possibleExecutorPaths = [
     path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
