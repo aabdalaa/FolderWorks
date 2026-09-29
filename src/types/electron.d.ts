@@ -27,7 +27,8 @@ export interface ElectronAPI {
   getConfig: () => Promise<any>;
   saveConfig: (cfg: any) => Promise<any>;
   resetConfig: () => Promise<any>;
-  createFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; durationSeconds?: number; error?: string }>;
+  createFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; folderName?: string; finalPath?: string; durationSeconds?: number; error?: string }>;
+  createEmptyFolder: (req: { company: string; folderName: string }) => Promise<{ success: boolean; folderName?: string; finalPath?: string; durationSeconds?: number; error?: string }>;
   getRecentLogs: () => Promise<string[]>;
   clearLogs: () => Promise<boolean>;
   openLogFile: (filePath?: string) => Promise<boolean>;

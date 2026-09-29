@@ -466,7 +466,7 @@ function formatSharedLogEntry(record: SharedAuditEvent, ext: string, isNewFile: 
     if (record.sourcePath) lines.push(`  sourcePath: "${record.sourcePath.replace(/\\/g, '\\\\')}"`);
     if (targetStr) lines.push(`  targetPath: "${targetStr.replace(/\\/g, '\\\\')}"`);
     if (record.details) lines.push(`  details: "${record.details.replace(/"/g, '\\"')}"`);
-    lines.push(`  appVersion: "${record.appVersion || '2.9.7'}"`);
+    lines.push(`  appVersion: "${record.appVersion || '3.0.0'}"`);
     return lines.join('\n') + '\n';
   }
 
@@ -625,7 +625,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
               status: statusMatch ? statusMatch[1] : 'SUCCESS',
               durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
               details: detMatch ? detMatch[1] : undefined,
-              appVersion: '2.9.7',
+              appVersion: '3.0.0',
             });
           }
         } catch {}
@@ -664,7 +664,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             executedBy: opRaw,
             status: status.includes('SUCESSO') || status.includes('SUCCESS') ? 'SUCCESS' : status,
             durationSeconds: durRaw,
-            appVersion: '2.9.7',
+            appVersion: '3.0.0',
           });
         }
       }
@@ -710,7 +710,7 @@ function readSharedLogEntries(sharedPath: string): SharedAuditEvent[] {
             status: statusMatch ? statusMatch[1] : 'SUCCESS',
             durationSeconds: durMatch ? parseInt(durMatch[1], 10) : 1,
             details: detMatch ? detMatch[1] : undefined,
-            appVersion: '2.9.7',
+            appVersion: '3.0.0',
           });
         }
       }
@@ -777,7 +777,7 @@ function saveHistoryEntry(input: any) {
     status: input.status || 'SUCCESS',
     durationSeconds,
     details: input.details,
-    appVersion: '2.9.7',
+    appVersion: '3.0.0',
   };
 
   // 1. Guardar no cache de memória local
@@ -2301,6 +2301,124 @@ ipcMain.handle('create-folder', async (_, { company, folderName }) => {
       } else {
         const failMsg = `A autenticação ou cópia sob o usuário '${adUser}' falhou (Código de saída: ${exitCode}).\nOperação cancelada para impedir o uso da conta logada na máquina.`;
         appendLog(`[ERRO CRÍTICO IMPERSONAÇÃO] ${failMsg}`);
+
+        saveHistoryEntry({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString('pt-BR'),
+          company,
+          folderName: trimmedName,
+          finalPath,
+          executedBy: adUser,
+          status: 'FAILED',
+          durationSeconds: durationSec,
+          error: failMsg,
+        });
+
+        resolve({ success: false, error: failMsg, durationSeconds: durationSec });
+      }
+    });
+  });
+});
+
+ipcMain.handle('create-empty-folder', async (_, { company, folderName }) => {
+  const trimmedName = (folderName || '').trim();
+  if (!trimmedName) return { success: false, error: 'O nome da pasta não pode estar vazio.' };
+
+  const config = getCompanyConfig(company);
+  const destShare = config.destSharePath || config.destinationParentPath;
+  if (!destShare) {
+    return { success: false, error: `Caminho de destino não configurado para a empresa '${company}'.` };
+  }
+  const finalPath = path.join(destShare, trimmedName);
+  const allowedBase = config.allowedBasePath || config.destSharePath;
+  if (allowedBase && !isWithinBoundary(finalPath, allowedBase)) {
+    const errorMsg = `[BLOQUEIO TI] O destino de criação '${finalPath}' está fora do Perímetro de Segurança autorizado ('${allowedBase}'). Criação proibida.`;
+    appendLog(errorMsg);
+    if (mainWindow) {
+      mainWindow.webContents.send('perimeter-blocked', {
+        attemptedPath: finalPath,
+        allowedBasePath: allowedBase,
+        action: 'CRIAR_PASTA_VAZIA',
+      });
+    }
+    return { success: false, error: errorMsg };
+  }
+
+  appendLog('---------------------------------------------------------');
+  appendLog(`[SOLICITAÇÃO DE CRIAÇÃO VAZIA] Empresa: ${company} | Pasta: ${trimmedName}`);
+  appendLog(`[DESTINO FINAL REDE] ${finalPath}`);
+
+  const adUser = config.domainUser || `${company}\\pasta.paralegal`;
+  const adPass = config.adPass || 'Mestre@300';
+
+  const possibleExecutorPaths = [
+    path.join(process.resourcesPath, 'core', 'ExecuteAsUser.exe'),
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'core', 'ExecuteAsUser.exe'),
+    path.join(__dirname, 'core', 'ExecuteAsUser.exe'),
+    path.join(__dirname, 'ExecuteAsUser.exe'),
+    path.join(app.getAppPath(), 'dist-electron', 'core', 'ExecuteAsUser.exe'),
+    path.join(app.getAppPath(), 'electron', 'core', 'ExecuteAsUser.exe'),
+  ];
+
+  let executorPath = '';
+  for (const p of possibleExecutorPaths) {
+    if (fs.existsSync(p)) {
+      executorPath = p;
+      break;
+    }
+  }
+
+  if (!executorPath) {
+    const errorMsg = `[ERRO CRÍTICO INSTALAÇÃO] O executável nativo ExecuteAsUser.exe não foi encontrado em nenhuma das pastas do sistema.`;
+    appendLog(errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  appendLog(`[IMPERSONAÇÃO AD] Criando pasta vazia via ExecuteAsUser --mkdir sob o token de '${adUser}'...`);
+
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+
+    execFile(executorPath, ['--mkdir', adUser, adPass, finalPath], { encoding: 'utf-8' }, (error, stdout, stderr) => {
+      const stdoutStr = (stdout || '').trim();
+      const stderrStr = (stderr || '').trim();
+      if (stdoutStr) {
+        stdoutStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[MKDIR STDOUT] ${line.trim()}`));
+      }
+      if (stderrStr) {
+        stderrStr.split('\n').filter(Boolean).forEach((line) => appendLog(`[MKDIR STDERR] ${line.trim()}`));
+      }
+
+      let resJson: any = null;
+      try {
+        const jsonMatch = stdoutStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) resJson = JSON.parse(jsonMatch[0]);
+      } catch {}
+
+      const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
+
+      if (!error && resJson?.success) {
+        appendLog(`[SUCESSO INTEGRAL] Pasta vazia '${trimmedName}' criada em ${durationSec}s.`);
+
+        if (mainWindow) {
+          mainWindow.webContents.send('folders-updated', { company, folderName: trimmedName, action: 'created_empty' });
+        }
+
+        saveHistoryEntry({
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString('pt-BR'),
+          company,
+          folderName: trimmedName,
+          finalPath,
+          executedBy: adUser,
+          status: 'SUCCESS',
+          durationSeconds: durationSec,
+        });
+
+        resolve({ success: true, folderName: trimmedName, finalPath, durationSeconds: durationSec });
+      } else {
+        const failMsg = resJson?.error || stderrStr || error?.message || 'Falha ao criar pasta vazia.';
+        appendLog(`[ERRO CRÍTICO CRIAÇÃO VAZIA] ${failMsg}`);
 
         saveHistoryEntry({
           id: Date.now().toString(),

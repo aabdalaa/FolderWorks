@@ -60,31 +60,39 @@ export const UserGuideView: React.FC = () => {
               Acesse a aba <strong>Criar Pasta</strong> no menu lateral do aplicativo.
             </li>
             <li>
-              Selecione a <strong>empresa</strong> correspondente à operação.
+              Selecione a <strong>empresa</strong> correspondente à operação (RTO ou RELÍQUIA).
             </li>
             <li>
-              No campo <em>Nome da Pasta</em>, digite o nome desejado para a pasta a ser criada (Exemplo ilustrativo: <span className="font-mono text-teams-600 dark:text-teams-400 font-semibold">0001 - CLIENTE EXEMPLO LTDA</span>).
+              <strong>Criar Pasta (com Modelo AD)</strong>: No primeiro card, digite o nome desejado. Caso deseje criar múltiplas pastas de uma vez, clique no botão <strong>+</strong> no final da barra de texto para adicionar novas linhas e clique em <em>Criar Pastas Simultâneas</em>. O sistema executará tarefas paralelas multithread na rede replicando o modelo do AD.
             </li>
             <li>
-              Clique no botão <strong>Criar Pasta</strong>.
+              <strong>Criar Pasta Vazia</strong>: No segundo card, digite o nome da pasta limpa. Também conta com suporte ao botão <strong>+</strong> para criação múltipla concorrente. O sistema criará as pastas vazias diretamente na rede em milissegundos sem copiar modelos.
             </li>
             <li>
-              O sistema criará automaticamente a estrutura corporativa padronizada copiando o modelo de pastas criado no Active Directory para o diretório de destino.
-            </li>
-            <li>
-              Uma notificação de confirmação em verde indicará a conclusão com sucesso da operação.
+              Ao término da criação, uma notificação estilo Windows (Toast) surgirá no canto inferior direito com atalho para abrir o diretório no Windows Explorer.
             </li>
           </ol>
 
-          {/* Replicação da Estrutura Modelo Corporativa */}
-          <div className="mt-4 p-5 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-2.5">
-            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
-              <Layers className="w-4 h-4 text-teams-600 dark:text-teams-400" />
-              <span>Replicação Automática do Modelo de Pastas</span>
+          {/* Replicação da Estrutura Modelo e Criação Vazia */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-2">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                <Layers className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+                <span>Criação com Modelo Corporativo</span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Copia o modelo completo de pastas criado no Active Directory preservando permissões NTFS (DACLs) e herança de segurança para os novos clientes.
+              </p>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
-              O sistema copia o modelo de pastas criado no Active Directory para o diretório de destino selecionado, garantindo organização, herança e permissões de segurança apropriadas sem necessidade de configuração manual.
-            </p>
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 space-y-2">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                <FolderPlus className="w-4 h-4 text-teams-600 dark:text-teams-400" />
+                <span>Criação de Pastas Vazias</span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+                Cria pastas vazias limpas instantaneamente no destino da rede via comando Win32 nativo sob credenciais de serviço, com alto desempenho.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -312,12 +320,24 @@ export const UserGuideView: React.FC = () => {
           </p>
 
           <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 pl-6 space-y-6 pt-2">
-            {/* v2.9.9 */}
+            {/* v3.0.0 */}
             <div className="relative">
               <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-teams-600 border-2 border-white dark:border-neutral-900" />
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v2.9.9</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Atual</span>
+                <span className="font-mono font-bold text-xs text-teams-600 dark:text-teams-400">v3.0.0</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-semibold">Versão Final</span>
+              </div>
+              <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Módulo Criar Pasta Vazia, Criação Múltipla Concorrente e Paralelismo Nativo</h5>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                Adição da funcionalidade 'Criar Pasta Vazia' em card dedicado na tela de Criar Pastas, permitindo a criação de pastas limpas sem cópia de arquivos ou modelos de forma instantânea. Tanto a criação com modelo quanto a criação vazia contam com botão '+' na barra de texto para inserção em lote e execução simultânea concorrente na rede multithread. Nova rotina nativa Win32 '--mkdir' em C# no ExecuteAsUser.exe sob token de serviço do Active Directory.
+              </p>
+            </div>
+
+            {/* v2.9.9 */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-0.5 w-3.5 h-3.5 rounded-full bg-slate-300 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900" />
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-bold text-xs text-slate-700 dark:text-slate-300">v2.9.9</span>
               </div>
               <h5 className="font-semibold text-slate-900 dark:text-white mt-1">Atalhos Rápidos Livres para o Usuário, Botão Direto na Transferência e Proteção Estrita do TI</h5>
               <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-relaxed">

@@ -482,6 +482,78 @@ namespace ExecuteAsUser {
             }
         }
 
+        private static int CreateDirectoryUnderToken(string fullUser, string password, string targetPath) {
+            targetPath = targetPath.TrimEnd('\\');
+            if (!targetPath.StartsWith(@"\\")) targetPath = @"\\" + targetPath.TrimStart('\\');
+
+            string domain = "";
+            string userOnly = fullUser;
+            if (fullUser.Contains("\\")) {
+                string[] parts = fullUser.Split('\\');
+                domain = parts[0];
+                userOnly = parts[1];
+            } else if (fullUser.Contains("@")) {
+                string[] parts = fullUser.Split('@');
+                userOnly = parts[0];
+                domain = parts[1];
+            }
+
+            IntPtr token = IntPtr.Zero;
+            bool logonOk = LogonUser(userOnly, domain, password, LOGON32_LOGON_NEW_CREDENTIALS, LOGON32_PROVIDER_DEFAULT, out token);
+            WindowsImpersonationContext ctx = null;
+            if (logonOk) {
+                try {
+                    ctx = WindowsIdentity.Impersonate(token);
+                } catch {}
+            }
+
+            try {
+                if (Directory.Exists(targetPath)) {
+                    Console.WriteLine("{\"success\": false, \"error\": \"A pasta já existe no servidor: " + EscapeJson(targetPath) + "\"}");
+                    return 1;
+                }
+
+                Directory.CreateDirectory(targetPath);
+
+                if (Directory.Exists(targetPath)) {
+                    Console.WriteLine("{\"success\": true, \"created\": \"" + EscapeJson(targetPath) + "\"}");
+                    return 0;
+                }
+
+                STARTUPINFO si = new STARTUPINFO();
+                si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+                PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+                string cmdLine = String.Format("cmd.exe /c mkdir \"{0}\"", targetPath);
+
+                bool ok = CreateProcessWithLogonW(
+                    userOnly, domain, password,
+                    LOGON_NETCREDENTIALS_ONLY, null, cmdLine,
+                    CREATE_NO_WINDOW, IntPtr.Zero, @"C:\Windows\System32",
+                    ref si, out pi
+                );
+
+                if (ok) {
+                    WaitForSingleObject(pi.hProcess, 15000);
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                }
+
+                if (Directory.Exists(targetPath)) {
+                    Console.WriteLine("{\"success\": true, \"created\": \"" + EscapeJson(targetPath) + "\"}");
+                    return 0;
+                } else {
+                    Console.WriteLine("{\"success\": false, \"error\": \"Não foi possível criar a pasta vazia no servidor. Verifique permissões de rede.\"}");
+                    return 1;
+                }
+            } catch (Exception ex) {
+                Console.WriteLine("{\"success\": false, \"error\": \"" + EscapeJson(ex.Message) + "\"}");
+                return 1;
+            } finally {
+                if (ctx != null) { ctx.Dispose(); }
+                if (token != IntPtr.Zero) { CloseHandle(token); }
+            }
+        }
+
         static int Main(string[] args) {
             try {
                 Console.OutputEncoding = new UTF8Encoding(false);
@@ -489,8 +561,12 @@ namespace ExecuteAsUser {
             } catch {}
 
             if (args == null || args.Length < 4) {
-                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | --delete | --rename | --move | Domain\User> <Password> <Source> <TargetPath>");
+                Console.WriteLine(@"Usage: ExecuteAsUser.exe <--list | --delete | --rename | --move | --mkdir | Domain\User> <Password> <Source> <TargetPath>");
                 return 16;
+            }
+
+            if (args[0] == "--mkdir") {
+                return CreateDirectoryUnderToken(args[1], args[2], args[3]);
             }
 
             if (args[0] == "--list") {

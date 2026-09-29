@@ -85,7 +85,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
           {/* Version badge */}
           <div className="text-right">
             <span className="text-[11px] font-mono font-bold text-teams-700 dark:text-teams-300 bg-teams-50 dark:bg-teams-950 px-3 py-1 rounded-lg border border-teams-200 dark:border-teams-800">
-              v2.9.9 Oficial
+              v3.0.0 Oficial
             </span>
           </div>
         </div>

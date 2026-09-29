@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveConfig: (cfg: any) => ipcRenderer.invoke('save-config', cfg),
   resetConfig: () => ipcRenderer.invoke('reset-config'),
   createFolder: (req: { company: string; folderName: string }) => ipcRenderer.invoke('create-folder', req),
+  createEmptyFolder: (req: { company: string; folderName: string }) => ipcRenderer.invoke('create-empty-folder', req),
   getRecentLogs: () => ipcRenderer.invoke('get-recent-logs'),
   clearLogs: () => ipcRenderer.invoke('clear-logs'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),

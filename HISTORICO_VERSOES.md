@@ -1,5 +1,26 @@
 # Entropy FolderWorks - Histórico de Lançamentos e Versionamento
 
+## Versão 3.0.0 (28/09/2026) - **Versão Final de Entrega: Card Dedicado "Criar Pasta Vazia", Criação Múltipla Concorrente com Botão (+), Paralelismo Nativo e Rotina Win32 --mkdir**
+- **Novo Card Dedicado "Criar Pasta Vazia"**:
+  - Nova funcionalidade integrada na parte inferior da tela *Criar Pasta*, permitindo a abertura de diretórios puros e limpos no destino da empresa selecionada (RTO ou RELÍQUIA) sem replicar modelos de pastas ou arquivos.
+  - Execução instantânea (em dezenas de milissegundos) direto na rede corporativa.
+  - Disparo de notificações Toast no canto inferior direito com botão "Abrir Pasta" no Windows Explorer.
+- **Criação Múltipla Concorrente com Botão `+` na Barra de Texto**:
+  - Tanto o card superior (*Criar Pasta com Modelo*) quanto o card inferior (*Criar Pasta Vazia*) contam com botão **`+`** no final do campo de texto para inclusão dinâmica de N pastas em lote.
+  - Botão de remoção individual para cada linha e atalho de teclado `Enter` inteligente para adição rápida.
+  - **Disparo Concorrente Paralelo (`Promise.all`)**: todas as pastas do lote são criadas simultaneamente na rede corporativa através de processos paralelos multithread, eliminando a espera sequencial.
+- **Nova Rotina Nativa Win32 C# `--mkdir` no `ExecuteAsUser.exe`**:
+  - Adicionado comando `--mkdir <User> <Password> <TargetPath>` no núcleo C# compilado em 64-bit (`ExecuteAsUser.exe`).
+  - Utiliza `LogonUser` com `LOGON32_LOGON_NEW_CREDENTIALS` para impersonar o token corporativo da conta de serviço (`pasta.paralegal`) e criar o diretório com permissões autorizadas no SMB.
+  - Fallback automático para `cmd.exe /c mkdir` sob `CreateProcessWithLogonW`.
+- **Validação de Perímetro e Auditoria Completa**:
+  - Ambas as operações de criação (com modelo e vazia) passam pela validação rigorosa de Perímetro de Segurança do TI (`allowedBasePath`), emitindo aviso visual caso o operador tente criar pastas fora do perímetro.
+  - Registro detalhado de auditoria corporativa com operador real, máquina física, duração e status.
+- **Versão Final de Entrega Oficial v3.0.0**:
+  - Empacotamento oficial via WiX Toolset v3.14 com GUID fixo de atualização in-place e encerramento preventivo de instâncias ativas (`FolderWorks.msi`).
+
+---
+
 ## Versão 2.9.9 (28/09/2026) - **Atalhos Rápidos Totalmente Livres para o Usuário, Botão Direto na Transferência e Proteção Estrita dos Atalhos do TI**
 - **Atalhos Rápidos Desvinculados do Bloqueio de TI (Card Dedicado e 100% Aberto)**:
   - Extraída a configuração de atalhos rápidos de dentro do formulário com privacidade blur e bloqueio administrativo do TI.

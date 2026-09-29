@@ -107,6 +107,10 @@ export const App: React.FC = () => {
     return window.electronAPI?.createFolder({ company, folderName });
   };
 
+  const handleCreateEmptyFolder = async (company: string, folderName: string) => {
+    return window.electronAPI?.createEmptyFolder({ company, folderName });
+  };
+
   const handleTestConnection = async (company: string, overrideConfig?: any) => {
     const res = await window.electronAPI?.testServerConnection(company, overrideConfig);
     setServerStatuses((prev) => ({ ...prev, [company]: res.success }));
@@ -217,6 +221,7 @@ export const App: React.FC = () => {
             {activeTab === 'dashboard' && (
               <FolderCreationView
                 onCreateFolder={handleCreateFolder}
+                onCreateEmptyFolder={handleCreateEmptyFolder}
                 onShowToast={(data) => setToastData(data)}
               />
             )}
